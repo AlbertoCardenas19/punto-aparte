@@ -33,9 +33,11 @@
             border-color: #a92732;
         }
     </style>
+    {% block extra_css %}{% endblock %}
 </head>
 
-<body>
+<body class="{% block body_class %}{% endblock %}">
+    {% block navigation %}
     <nav class="navbar navbar-expand-lg navbar-dark navbar-pa">
         <div class="container">
             <a class="navbar-brand fw-semibold" href="{% url 'inicio' %}">Punto Aparte</a>
@@ -62,8 +64,9 @@
             {% endif %}
         </div>
     </nav>
+    {% endblock %}
 
-    <main class="container py-4">
+    <main class="{% block main_class %}container py-4{% endblock %}">
         {% for message in messages %}
         <div
             class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %}">
