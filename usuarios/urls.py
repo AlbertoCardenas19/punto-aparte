@@ -6,6 +6,7 @@ from . import views
 app_name = "usuarios"
 
 urlpatterns = [
+    path("password-inicial/", views.cambiar_password_inicial, name="password_inicial"),
     path("", views.lista_usuarios, name="lista"),
     path("nuevo/", views.crear_usuario, name="crear"),
     path("<int:usuario_id>/editar/", views.editar_usuario, name="editar"),

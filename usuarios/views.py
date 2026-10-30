@@ -1,9 +1,15 @@
+import secrets
+
+from django.contrib.auth import update_session_auth_hash
+from django.db import transaction
+from django.views.decorators.cache import never_cache
+from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .decorators import jefe_required
-from .forms import UsuarioCreationForm, UsuarioEdicionForm
+from .forms import UsuarioCreationForm, UsuarioEdicionForm, PasswordInicialForm
 from .models import Usuario
 
 
@@ -18,14 +24,21 @@ def lista_usuarios(request):
     return render(request, "usuarios/lista.html", {"usuarios": usuarios})
 
 
+@never_cache
+@sensitive_variables("temporal")
 @jefe_required
 def crear_usuario(request):
     form = UsuarioCreationForm(request.POST or None)
 
     if request.method == "POST" and form.is_valid():
-        form.save()
-        messages.success(request, "La cuenta se creó correctamente.")
-        return redirect("usuarios:lista")
+        temporal = secrets.token_urlsafe(24)
+        usuario = form.save(commit=False)
+        usuario.set_password(temporal)
+        usuario.debe_cambiar_password = True
+        usuario.save()
+        return render(request, "usuarios/cuenta_creada.html", {
+            "cuenta": usuario, "temporal": temporal,
+        })
 
     return render(
         request,
@@ -64,3 +77,20 @@ def cambiar_estado_usuario(request, usuario_id):
             messages.success(request, "El estado de la cuenta se actualizó.")
 
     return redirect("usuarios:lista")
+
+
+@never_cache
+@sensitive_post_parameters()
+@login_required
+def cambiar_password_inicial(request):
+    if not request.user.debe_cambiar_password:
+        return redirect("inicio")
+    form = PasswordInicialForm(request.user, request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        with transaction.atomic():
+            usuario = form.save(commit=False)
+            usuario.debe_cambiar_password = False
+            usuario.save(update_fields=["password", "debe_cambiar_password"])
+        update_session_auth_hash(request, usuario)
+        return redirect("inicio")
+    return render(request, "usuarios/password_inicial.html", {"form": form})

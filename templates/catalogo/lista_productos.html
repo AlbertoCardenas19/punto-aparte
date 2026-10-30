@@ -24,7 +24,7 @@
     {% endif %}
 </div>
 
-<form method="get" class="card card-body mb-4">
+<form data-busqueda-viva method="get" class="card card-body mb-4">
     <div class="row g-2">
         <div class="col">
             <label class="visually-hidden" for="q">Buscar producto</label>
@@ -37,6 +37,7 @@
     </div>
 </form>
 
+<div data-resultados-busqueda>
 <div class="card">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
@@ -131,4 +132,5 @@
     </ul>
 </nav>
 {% endif %}
+</div>
 {% endblock %}

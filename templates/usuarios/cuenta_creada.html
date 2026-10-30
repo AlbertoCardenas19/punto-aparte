@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Cuenta creada | Punto Aparte{% endblock %}
+{% block content %}
+<section class="card mx-auto" style="max-width: 42rem"><div class="card-body">
+    <h1 class="h3">Cuenta creada</h1>
+    <p>Entrega estos datos al trabajador. La contraseña temporal se muestra solo ahora y deberá cambiarla al iniciar sesión.</p>
+    <p><strong>Nombre de usuario:</strong> {{ cuenta.username }}</p>
+    <label for="password-temporal">Contraseña temporal</label>
+    <input class="form-control mb-3" id="password-temporal" value="{{ temporal }}" readonly autocomplete="off">
+    <button class="btn btn-outline-primary" type="button" data-copiar-password>Copiar contraseña</button>
+    <p class="small mt-2" role="status" data-estado-copia></p>
+    <a class="btn btn-pa" href="{% url 'usuarios:lista' %}">Volver a usuarios</a>
+</div></section>
+{% endblock %}

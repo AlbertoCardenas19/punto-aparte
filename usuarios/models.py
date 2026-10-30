@@ -20,6 +20,8 @@ class Usuario(AbstractUser):
         default=Rol.CAJERO,
     )
     
+    debe_cambiar_password = models.BooleanField(default=False)
+
     REQUIRED_FIELDS = ["first_name", "last_name", "email"]
 
     class Meta:

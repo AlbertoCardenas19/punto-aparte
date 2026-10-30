@@ -27,6 +27,7 @@ def lista_productos(request):
     if busqueda:
         productos = productos.filter(
             Q(nombre__icontains=busqueda)
+            | Q(descripcion__icontains=busqueda)
             | Q(marca__icontains=busqueda)
             | Q(codigo_barras__icontains=busqueda)
             | Q(categorias__nombre__icontains=busqueda)

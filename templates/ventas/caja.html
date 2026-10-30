@@ -30,7 +30,7 @@
 <div class="row g-4">
     <section class="col-12 col-xl-8">
         <div class="pa-caja-panel">
-        <form method="get" class="mb-4">
+        <form data-busqueda-viva method="get" class="mb-4">
             <label for="q" class="form-label">Buscar producto</label>
             <div class="input-group">
                 <input class="form-control" id="q" name="q" value="{{ busqueda }}"
@@ -39,6 +39,7 @@
             </div>
         </form>
 
+        <div data-resultados-busqueda>
         <div class="pa-caja-productos">
             {% for producto in pagina %}
             <article class="pa-caja-producto">
@@ -89,6 +90,7 @@
             </ul>
         </nav>
         {% endif %}
+        </div>
         </div>
     </section>
 

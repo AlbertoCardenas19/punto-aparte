@@ -1,13 +1,13 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .forms import UsuarioCreationForm
+from .forms import AdminUsuarioCreationForm
 from .models import Usuario
 
 
 @admin.register(Usuario)
 class UsuarioAdmin(UserAdmin):
-    add_form = UsuarioCreationForm
+    add_form = AdminUsuarioCreationForm
 
     list_display = ("username", "first_name", "last_name",
                     "email", "rol", "is_active")
