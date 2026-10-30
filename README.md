@@ -27,6 +27,27 @@ python manage.py check
 python manage.py runserver
 ```
 
+### Crear el primer Jefe
+
+En una instalación nueva, crea la primera cuenta administrativa con:
+
+```bash
+python manage.py inicializar_jefe \
+  --nombre "Nombre" \
+  --apellido "Apellido" \
+  --email "jefe@example.com"
+```
+
+El sistema genera el nombre de usuario y una contraseña temporal, que se muestra
+una sola vez en la terminal y se guarda únicamente como hash. La cuenta queda
+activa, con rol Jefe y permisos de superusuario, y debe cambiar la contraseña en
+su primer inicio de sesión. El comando se detiene si ya existe un Jefe activo.
+
+No uses `createsuperuser`: Punto Aparte lo deshabilita porque el flujo estándar
+solicita un nombre de usuario manual. Después de la inicialización, administra
+las cuentas desde la sección Usuarios de la aplicación. Django Admin conserva
+la consulta de cuentas, pero no permite crearlas, editarlas ni eliminarlas.
+
 La configuración PostgreSQL se lee desde `.env` mediante `python-dotenv`. El código utiliza estos nombres de variable:
 
 ```text

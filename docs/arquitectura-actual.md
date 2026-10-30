@@ -60,6 +60,21 @@ Las vistas actuales incluyen:
 - Consulta de ventas: el Cajero ve las propias y el Jefe ve todas, con filtros de fecha y cajero según permiso.
 - Usuarios para Jefe.
 
+## Inicialización y gestión de cuentas
+
+El primer Jefe se crea con el comando `inicializar_jefe`. El comando genera el
+nombre de usuario según la regla del proyecto, asigna rol Jefe y permisos de
+superusuario, entrega una contraseña temporal una sola vez y exige cambiarla al
+primer ingreso. Rechaza la operación si ya existe un Jefe activo. El comando
+estándar `createsuperuser` está deshabilitado para evitar que solicite un nombre
+de usuario manual.
+
+Las altas y modificaciones se realizan desde la interfaz de Punto Aparte.
+Django Admin permite consultar las cuentas, pero no crearlas, editarlas ni
+eliminarlas, porque su flujo estándar no puede entregar la contraseña temporal
+con las mismas garantías. Las operaciones que cambian rol o estado se serializan
+y nunca permiten dejar el sistema sin al menos un Jefe activo.
+
 DataTables se sirve localmente y se usa en los listados de productos, categorías, inventario, movimientos, usuarios y ventas. El detalle interno de venta y «Compra actual» no usan paginación.
 
 ## Límites

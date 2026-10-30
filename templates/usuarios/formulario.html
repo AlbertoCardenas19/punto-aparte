@@ -11,6 +11,9 @@
 
                 <form method="post">
                     {% csrf_token %}
+                    {% if clave_creacion %}
+                    <input type="hidden" name="clave_creacion" value="{{ clave_creacion }}">
+                    {% endif %}
                     {% if form.non_field_errors %}
                     <div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>
                     {% endif %}

@@ -1,5 +1,5 @@
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm, SetPasswordForm, UserCreationForm
+from django.contrib.auth.forms import AuthenticationForm, SetPasswordForm
 from django.core.exceptions import ValidationError
 
 from config.forms import BootstrapFormMixin
@@ -63,12 +63,3 @@ class InicioSesionForm(AuthenticationForm):
         super().__init__(*args, **kwargs)
         self.fields["username"].label = "Nombre de usuario o correo"
         self.fields["password"].label = "Contraseña"
-
-
-class AdminUsuarioCreationForm(UsuarioDatosMixin, BootstrapFormMixin, UserCreationForm):
-    """Conserva el formulario propio del administrador de Django."""
-    username = None
-
-    class Meta:
-        model = Usuario
-        fields = ("first_name", "last_name", "email", "rol")

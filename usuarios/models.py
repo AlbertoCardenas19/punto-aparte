@@ -22,6 +22,12 @@ class Usuario(AbstractUser):
     )
     
     debe_cambiar_password = models.BooleanField(default=False)
+    clave_creacion = models.UUIDField(
+        unique=True,
+        null=True,
+        blank=True,
+        editable=False,
+    )
 
     REQUIRED_FIELDS = ["first_name", "last_name", "email"]
 
@@ -68,6 +74,13 @@ class Usuario(AbstractUser):
             self.username = self._generar_username()
 
         super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        if not self.pk:
+            return super().delete(*args, **kwargs)
+        from .services import eliminar_cuenta
+
+        return eliminar_cuenta(usuario_id=self.pk)
 
     @staticmethod
     def _capitalizar_nombre(valor):
