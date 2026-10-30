@@ -53,9 +53,15 @@
                         {% endif %}
                     </td>
                     <td class="all">
-                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="offcanvas"
-                            data-bs-target="#detalle-producto-{{ producto.pk }}"
-                            aria-controls="detalle-producto-{{ producto.pk }}">Ver detalles</button>
+                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal"
+                            data-bs-target="#modal-detalle-producto" data-producto-detalle
+                            data-producto-nombre="{{ producto.nombre|escape }}"
+                            data-producto-marca="{{ producto.marca|default:'—'|escape }}"
+                            data-producto-codigo="{{ producto.codigo_barras|default:'—'|escape }}"
+                            data-producto-descripcion="{{ producto.descripcion|default:'Sin descripción.'|escape }}"
+                            data-producto-categorias="{% for categoria in producto.categorias.all %}{{ categoria.nombre|escape }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}">
+                            Ver detalles
+                        </button>
                     </td>
                     {% if request.user.rol == "JEFE" %}
                     <td class="all">
@@ -67,8 +73,14 @@
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li><a class="dropdown-item" href="{% url 'catalogo:editar_producto' producto.id %}">Editar</a></li>
-                                <li><a class="dropdown-item" href="{% url 'catalogo:ingresar_stock' producto.id %}">Ingresar stock</a></li>
-                                <li><a class="dropdown-item" href="{% url 'catalogo:ajustar_stock' producto.id %}">Ajustar stock</a></li>
+                                {% if producto.activo %}
+                                <li>
+                                    <form method="post" action="{% url 'catalogo:desactivar_producto' producto.pk %}">
+                                        {% csrf_token %}
+                                        <button class="dropdown-item text-danger" type="submit">Desactivar</button>
+                                    </form>
+                                </li>
+                                {% endif %}
                             </ul>
                         </div>
                     </td>
@@ -80,23 +92,26 @@
     </div>
 </div>
 
-{% for producto in productos %}
-<aside class="offcanvas offcanvas-end" tabindex="-1" id="detalle-producto-{{ producto.pk }}"
-    aria-labelledby="detalle-producto-titulo-{{ producto.pk }}">
-    <div class="offcanvas-header">
-        <h2 class="offcanvas-title h5" id="detalle-producto-titulo-{{ producto.pk }}">{{ producto.nombre }}</h2>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar detalles"></button>
+<div class="modal fade" id="modal-detalle-producto" tabindex="-1"
+    aria-labelledby="modal-detalle-producto-titulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="modal-detalle-producto-titulo" data-detalle-nombre></h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar detalles"></button>
+            </div>
+            <div class="modal-body">
+                <dl class="pa-detalle-producto">
+                    <div><dt>Marca</dt><dd data-detalle-marca></dd></div>
+                    <div><dt>Categorías</dt><dd data-detalle-categorias></dd></div>
+                    <div><dt>Código de barras</dt><dd data-detalle-codigo></dd></div>
+                    <div><dt>Descripción</dt><dd data-detalle-descripcion></dd></div>
+                </dl>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
     </div>
-    <div class="offcanvas-body">
-        <dl class="pa-detalle-producto">
-            <div><dt>Marca</dt><dd>{{ producto.marca|default:"—" }}</dd></div>
-            <div><dt>Categorías</dt><dd>{% for categoria in producto.categorias.all %}{{ categoria.nombre }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</dd></div>
-            <div><dt>Código de barras</dt><dd>{{ producto.codigo_barras|default:"—" }}</dd></div>
-            <div><dt>Descripción</dt><dd>{{ producto.descripcion|default:"Sin descripción." }}</dd></div>
-            <div><dt>Precio</dt><dd>${{ producto.precio }}</dd></div>
-            <div><dt>Stock</dt><dd>{{ producto.stock }}</dd></div>
-        </dl>
-    </div>
-</aside>
-{% endfor %}
+</div>
 {% endblock %}

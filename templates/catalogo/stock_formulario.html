@@ -11,6 +11,9 @@
                 <p class="text-secondary mb-4">
                     {{ producto.nombre }} · Stock actual: {{ producto.stock }}
                 </p>
+                {% if registro_completado %}
+                <p class="pa-estado-exito" role="status">Movimiento guardado. Puedes registrar otro.</p>
+                {% endif %}
 
                 <form method="post">
                     {% csrf_token %}
@@ -18,7 +21,7 @@
 
                     <div class="d-flex flex-wrap gap-2 pa-form-acciones">
                         <button class="btn btn-pa" type="submit">Guardar movimiento</button>
-                        <a class="btn btn-outline-secondary" href="{% url 'catalogo:lista_productos' %}">
+                        <a class="btn btn-outline-secondary" href="{% url 'catalogo:inventario' %}">
                             Cancelar
                         </a>
                     </div>

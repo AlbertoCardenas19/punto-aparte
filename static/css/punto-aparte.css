@@ -13,6 +13,7 @@
 .pa-app .pa-marca { color: #fff; display: inline-flex; align-items: center; gap: .75rem; font-size: 1.05rem; font-weight: 700; text-decoration: none; }
 .pa-app .pa-barra-superior .pa-logo { width: 46px; height: 46px; }
 .pa-app .pa-sesion { display: flex; align-items: center; gap: 1rem; font-size: .9rem; }
+.pa-app .pa-sesion-identidad { line-height: 1.3; }
 .pa-app .pa-menu-movil { border: 1px solid rgb(255 255 255 / 55%); border-radius: .65rem; background: transparent; color: #fff; width: 2.75rem; height: 2.75rem; font-size: 1.35rem; line-height: 1; }
 .pa-app .pa-estructura { display: grid; grid-template-columns: 16rem minmax(0, 1fr); min-height: calc(100vh - 4.5rem); min-height: calc(100dvh - 4.5rem); }
 .pa-app .pa-estructura-sin-menu { display: block; min-height: 100vh; min-height: 100dvh; }
@@ -42,10 +43,13 @@
 .pa-app .helptext { display: block; font-size: .875rem; color: var(--pa-muted); margin-top: .4rem; }
 .pa-app .errorlist { color: #a92732; padding-left: 1.25rem; }
 .pa-app .pa-error-campo { color: var(--pa-red); font-size: .875rem; margin: .35rem 0 0; }
+.pa-app .pa-error-global { color: #9f2430; display: flex; align-items: center; gap: .4rem; font-size: .875rem; margin: 0 0 1rem; }
+.pa-app .pa-estado-exito { color: #37684a; font-size: .875rem; margin: 0 0 1.25rem; }
 .pa-app .pa-sin-stock { color: var(--pa-red); display: inline-flex; align-items: center; gap: .35rem; font-size: .875rem; font-weight: 700; }
 .pa-app .pa-icono-alerta { border: 2px solid currentColor; border-radius: 50%; display: inline-grid; place-items: center; width: 1.25rem; height: 1.25rem; font-size: .8rem; line-height: 1; }
 .pa-app .pa-accion-estado { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin-bottom: 1rem; }
 .pa-app .pa-estado-breve { color: var(--pa-muted); font-size: .875rem; margin: .4rem 0 0; min-height: 1.4em; }
+.pa-app .pa-estado-breve.pa-estado-error { color: #9f2430; }
 .pa-app .pa-accion-estado .pa-estado-breve { margin: 0; }
 .pa-app .form-check-input:checked { background-color: var(--pa-navy); border-color: var(--pa-navy); }
 .pa-app .btn { border-radius: .65rem; padding: .6rem 1.1rem; font-weight: 600; }
@@ -57,7 +61,7 @@
 .pa-app .btn-outline-danger { --bs-btn-color: #ad2431; --bs-btn-border-color: #ad2431; --bs-btn-hover-bg: #ad2431; --bs-btn-hover-border-color: #ad2431; --bs-btn-active-bg: #ad2431; --bs-btn-active-border-color: #ad2431; }
 .pa-app .table { --bs-table-color: var(--pa-ink); --bs-table-border-color: var(--pa-border); --bs-table-hover-bg: #f1f4f8; }
 .pa-app .table-light { --bs-table-bg: #edf2f7; --bs-table-color: var(--pa-ink); }
-.pa-app .table th { font-size: .875rem; font-weight: 600; white-space: nowrap; }
+.pa-app .table th { font-size: .875rem; font-weight: 600; text-align: left !important; white-space: nowrap; }
 .pa-app .table td, .pa-app .table th { padding: 1rem; }
 .pa-app .table-responsive { border-radius: 1.25rem; }
 .pa-app .badge { border-radius: .5rem; padding: .45em .7em; }
@@ -76,7 +80,7 @@
 .pa-app .pa-venta-total { font-size: 1.25rem; }
 .pa-app :is(a, button):focus-visible { outline: 3px solid #6f91b5; outline-offset: 3px; }
 @media (max-width: 991.98px) { .pa-app .pa-estructura { display: block; min-height: calc(100vh - 4.5rem); min-height: calc(100dvh - 4.5rem); } }
-@media (max-width: 575.98px) { .pa-app .pa-marca span { display: none; } .pa-app .pa-barra-superior { gap: .6rem; } .pa-app .pa-sesion { margin-left: auto; } .pa-app .table td, .pa-app .table th { padding: .75rem; } .pa-app .pa-form-acciones { margin-top: 1.5rem; } }
+@media (max-width: 575.98px) { .pa-app .pa-marca span { display: none; } .pa-app .pa-barra-superior { flex-wrap: wrap; gap: .6rem; } .pa-app .pa-sesion { width: 100%; justify-content: space-between; } .pa-app .pa-sesion-identidad { font-size: .8rem; } .pa-app .table td, .pa-app .table th { padding: .75rem; } .pa-app .pa-form-acciones { margin-top: 1.5rem; } }
 /* Los menús trasladados al body quedan por encima de tablas y tarjetas. */
 body > .dropdown-menu { z-index: 1080; border-color: var(--pa-border); border-radius: .75rem; padding: .5rem; }
 .pa-app div.dt-container .dt-layout-row { align-items: center; gap: .75rem; margin: 0 0 1rem; }

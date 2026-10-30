@@ -24,7 +24,7 @@
             <span>Punto Aparte</span>
         </a>
         <div class="pa-sesion">
-            <span class="d-none d-md-inline">{{ request.user.get_full_name|default:request.user.username }}</span>
+            <span class="pa-sesion-identidad">{{ request.user.get_full_name|default:request.user.username }} · {{ request.user.get_rol_display }}</span>
             <form method="post" action="{% url 'logout' %}">
                 {% csrf_token %}
                 <button class="btn btn-sm btn-outline-light" type="submit">Cerrar sesión</button>
@@ -57,13 +57,12 @@
         <main class="{% block main_class %}pa-contenido{% endblock %}">
             <div data-mensajes>
                 {% for message in messages %}
-                <div
-                    class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %}">
-                    {% if message.tags == 'error' %}
+                {% if 'success' not in message.tags %}
+                <p class="pa-error-global" role="alert">
                     <span class="pa-icono-alerta" aria-hidden="true">!</span>
-                    {% endif %}
                     {{ message }}
-                </div>
+                </p>
+                {% endif %}
                 {% endfor %}
             </div>
 

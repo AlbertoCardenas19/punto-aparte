@@ -11,6 +11,7 @@ def normalizar_mayuscula_inicial(valor):
 
 class Categoria(models.Model):
     nombre = models.CharField(max_length=100, unique=True)
+    activo = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = "categoría"

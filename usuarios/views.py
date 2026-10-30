@@ -54,7 +54,6 @@ def editar_usuario(request, usuario_id):
 
     if request.method == "POST" and form.is_valid():
         form.save()
-        messages.success(request, "Los datos de la cuenta se actualizaron.")
         return redirect("usuarios:lista")
 
     return render(
@@ -74,7 +73,6 @@ def cambiar_estado_usuario(request, usuario_id):
         else:
             usuario.is_active = not usuario.is_active
             usuario.save(update_fields=["is_active"])
-            messages.success(request, "El estado de la cuenta se actualizó.")
 
     return redirect("usuarios:lista")
 

@@ -20,6 +20,7 @@ Confirma versiones contra `requirements.txt`, `package.json` y el entorno de eje
 Relaciones relevantes:
 
 - `Producto` ↔ `Categoria`: muchos a muchos.
+- `Categoria.activo`: controla si puede asignarse en altas y ediciones nuevas. Desactivarla conserva su nombre y todas sus asociaciones existentes.
 - `Venta` → `Usuario` cajero: muchas ventas por usuario.
 - `DetalleVenta` → `Venta`: varios detalles por venta.
 - `DetalleVenta` → `Producto`: referencia al producto y, además, conserva nombre, precio unitario y subtotal de la operación.
@@ -55,7 +56,7 @@ Las plantillas extienden `templates/base.html`, que carga Bootstrap local y el s
 Las vistas actuales incluyen:
 
 - Venta con catálogo paginado, carrito de sesión y confirmación en efectivo.
-- Productos, categorías e inventario; los ingresos y ajustes conservan sus formularios dedicados.
+- Productos y categorías con administración de estado; inventario concentra los ingresos y ajustes en formularios dedicados que permanecen listos para registrar el movimiento siguiente.
 - Consulta de ventas: el Cajero ve las propias y el Jefe ve todas, con filtros de fecha y cajero según permiso.
 - Usuarios para Jefe.
 

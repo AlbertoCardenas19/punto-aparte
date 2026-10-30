@@ -1,4 +1,5 @@
 from django import forms
+from django.db.models import Q
 
 from config.forms import BootstrapFormMixin
 
@@ -24,11 +25,19 @@ class ProductoForm(BootstrapFormMixin, forms.ModelForm):
             "codigo_barras",
             "precio",
             "categorias",
-            "activo",
         )
         widgets = {
             "categorias": forms.SelectMultiple(attrs={"size": "6"}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        categorias = Categoria.objects.filter(activo=True)
+        if self.instance.pk:
+            categorias = Categoria.objects.filter(
+                Q(activo=True) | Q(productos=self.instance)
+            ).distinct()
+        self.fields["categorias"].queryset = categorias.order_by("nombre")
 
     def clean_nombre(self):
         return normalizar_mayuscula_inicial(self.cleaned_data["nombre"])

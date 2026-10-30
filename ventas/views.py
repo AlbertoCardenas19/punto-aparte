@@ -176,7 +176,6 @@ def caja(request):
                 return redirect("ventas:caja")
 
             request.session.pop(CLAVE_CARRITO, None)
-            messages.success(request, f"Venta #{venta.pk} registrada.")
             return redirect("ventas:detalle", venta_id=venta.pk)
 
     busqueda = request.GET.get("q", "").strip()

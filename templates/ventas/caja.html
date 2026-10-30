@@ -30,8 +30,10 @@
             <article class="pa-caja-producto" data-producto-tarjeta data-producto-id="{{ producto.pk }}"
                 data-codigo-barras="{{ producto.codigo_barras|default:'' }}">
                 <h2 class="h6 fw-bold">{{ producto.nombre }}</h2>
+                <p class="pa-caja-marca-producto">{{ producto.marca|default:"Sin marca" }}</p>
                 <p class="pa-caja-precio">${{ producto.precio|localize }}</p>
                 <div class="pa-caja-indicadores">
+                    <span class="pa-stock-disponible">Stock disponible: {{ producto.stock }}</span>
                     {% if producto.stock == 0 %}{% include "includes/sin_stock.html" %}{% endif %}
                     <span class="pa-en-compra" data-cantidad-en-carrito {% if producto.cantidad_carrito == 0 %}hidden{% endif %}>
                         En compra: <strong>{{ producto.cantidad_carrito }}</strong>

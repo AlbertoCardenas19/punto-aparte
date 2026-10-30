@@ -14,6 +14,18 @@ document.addEventListener('hidden.bs.dropdown', event => {
     if (entry) { entry.marker.replaceWith(entry.menu); menus.delete(event.target); }
 });
 
+document.addEventListener('show.bs.modal', event => {
+    if (event.target.id !== 'modal-detalle-producto') return;
+    const trigger = event.relatedTarget;
+    if (!trigger?.matches('[data-producto-detalle]')) return;
+    const modal = event.target;
+    modal.querySelector('[data-detalle-nombre]').textContent = trigger.dataset.productoNombre;
+    modal.querySelector('[data-detalle-marca]').textContent = trigger.dataset.productoMarca;
+    modal.querySelector('[data-detalle-categorias]').textContent = trigger.dataset.productoCategorias;
+    modal.querySelector('[data-detalle-codigo]').textContent = trigger.dataset.productoCodigo;
+    modal.querySelector('[data-detalle-descripcion]').textContent = trigger.dataset.productoDescripcion;
+});
+
 for (const table of document.querySelectorAll('[data-tabla-listado]')) {
     const noOrdenables = [...table.querySelectorAll('thead th')]
         .map((th, index) => th.hasAttribute('data-no-orden') ? index : null)
@@ -220,6 +232,19 @@ function solicitarActualizacionCarrito(form, datos) {
     return solicitud;
 }
 
+function trasladarErroresAlEstado(doc, selectorEstado) {
+    const errores = [...doc.querySelectorAll('[data-mensajes] [role="alert"]')]
+        .map(error => error.textContent.trim())
+        .filter(Boolean);
+    if (!errores.length) return;
+    const status = doc.querySelector(selectorEstado);
+    if (status) {
+        status.textContent = errores.join(' ');
+        status.classList.add('pa-estado-error');
+    }
+    doc.querySelector('[data-mensajes]')?.replaceChildren();
+}
+
 function aplicarActualizacionCarrito(doc) {
     const nextPanel = doc.querySelector('[data-carrito-panel]');
     if (!nextPanel) throw new Error('Carrito no disponible');
@@ -266,10 +291,11 @@ function prepararCarrito(panel = document) {
         controles.forEach(control => control.disabled = true);
         form.setAttribute('aria-busy', 'true');
         status.textContent = '';
+        status.classList.remove('pa-estado-error');
         try {
-            aplicarActualizacionCarrito(
-                await solicitarActualizacionCarrito(form, datos)
-            );
+            const doc = await solicitarActualizacionCarrito(form, datos);
+            trasladarErroresAlEstado(doc, '[data-carrito-estado]');
+            aplicarActualizacionCarrito(doc);
         } catch (error) {
             form.removeAttribute('aria-busy');
             form.querySelectorAll('.pa-cantidad-valor').forEach(input => {
@@ -277,6 +303,7 @@ function prepararCarrito(panel = document) {
                 ajustarBotonesCantidad(input);
             });
             status.textContent = 'No se pudo actualizar la compra. Intenta nuevamente.';
+            status.classList.add('pa-estado-error');
         }
     };
 
@@ -304,15 +331,21 @@ function prepararBotonesAgregar(contenedor = document) {
             const button = form.querySelector('button[type="submit"]');
             form.setAttribute('aria-busy', 'true');
             status.textContent = '';
+            status.classList.remove('pa-estado-error');
             button.disabled = true;
             try {
-                aplicarActualizacionCarrito(
-                    await solicitarActualizacionCarrito(form, datos)
+                const productoId = datos.get('producto_id');
+                const doc = await solicitarActualizacionCarrito(form, datos);
+                trasladarErroresAlEstado(
+                    doc,
+                    `[data-producto-tarjeta][data-producto-id="${productoId}"] [data-agregar-estado]`
                 );
+                aplicarActualizacionCarrito(doc);
             } catch (error) {
                 form.removeAttribute('aria-busy');
                 button.disabled = false;
                 status.textContent = 'No se pudo agregar. Intenta nuevamente.';
+                status.classList.add('pa-estado-error');
             }
         });
     }

@@ -91,6 +91,35 @@ def crear_categoria(request):
 
 
 @jefe_required
+def editar_categoria(request, categoria_id):
+    categoria = get_object_or_404(Categoria, pk=categoria_id)
+    form = CategoriaForm(request.POST or None, instance=categoria)
+
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        return redirect("catalogo:lista_categorias")
+
+    return render(
+        request,
+        "catalogo/formulario.html",
+        {
+            "form": form,
+            "titulo": "Editar categoría",
+            "url_cancelar": "catalogo:lista_categorias",
+        },
+    )
+
+
+@jefe_required
+def cambiar_estado_categoria(request, categoria_id):
+    if request.method == "POST":
+        categoria = get_object_or_404(Categoria, pk=categoria_id)
+        categoria.activo = not categoria.activo
+        categoria.save(update_fields=["activo"])
+    return redirect("catalogo:lista_categorias")
+
+
+@jefe_required
 def editar_producto(request, producto_id):
     producto = get_object_or_404(Producto, pk=producto_id)
     form = ProductoForm(request.POST or None, instance=producto)
@@ -108,6 +137,15 @@ def editar_producto(request, producto_id):
             "url_cancelar": "catalogo:lista_productos",
         },
     )
+
+
+@jefe_required
+def desactivar_producto(request, producto_id):
+    if request.method == "POST":
+        producto = get_object_or_404(Producto, pk=producto_id, activo=True)
+        producto.activo = False
+        producto.save(update_fields=["activo"])
+    return redirect("catalogo:lista_productos")
 
 
 @jefe_required
@@ -135,7 +173,7 @@ def ingresar_stock(request, producto_id):
                 usuario=request.user,
             )
 
-        return redirect("catalogo:lista_productos")
+        return redirect(f"{request.path}?registrado=1")
 
     return render(
         request,
@@ -144,6 +182,7 @@ def ingresar_stock(request, producto_id):
             "form": form,
             "producto": producto,
             "titulo": "Registrar ingreso de stock",
+            "registro_completado": request.GET.get("registrado") == "1",
         },
     )
 
@@ -178,7 +217,7 @@ def ajustar_stock(request, producto_id):
                     usuario=request.user,
                 )
 
-                return redirect("catalogo:lista_productos")
+                return redirect(f"{request.path}?registrado=1")
 
     return render(
         request,
@@ -187,6 +226,7 @@ def ajustar_stock(request, producto_id):
             "form": form,
             "producto": producto,
             "titulo": "Ajustar stock",
+            "registro_completado": request.GET.get("registrado") == "1",
         },
     )
 

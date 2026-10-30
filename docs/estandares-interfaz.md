@@ -25,7 +25,7 @@ Lee este documento antes de modificar pantallas. Define requisitos aprobados; su
 ## Idioma, mensajes y errores
 
 - Toda la interfaz y los mensajes visibles para usuarios deben estar en español claro, incluidas validaciones, estados vacíos, ayudas y errores de Django.
-- Los mensajes de estado deben ser breves, discretos y estar alineados con el elemento relacionado. No muestres mensajes innecesarios por cada búsqueda; informa cuando no haya coincidencias o cuando ocurra un error que requiera atención.
+- Los mensajes de estado deben ser breves, discretos y estar alineados con el elemento relacionado. No uses avisos globales genéricos para acciones correctas cuando el nuevo estado de la pantalla ya confirma el resultado. No muestres mensajes innecesarios por cada búsqueda; informa cuando no haya coincidencias o cuando ocurra un error que requiera atención.
 - Muestra los errores de formulario junto al campo correspondiente, en español y con estilo claro. Los errores generales deben quedar junto al formulario.
 - No muestres las reglas completas de contraseña mientras no haya un error. Ante un error, explica la corrección necesaria sin desactivar validadores ni revelar contraseñas.
 - Destaca la falta de stock en rojo e incluye el ícono circular de exclamación. Acompáñalo de texto claro; no dependas solo del color o del ícono para comunicar el aviso.

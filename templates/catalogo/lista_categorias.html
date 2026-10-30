@@ -25,6 +25,8 @@
                 <tr>
                     <th>Categoría</th>
                     <th data-no-buscar>Productos</th>
+                    <th data-no-buscar>Estado</th>
+                    {% if request.user.rol == "JEFE" %}<th class="all" data-no-orden data-no-buscar>Acciones</th>{% endif %}
                 </tr>
             </thead>
             <tbody>
@@ -32,6 +34,27 @@
                 <tr>
                     <td class="fw-semibold">{{ categoria.nombre }}</td>
                     <td data-order="{{ categoria.cantidad_productos }}">{{ categoria.cantidad_productos }}</td>
+                    <td>{% if categoria.activo %}<span class="badge text-bg-success">Activa</span>{% else %}<span class="badge text-bg-secondary">Inactiva</span>{% endif %}</td>
+                    {% if request.user.rol == "JEFE" %}
+                    <td class="all">
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button"
+                                data-bs-toggle="dropdown" aria-expanded="false"
+                                aria-label="Acciones de {{ categoria.nombre }}">Acciones</button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{% url 'catalogo:editar_categoria' categoria.pk %}">Editar</a></li>
+                                <li>
+                                    <form method="post" action="{% url 'catalogo:cambiar_estado_categoria' categoria.pk %}">
+                                        {% csrf_token %}
+                                        <button class="dropdown-item {% if categoria.activo %}text-danger{% endif %}" type="submit">
+                                            {% if categoria.activo %}Desactivar{% else %}Reactivar{% endif %}
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    </td>
+                    {% endif %}
                 </tr>
                 {% endfor %}
             </tbody>
