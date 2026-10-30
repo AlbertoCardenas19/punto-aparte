@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} | Punto Aparte{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-7">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <h1 class="h3 fw-bold mb-1">{{ titulo }}</h1>
+                <p class="text-secondary mb-4">
+                    {{ producto.nombre }} · Stock actual: {{ producto.stock }}
+                </p>
+
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+
+                    <div class="d-flex gap-2 mt-4">
+                        <button class="btn btn-pa" type="submit">Guardar movimiento</button>
+                        <a class="btn btn-outline-secondary" href="{% url 'catalogo:lista_productos' %}">
+                            Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

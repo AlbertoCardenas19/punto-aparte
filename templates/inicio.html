@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Inicio | Punto Aparte{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h1 class="h2 fw-bold mb-1">Hola, {{ request.user.first_name }}</h1>
+    <p class="text-secondary">
+        Sesión iniciada como
+        <span class="badge text-bg-primary">{{ request.user.get_rol_display }}</span>
+    </p>
+</div>
+
+<div class="row g-3">
+    <div class="col-12 col-md-6 col-xl-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <h2 class="h5 card-title">Abrir caja</h2>
+                <a class="btn btn-pa" href="{% url 'ventas:caja' %}">Abrir caja</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-6 col-xl-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <h2 class="h5 card-title">Catálogo</h2>
+                <p class="card-text text-secondary">
+                    Consulta los productos disponibles.
+                </p>
+                <a class="btn btn-pa" href="{% url 'catalogo:lista_productos' %}">
+                    Abrir catálogo
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if request.user.rol == "JEFE" %}
+    <div class="col-12 col-md-6 col-xl-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <h2 class="h5 card-title">Usuarios</h2>
+                <p class="card-text text-secondary">
+                    Crea cuentas y administra sus estados y roles.
+                </p>
+                <a class="btn btn-outline-primary" href="{% url 'usuarios:lista' %}">
+                    Gestionar usuarios
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

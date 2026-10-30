@@ -1,0 +1,80 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Punto Aparte{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'vendor/bootstrap/css/bootstrap.min.css' %}">
+    <style>
+        :root {
+            --pa-navy: #17324d;
+            --pa-red: #c93440;
+        }
+
+        body {
+            background: #f4f6f8;
+        }
+
+        .navbar-pa {
+            background: var(--pa-navy);
+        }
+
+        .btn-pa {
+            color: #fff;
+            background: var(--pa-red);
+            border-color: var(--pa-red);
+        }
+
+        .btn-pa:hover {
+            color: #fff;
+            background: #a92732;
+            border-color: #a92732;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-pa">
+        <div class="container">
+            <a class="navbar-brand fw-semibold" href="{% url 'inicio' %}">Punto Aparte</a>
+
+            {% if request.user.is_authenticated %}
+            <div class="d-flex align-items-center gap-3">
+                <a class="nav-link text-white" href="{% url 'catalogo:lista_productos' %}">
+                    Catálogo
+                </a>
+
+                {% if request.user.rol == "JEFE" %}
+                <a class="nav-link text-white" href="{% url 'usuarios:lista' %}">
+                    Usuarios
+                </a>
+                {% endif %}
+
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button class="btn btn-sm btn-outline-light" type="submit">
+                        Cerrar sesión
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </nav>
+
+    <main class="container py-4">
+        {% for message in messages %}
+        <div
+            class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="{% static 'vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+</body>
+
+</html>

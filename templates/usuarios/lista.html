@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Usuarios | Punto Aparte{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="h2 fw-bold mb-1">Usuarios</h1>
+        <p class="text-secondary mb-0">Administra las cuentas, roles y estados.</p>
+    </div>
+    <a class="btn btn-pa" href="{% url 'usuarios:crear' %}">Crear cuenta</a>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Nombre</th>
+                    <th>Usuario generado</th>
+                    <th>Correo</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for usuario in usuarios %}
+                <tr>
+                    <td class="fw-semibold">{{ usuario.first_name }} {{ usuario.last_name }}</td>
+                    <td><code>{{ usuario.username }}</code></td>
+                    <td>{{ usuario.email }}</td>
+                    <td>{{ usuario.get_rol_display }}</td>
+                    <td>
+                        {% if usuario.is_active %}
+                        <span class="badge text-bg-success">Activa</span>
+                        {% else %}
+                        <span class="badge text-bg-secondary">Desactivada</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a class="btn btn-sm btn-outline-primary" href="{% url 'usuarios:editar' usuario.id %}">
+                                Editar
+                            </a>
+
+                            {% if usuario != request.user %}
+                            <form method="post" action="{% url 'usuarios:cambiar_estado' usuario.id %}">
+                                {% csrf_token %}
+                                <button
+                                    class="btn btn-sm {% if usuario.is_active %}btn-outline-danger{% else %}btn-outline-success{% endif %}"
+                                    type="submit">
+                                    {% if usuario.is_active %}Desactivar{% else %}Activar{% endif %}
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-secondary py-4">
+                        No hay cuentas registradas.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
