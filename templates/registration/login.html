@@ -19,14 +19,14 @@
 
     {% if form.errors %}
     <div class="alert alert-danger" role="alert">
-        El nombre de usuario o la contraseña no son correctos.
+        El nombre de usuario, correo o contraseña no son correctos.
     </div>
     {% endif %}
 
     <form method="post">
         {% csrf_token %}
         <div class="pa-acceso-campo">
-            <label for="id_username" class="form-label">Nombre de usuario</label>
+            <label for="id_username" class="form-label">Nombre de usuario o correo</label>
             <input id="id_username" class="form-control" type="text" name="username"
                 value="{{ form.username.value|default_if_none:'' }}"
                 autocomplete="username" required autofocus>

@@ -68,7 +68,13 @@
                         {% endfor %}
                     </td>
                     <td>${{ producto.precio }}</td>
-                    <td>{{ producto.stock }}</td>
+                    <td>
+                        {% if producto.stock == 0 %}
+                        {% include "includes/sin_stock.html" %}
+                        {% else %}
+                        {{ producto.stock }}
+                        {% endif %}
+                    </td>
                     <td>{{ producto.codigo_barras|default:"—" }}</td>
 
                     {% if request.user.rol == "JEFE" %}
@@ -98,7 +104,11 @@
                 {% empty %}
                 <tr>
                     <td colspan="{% if request.user.rol == 'JEFE' %}8{% else %}6{% endif %}" class="text-center text-secondary py-4">
+                        {% if busqueda %}
+                        No hay productos que coincidan con «{{ busqueda }}».
+                        {% else %}
                         No hay productos para mostrar.
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}

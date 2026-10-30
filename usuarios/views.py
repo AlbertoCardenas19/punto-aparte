@@ -6,6 +6,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .decorators import jefe_required
@@ -20,8 +21,19 @@ def inicio(request):
 
 @jefe_required
 def lista_usuarios(request):
+    busqueda = request.GET.get("q", "").strip()
     usuarios = Usuario.objects.order_by("last_name", "first_name")
-    return render(request, "usuarios/lista.html", {"usuarios": usuarios})
+    if busqueda:
+        usuarios = usuarios.filter(
+            Q(first_name__icontains=busqueda)
+            | Q(last_name__icontains=busqueda)
+            | Q(email__icontains=busqueda)
+        )
+    return render(
+        request,
+        "usuarios/lista.html",
+        {"usuarios": usuarios, "busqueda": busqueda},
+    )
 
 
 @never_cache

@@ -25,6 +25,12 @@
 .pa-app form p { margin-bottom: 1.25rem; }
 .pa-app .helptext { display: block; font-size: .875rem; color: var(--pa-muted); margin-top: .4rem; }
 .pa-app .errorlist { color: #a92732; padding-left: 1.25rem; }
+.pa-app .pa-error-campo { color: var(--pa-red); font-size: .875rem; margin: .35rem 0 0; }
+.pa-app .pa-sin-stock { color: var(--pa-red); display: inline-flex; align-items: center; gap: .35rem; font-size: .875rem; font-weight: 700; }
+.pa-app .pa-icono-alerta { border: 2px solid currentColor; border-radius: 50%; display: inline-grid; place-items: center; width: 1.25rem; height: 1.25rem; font-size: .8rem; line-height: 1; }
+.pa-app .pa-accion-estado { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin-bottom: 1rem; }
+.pa-app .pa-estado-breve { color: var(--pa-muted); font-size: .875rem; margin: .4rem 0 0; min-height: 1.4em; }
+.pa-app .pa-accion-estado .pa-estado-breve { margin: 0; }
 .pa-app .form-check-input:checked { background-color: var(--pa-navy); border-color: var(--pa-navy); }
 .pa-app .btn { border-radius: .65rem; padding: .6rem 1.1rem; font-weight: 600; }
 .pa-app .btn-sm { padding: .35rem .75rem; font-size: .875rem; }
@@ -41,6 +47,7 @@
 .pa-app .text-bg-primary { background-color: var(--pa-navy) !important; }
 .pa-app code { color: var(--pa-navy); }
 .pa-app .alert { border-radius: .85rem; }
+.pa-app .alert .pa-icono-alerta { margin-right: .35rem; }
 .pa-app .page-link { color: var(--pa-navy); border-color: var(--pa-border); }
 .pa-app .dropdown-menu { border-color: var(--pa-border); border-radius: .75rem; padding: .5rem; }
 .pa-app .dropdown-item { border-radius: .4rem; padding: .6rem .9rem; }

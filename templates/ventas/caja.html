@@ -57,11 +57,17 @@
                             min="1" max="{{ producto.stock }}" {% if producto.stock == 0 %}disabled{% endif %}>
                     </div>
                     <button class="btn btn-outline-primary" type="submit" {% if producto.stock == 0 %}disabled{% endif %}>Agregar</button>
-                    {% if producto.stock == 0 %}<span class="small text-secondary">Sin stock</span>{% endif %}
+                    {% if producto.stock == 0 %}{% include "includes/sin_stock.html" %}{% endif %}
                 </form>
             </article>
             {% empty %}
-            <p class="text-secondary py-4">No se encontraron productos.</p>
+            <p class="text-secondary py-4">
+                {% if busqueda %}
+                No hay productos que coincidan con «{{ busqueda }}».
+                {% else %}
+                No hay productos disponibles.
+                {% endif %}
+            </p>
             {% endfor %}
         </div>
 

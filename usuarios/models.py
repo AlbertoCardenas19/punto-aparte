@@ -3,6 +3,7 @@ import unicodedata
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.db.models.functions import Lower
 
 
 class Usuario(AbstractUser):
@@ -27,6 +28,13 @@ class Usuario(AbstractUser):
     class Meta:
         verbose_name = "usuario"
         verbose_name_plural = "usuarios"
+        constraints = [
+            models.UniqueConstraint(
+                Lower("email"),
+                name="usuarios_email_ci_unique",
+                violation_error_message="Ya existe una cuenta con este correo electrónico.",
+            ),
+        ]
 
     def __str__(self):
         return self.username
@@ -52,7 +60,15 @@ class Usuario(AbstractUser):
             numero += 1
 
     def save(self, *args, **kwargs):
+        self.first_name = self._capitalizar_nombre(self.first_name)
+        self.last_name = self._capitalizar_nombre(self.last_name)
+        self.email = self.email.strip().lower()
+
         if self._state.adding:
             self.username = self._generar_username()
 
         super().save(*args, **kwargs)
+
+    @staticmethod
+    def _capitalizar_nombre(valor):
+        return " ".join(palabra.capitalize() for palabra in valor.split())

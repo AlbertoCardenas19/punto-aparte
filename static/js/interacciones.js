@@ -17,7 +17,7 @@ document.addEventListener('hidden.bs.dropdown', event => {
 for (const form of document.querySelectorAll('[data-busqueda-viva]')) {
     const input = form.querySelector('[name="q"]');
     const status = document.createElement('p');
-    status.className = 'small text-secondary mt-2';
+    status.className = 'pa-estado-breve';
     status.setAttribute('role', 'status');
     form.append(status);
     let timer, controller, version = 0;
@@ -45,7 +45,7 @@ for (const form of document.querySelectorAll('[data-busqueda-viva]')) {
                 }
                 results.replaceWith(next);
                 history.replaceState(null, '', url);
-                status.textContent = 'Resultados actualizados.';
+                status.textContent = '';
             } catch (error) {
                 if (current === version && error.name !== 'AbortError') status.textContent = 'No se pudo actualizar. Usa Buscar para intentarlo de nuevo.';
             } finally {
