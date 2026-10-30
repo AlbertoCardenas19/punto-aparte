@@ -43,6 +43,16 @@ def lista_categorias(request):
 
 
 @jefe_required
+def inventario(request):
+    productos = Producto.objects.order_by("nombre")
+    return render(
+        request,
+        "catalogo/inventario.html",
+        {"productos": productos},
+    )
+
+
+@jefe_required
 def crear_producto(request):
     form = ProductoForm(request.POST or None)
 

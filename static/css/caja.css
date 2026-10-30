@@ -1,20 +1,17 @@
 /* Estilos exclusivos de caja. La autenticación y las otras páginas conservan su diseño. */
 .pa-caja { background: #f1f4f8; color: #1b2d48; }
-.pa-caja .pa-caja-cabecera { background: white; border-bottom: 1px solid #d9e1eb; padding: 1.5rem clamp(1rem, 3vw, 3rem); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1.5rem; }
-.pa-caja .pa-caja-marca { font-size: 1.5rem; font-weight: 700; color: #1b2d48; text-decoration: none; }
-.pa-caja .pa-caja-marca small { display: block; font-size: .9rem; font-weight: 400; color: #60738e; margin-top: .25rem; }
-.pa-caja nav a { color: #60738e; text-decoration: none; padding: .75rem 1rem; border-radius: .85rem; }
-.pa-caja nav a:hover, .pa-caja nav a:focus-visible { background: #e8eef6; }
-.pa-caja .pa-caja-activa { background: #e8eef6; color: #1b2d48; font-weight: 700; }
-.pa-caja .pa-caja-contenido { max-width: 1760px; margin: auto; padding: 1.5rem clamp(1rem, 3vw, 3rem) 3rem; }
+.pa-caja .pa-caja-contenido { min-width: 0; width: 100%; max-width: 1760px; padding: 1.5rem clamp(1rem, 3vw, 3rem) 3rem; }
 .pa-caja .pa-caja-panel { background: #fff; border: 1px solid #d9e1eb; border-radius: 1.25rem; padding: clamp(1rem, 2vw, 2rem); height: 100%; }
-.pa-caja .pa-caja-productos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; }
-.pa-caja .pa-caja-producto { border: 1px solid #d9e1eb; border-radius: 1rem; padding: 1.5rem; display: flex; flex-direction: column; overflow-wrap: anywhere; }
+.pa-caja .pa-caja-productos { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: .9rem; }
+.pa-caja .pa-caja-producto { border: 1px solid #d9e1eb; border-radius: .9rem; padding: 1rem; display: flex; flex-direction: column; overflow-wrap: anywhere; }
+.pa-caja .pa-caja-producto h2 { min-height: 2.5em; margin-bottom: .45rem; }
 .pa-caja .pa-busqueda-productos { margin: .25rem 0 1.5rem; padding: .25rem 0; }
-.pa-caja .pa-caja-meta-producto { color: #60738e; display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .65rem; font-size: .875rem; margin-bottom: 1rem; }
+.pa-caja .pa-caja-indicadores { min-height: 1.4rem; display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .6rem; margin-bottom: .75rem; }
+.pa-caja .pa-en-compra { color: var(--pa-muted); font-size: .78rem; }
 .pa-caja .pa-sin-stock { font-size: .75rem; font-weight: 600; gap: .25rem; }
 .pa-caja .pa-sin-stock .pa-icono-alerta { border-width: 1px; width: 1rem; height: 1rem; font-size: .65rem; }
-.pa-caja .pa-caja-precio { font-size: 1.3rem; font-weight: 700; margin-top: auto; padding-top: 1.5rem; }
+.pa-caja .pa-caja-precio { font-size: 1.25rem; font-weight: 750; margin: auto 0 .65rem; padding-top: .35rem; }
+.pa-caja [data-agregar-producto] .pa-estado-breve { margin-bottom: 0; }
 .pa-caja .form-control { border-color: #d9e1eb; border-radius: .65rem; min-height: 2.75rem; }
 .pa-caja .pa-caja-resumen { padding-bottom: 1.5rem; border-bottom: 1px solid #d9e1eb; margin-bottom: 1rem; }
 .pa-caja .table { --bs-table-color: #1b2d48; --bs-table-border-color: #d9e1eb; }
@@ -27,15 +24,11 @@
 .pa-caja .pa-cantidad-valor { border-left: 0; border-right: 0; border-radius: 0; min-width: 0; width: 100%; appearance: textfield; }
 .pa-caja .pa-cantidad-valor::-webkit-inner-spin-button, .pa-caja .pa-cantidad-valor::-webkit-outer-spin-button { appearance: none; margin: 0; }
 .pa-caja .pa-cantidad-control :focus-visible { outline: 3px solid #6f91b5; outline-offset: 2px; position: relative; z-index: 1; }
-.pa-caja [data-producto-carrito-form] { margin-top: .25rem; }
-.pa-caja [data-producto-carrito-form] .pa-cantidad-control { width: fit-content; }
-.pa-caja [data-producto-carrito-form] .pa-estado-breve { margin-bottom: 0; }
 .pa-caja .pa-caja-total { font-size: clamp(1.4rem, 2vw, 1.8rem); gap: .75rem; flex-wrap: wrap; }
 .pa-caja .pa-caja-cobrar { --bs-btn-color: white; --bs-btn-bg: #13294c; --bs-btn-border-color: #13294c; --bs-btn-hover-color: white; --bs-btn-hover-bg: #203e65; --bs-btn-hover-border-color: #203e65; --bs-btn-active-color: white; --bs-btn-active-bg: #0c1c35; --bs-btn-active-border-color: #0c1c35; --bs-btn-focus-shadow-rgb: 19, 41, 76; min-height: 4.5rem; font-weight: 700; border-radius: .85rem; }
-@media (max-width: 575.98px) { .pa-caja .pa-caja-productos { grid-template-columns: 1fr; } }
-/* Encabezado de marca con navegación de alto contraste. */
-.pa-caja .pa-caja-cabecera { background: var(--pa-navy); color: #fff; border-bottom: 3px solid var(--pa-red); }
-.pa-caja .pa-caja-marca { display: flex; align-items: center; gap: 1rem; color: #fff; }
-.pa-caja .pa-caja-marca span { font-size: 1rem; font-weight: 500; }
-.pa-caja .pa-caja-cabecera nav a { color: #fff; }
-.pa-caja .pa-caja-cabecera nav a:hover, .pa-caja .pa-caja-cabecera nav a:focus-visible, .pa-caja .pa-caja-cabecera .pa-caja-activa { color: #fff; background: #304b68; }
+.pa-caja .pa-carrito-movil { width: 100%; border: 0; border-radius: .9rem; background: var(--pa-navy); color: #fff; display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1rem 1.15rem; font-size: 1rem; }
+.pa-caja .pa-carrito-movil strong { font-size: 1.15rem; }
+.pa-caja .modal { color: var(--pa-ink); }
+@media (min-width: 1200px) { .pa-caja .pa-carrito-contenido.collapse { display: block !important; } .pa-caja .pa-carrito-columna { position: sticky; top: 6rem; align-self: flex-start; } }
+@media (max-width: 1199.98px) { .pa-caja .pa-carrito-contenido { margin-top: .75rem; } }
+@media (max-width: 575.98px) { .pa-caja .pa-caja-productos { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; } .pa-caja .pa-caja-producto { padding: .85rem; } .pa-caja .pa-caja-producto h2 { font-size: .9rem; } .pa-caja .pa-caja-precio { font-size: 1.05rem; } }

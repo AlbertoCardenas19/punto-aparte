@@ -9,7 +9,22 @@
 .pa-app { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--pa-ink); background: var(--pa-surface); line-height: 1.6; }
 .pa-app h1, .pa-app h2, .pa-app h3 { color: var(--pa-ink); letter-spacing: -.02em; }
 .pa-app .text-secondary { color: var(--pa-muted) !important; }
-.pa-app main.container { max-width: 1440px; padding: 2rem clamp(1rem, 3vw, 3rem) !important; }
+.pa-app .pa-barra-superior { min-height: 4.5rem; background: var(--pa-navy); color: #fff; border-bottom: 3px solid var(--pa-red); display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .65rem clamp(1rem, 2.5vw, 2rem); position: sticky; top: 0; z-index: 1040; }
+.pa-app .pa-marca { color: #fff; display: inline-flex; align-items: center; gap: .75rem; font-size: 1.05rem; font-weight: 700; text-decoration: none; }
+.pa-app .pa-barra-superior .pa-logo { width: 46px; height: 46px; }
+.pa-app .pa-sesion { display: flex; align-items: center; gap: 1rem; font-size: .9rem; }
+.pa-app .pa-menu-movil { border: 1px solid rgb(255 255 255 / 55%); border-radius: .65rem; background: transparent; color: #fff; width: 2.75rem; height: 2.75rem; font-size: 1.35rem; line-height: 1; }
+.pa-app .pa-estructura { display: grid; grid-template-columns: 16rem minmax(0, 1fr); min-height: calc(100vh - 4.5rem); min-height: calc(100dvh - 4.5rem); }
+.pa-app .pa-estructura-sin-menu { display: block; min-height: 100vh; min-height: 100dvh; }
+.pa-app .pa-menu-lateral { background: #fff; border-right: 1px solid var(--pa-border); padding: 1.5rem 1rem; }
+.pa-app .pa-menu { display: flex; flex-direction: column; gap: .25rem; width: 100%; }
+.pa-app .pa-menu-grupo { color: var(--pa-muted); font-size: .72rem; font-weight: 800; letter-spacing: .08em; margin: 1.25rem .75rem .35rem; text-transform: uppercase; }
+.pa-app .pa-menu-grupo:first-of-type { margin-top: 1rem; }
+.pa-app .pa-menu-enlace { color: var(--pa-ink); border-radius: .7rem; padding: .65rem .75rem; text-decoration: none; }
+.pa-app .pa-menu-enlace:hover, .pa-app .pa-menu-enlace:focus-visible { background: #edf2f7; color: var(--pa-ink); }
+.pa-app .pa-menu-enlace.active { background: #e1eaf4; color: var(--pa-navy); font-weight: 700; box-shadow: inset 3px 0 var(--pa-red); }
+.pa-app .pa-menu-lateral-movil { --bs-offcanvas-width: min(20rem, 88vw); color: var(--pa-ink); }
+.pa-app .pa-contenido { min-width: 0; width: 100%; max-width: 1760px; padding: 2rem clamp(1rem, 3vw, 3rem) 3rem; }
 .pa-app .navbar-pa { background: var(--pa-navy); padding: 1rem 0; border-bottom: 3px solid var(--pa-red); }
 .pa-app .pa-nav-contenido { padding-inline: clamp(1rem, 3vw, 3rem); gap: 1rem; }
 .pa-app .pa-logo { width: 64px; height: 64px; object-fit: contain; border-radius: 50%; background: white; flex-shrink: 0; }
@@ -54,9 +69,14 @@
 .pa-app .dropdown-menu { border-color: var(--pa-border); border-radius: .75rem; padding: .5rem; }
 .pa-app .dropdown-item { border-radius: .4rem; padding: .6rem .9rem; }
 .pa-app .dropdown-item:active { background: var(--pa-navy); }
+.pa-app .pa-detalle-producto { display: grid; gap: 0; }
+.pa-app .pa-detalle-producto div { border-bottom: 1px solid var(--pa-border); padding: .9rem 0; }
+.pa-app .pa-detalle-producto dt { color: var(--pa-muted); font-size: .8rem; font-weight: 700; margin-bottom: .2rem; }
+.pa-app .pa-detalle-producto dd { margin: 0; overflow-wrap: anywhere; }
 .pa-app .pa-venta-total { font-size: 1.25rem; }
 .pa-app :is(a, button):focus-visible { outline: 3px solid #6f91b5; outline-offset: 3px; }
-@media (max-width: 575.98px) { .pa-app .navbar .pa-nav-contenido { align-items: flex-start; } .pa-app .table td, .pa-app .table th { padding: .75rem; } .pa-app .pa-form-acciones { margin-top: 1.5rem; } }
+@media (max-width: 991.98px) { .pa-app .pa-estructura { display: block; min-height: calc(100vh - 4.5rem); min-height: calc(100dvh - 4.5rem); } }
+@media (max-width: 575.98px) { .pa-app .pa-marca span { display: none; } .pa-app .pa-barra-superior { gap: .6rem; } .pa-app .pa-sesion { margin-left: auto; } .pa-app .table td, .pa-app .table th { padding: .75rem; } .pa-app .pa-form-acciones { margin-top: 1.5rem; } }
 /* Los menús trasladados al body quedan por encima de tablas y tarjetas. */
 body > .dropdown-menu { z-index: 1080; border-color: var(--pa-border); border-radius: .75rem; padding: .5rem; }
 .pa-app div.dt-container .dt-layout-row { align-items: center; gap: .75rem; margin: 0 0 1rem; }

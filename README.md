@@ -41,7 +41,7 @@ No guardes el `.env` en el repositorio. Para una instalación nueva, crea el arc
 
 ## Interfaz y dependencias
 
-Bootstrap se sirve desde `static/vendor/bootstrap/`; no se necesita Node para ejecutar el servidor Django con esos archivos estáticos ya presentes. `package.json` declara Bootstrap para tareas de mantenimiento de los recursos frontend. Revisa `package-lock.json` antes de usar `npm ci`.
+Bootstrap, jQuery y DataTables se sirven desde `static/vendor/`; no se necesita Node para ejecutar el servidor Django con esos archivos estáticos ya presentes. `package.json` declara estas dependencias para mantener los recursos frontend. Revisa `package-lock.json` antes de usar `npm ci`.
 
 ## Documentos
 

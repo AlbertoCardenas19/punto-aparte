@@ -2,8 +2,9 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Case, IntegerField, Q, Value, When
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.dateparse import parse_date
 
 from catalogo.models import Producto
 from usuarios.models import Usuario
@@ -16,8 +17,48 @@ CLAVE_CARRITO = "carrito_venta"
 
 
 @login_required
+def lista_ventas(request):
+    ventas = Venta.objects.select_related("cajero").order_by("-fecha")
+
+    if request.user.rol != Usuario.Rol.JEFE:
+        ventas = ventas.filter(cajero=request.user)
+
+    fecha_desde = request.GET.get("desde", "").strip()
+    fecha_hasta = request.GET.get("hasta", "").strip()
+    cajero_id = request.GET.get("cajero", "").strip()
+
+    if parse_date(fecha_desde):
+        ventas = ventas.filter(fecha__date__gte=fecha_desde)
+    if parse_date(fecha_hasta):
+        ventas = ventas.filter(fecha__date__lte=fecha_hasta)
+    if request.user.rol == Usuario.Rol.JEFE and cajero_id.isdigit():
+        ventas = ventas.filter(cajero_id=int(cajero_id))
+
+    cajeros = None
+    if request.user.rol == Usuario.Rol.JEFE:
+        cajeros = (
+            Usuario.objects.filter(ventas__isnull=False)
+            .distinct()
+            .order_by("first_name", "last_name")
+        )
+
+    return render(
+        request,
+        "ventas/lista.html",
+        {
+            "ventas": ventas,
+            "cajeros": cajeros,
+            "fecha_desde": fecha_desde,
+            "fecha_hasta": fecha_hasta,
+            "cajero_seleccionado": cajero_id,
+        },
+    )
+
+
+@login_required
 def caja(request):
     carrito = request.session.get(CLAVE_CARRITO, {})
+    codigo_encontrado = None
     solicitud_dinamica = (
         request.headers.get("X-Requested-With") == "XMLHttpRequest"
     )
@@ -60,38 +101,19 @@ def caja(request):
             if not solicitud_dinamica:
                 return redirect("ventas:caja")
 
-        if accion == "establecer":
-            try:
-                producto_id = int(request.POST.get("producto_id", ""))
-                cantidad = int(request.POST.get("cantidad", ""))
-            except ValueError:
-                messages.error(request, "Producto o cantidad no válidos.")
-            else:
-                id_texto = str(producto_id)
-                producto = Producto.objects.filter(
-                    pk=producto_id,
-                    activo=True,
-                ).first()
+        if accion == "escanear":
+            codigo = request.POST.get("codigo", "").strip()
+            producto = Producto.objects.filter(
+                codigo_barras=codigo,
+                activo=True,
+            ).first()
+            codigo_encontrado = producto is not None
 
-                if cantidad < 0:
-                    messages.error(
-                        request, "La cantidad no puede ser negativa."
-                    )
-                elif cantidad == 0:
-                    carrito.pop(id_texto, None)
-                    request.session[CLAVE_CARRITO] = carrito
-                elif not producto:
-                    messages.error(request, "El producto no está disponible.")
-                    carrito.pop(id_texto, None)
-                    request.session[CLAVE_CARRITO] = carrito
-                elif cantidad > producto.stock:
-                    messages.error(
-                        request,
-                        f"Stock insuficiente de «{producto.nombre}». "
-                        f"Disponible: {producto.stock}.",
-                    )
-                else:
-                    carrito[id_texto] = cantidad
+            if producto and producto.stock > 0:
+                id_texto = str(producto.pk)
+                nueva_cantidad = int(carrito.get(id_texto, 0)) + 1
+                if nueva_cantidad <= producto.stock:
+                    carrito[id_texto] = nueva_cantidad
                     request.session[CLAVE_CARRITO] = carrito
 
             if not solicitud_dinamica:
@@ -169,9 +191,14 @@ def caja(request):
             | Q(categorias__nombre__icontains=busqueda)
         ).distinct()
 
-    pagina = Paginator(productos.order_by("nombre"), 20).get_page(
-        request.GET.get("page")
-    )
+    productos = productos.annotate(
+        sin_stock=Case(
+            When(stock=0, then=Value(1)),
+            default=Value(0),
+            output_field=IntegerField(),
+        )
+    ).order_by("sin_stock", "nombre")
+    pagina = Paginator(productos, 12).get_page(request.GET.get("page"))
 
     for producto in pagina.object_list:
         producto.cantidad_carrito = int(
@@ -192,7 +219,7 @@ def caja(request):
             "subtotal": subtotal,
         })
 
-    return render(
+    respuesta = render(
         request,
         "ventas/caja.html",
         {
@@ -202,6 +229,11 @@ def caja(request):
             "total_carrito": total_carrito,
         },
     )
+    if codigo_encontrado is not None:
+        respuesta.headers["X-Codigo-Encontrado"] = (
+            "1" if codigo_encontrado else "0"
+        )
+    return respuesta
 
 
 @login_required

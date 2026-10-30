@@ -60,6 +60,20 @@ for (const table of document.querySelectorAll('[data-tabla-listado]')) {
     });
 }
 
+function reemplazarResultadosBusqueda(doc, url) {
+    const results = document.querySelector('[data-resultados-busqueda]');
+    const next = doc.querySelector('[data-resultados-busqueda]');
+    if (!results || !next) throw new Error('Resultados no disponibles');
+    for (const [toggle, entry] of menus) {
+        bootstrap.Dropdown.getInstance(toggle)?.hide();
+        entry.menu.remove();
+        menus.delete(toggle);
+    }
+    results.replaceWith(next);
+    prepararBotonesAgregar(next);
+    history.replaceState(null, '', url);
+}
+
 for (const form of document.querySelectorAll('[data-busqueda-viva]')) {
     const input = form.querySelector('[name="q"]');
     const status = document.createElement('p');
@@ -67,6 +81,7 @@ for (const form of document.querySelectorAll('[data-busqueda-viva]')) {
     status.setAttribute('role', 'status');
     form.append(status);
     let timer, controller, version = 0;
+
     input.addEventListener('input', () => {
         clearTimeout(timer);
         controller?.abort();
@@ -74,31 +89,68 @@ for (const form of document.querySelectorAll('[data-busqueda-viva]')) {
         timer = setTimeout(async () => {
             controller = new AbortController();
             const url = new URL(form.action || location.href);
-            url.search = new URLSearchParams(new FormData(form)).toString();
+            url.search = new URLSearchParams({q: input.value}).toString();
             const results = document.querySelector('[data-resultados-busqueda]');
             results.setAttribute('aria-busy', 'true');
             status.textContent = 'Buscando…';
             try {
                 const response = await fetch(url, {signal: controller.signal});
                 if (!response.ok) throw new Error('HTTP');
-                const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
-                const next = doc.querySelector('[data-resultados-busqueda]');
-                if (!next) throw new Error('Resultados no disponibles');
+                const doc = new DOMParser().parseFromString(
+                    await response.text(), 'text/html'
+                );
                 if (current !== version) return;
-                for (const [toggle, entry] of menus) {
-                    bootstrap.Dropdown.getInstance(toggle)?.hide();
-                    entry.menu.remove(); menus.delete(toggle);
-                }
-                results.replaceWith(next);
-                prepararControlesProductos(next);
-                history.replaceState(null, '', url);
+                reemplazarResultadosBusqueda(doc, url);
                 status.textContent = '';
             } catch (error) {
-                if (current === version && error.name !== 'AbortError') status.textContent = 'No se pudo actualizar. Usa Buscar para intentarlo de nuevo.';
+                if (current === version && error.name !== 'AbortError') {
+                    status.textContent = 'No se pudo actualizar. Usa Buscar para intentarlo nuevamente.';
+                }
             } finally {
-                if (current === version) document.querySelector('[data-resultados-busqueda]').removeAttribute('aria-busy');
+                if (current === version) {
+                    document.querySelector('[data-resultados-busqueda]')
+                        .removeAttribute('aria-busy');
+                }
             }
         }, 300);
+    });
+
+    input.addEventListener('keydown', async event => {
+        if (event.key !== 'Enter' || !input.value.trim()) return;
+        event.preventDefault();
+        clearTimeout(timer);
+        controller?.abort();
+        ++version;
+        const url = new URL(form.action || location.href);
+        url.search = new URLSearchParams({q: input.value.trim()}).toString();
+        const token = document.querySelector('[name="csrfmiddlewaretoken"]')?.value;
+        if (!token) {
+            location.assign(url);
+            return;
+        }
+        const datos = new FormData();
+        datos.append('csrfmiddlewaretoken', token);
+        datos.append('accion', 'escanear');
+        datos.append('codigo', input.value.trim());
+        status.textContent = 'Buscando…';
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                body: datos,
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+            });
+            if (!response.ok) throw new Error('HTTP');
+            const doc = new DOMParser().parseFromString(
+                await response.text(), 'text/html'
+            );
+            reemplazarResultadosBusqueda(doc, url);
+            if (response.headers.get('X-Codigo-Encontrado') === '1') {
+                aplicarActualizacionCarrito(doc);
+            }
+            status.textContent = '';
+        } catch (error) {
+            status.textContent = 'No se pudo buscar. Usa el botón Buscar para intentarlo nuevamente.';
+        }
     });
 }
 
@@ -176,22 +228,28 @@ function aplicarActualizacionCarrito(doc) {
     const nextMessages = doc.querySelector('[data-mensajes]');
     if (currentMessages && nextMessages) currentMessages.replaceWith(nextMessages);
 
+    const nextModal = doc.querySelector('#modal-cobro');
+    nextModal?.remove();
+    document.querySelector('#modal-cobro')?.remove();
+
     const currentPanel = document.querySelector('[data-carrito-panel]');
     currentPanel.replaceWith(nextPanel);
     prepararCarrito(nextPanel);
+    if (nextModal) document.body.append(nextModal);
 
-    for (const form of document.querySelectorAll('[data-producto-carrito-form]')) {
-        const nextForm = doc.querySelector(
-            `[data-producto-carrito-form][data-producto-id="${form.dataset.productoId}"]`
+    const currentMobileTotal = document.querySelector('[data-total-carrito-movil]');
+    const nextMobileTotal = doc.querySelector('[data-total-carrito-movil]');
+    if (currentMobileTotal && nextMobileTotal) {
+        currentMobileTotal.textContent = nextMobileTotal.textContent;
+    }
+
+    for (const card of [...document.querySelectorAll('[data-producto-tarjeta]')]) {
+        const nextCard = doc.querySelector(
+            `[data-producto-tarjeta][data-producto-id="${card.dataset.productoId}"]`
         );
-        if (!nextForm) continue;
-        const input = form.querySelector('.pa-cantidad-valor');
-        const nextInput = nextForm.querySelector('.pa-cantidad-valor');
-        input.value = nextInput.value;
-        input.max = nextInput.max;
-        input.disabled = false;
-        ajustarBotonesCantidad(input);
-        form.removeAttribute('aria-busy');
+        if (!nextCard) continue;
+        card.replaceWith(nextCard);
+        prepararBotonesAgregar(nextCard);
     }
 }
 
@@ -235,47 +293,33 @@ function prepararCarrito(panel = document) {
     });
 }
 
-function prepararControlesProductos(contenedor = document) {
-    for (const form of contenedor.querySelectorAll('[data-producto-carrito-form]')) {
-        if (form.dataset.carritoListo) continue;
-        form.dataset.carritoListo = 'true';
-        const input = form.querySelector('.pa-cantidad-valor');
-        const status = form.querySelector('[data-producto-carrito-estado]');
-        let timer;
-
-        const sincronizar = async () => {
-            clearTimeout(timer);
+function prepararBotonesAgregar(contenedor = document) {
+    for (const form of contenedor.querySelectorAll('[data-agregar-producto]')) {
+        if (form.dataset.agregarListo) continue;
+        form.dataset.agregarListo = 'true';
+        const status = form.querySelector('[data-agregar-estado]');
+        form.addEventListener('submit', async event => {
+            event.preventDefault();
             const datos = new FormData(form);
-            const controles = [...form.querySelectorAll('button, input[type="number"]')];
+            const button = form.querySelector('button[type="submit"]');
             form.setAttribute('aria-busy', 'true');
             status.textContent = '';
-            controles.forEach(control => control.disabled = true);
+            button.disabled = true;
             try {
                 aplicarActualizacionCarrito(
                     await solicitarActualizacionCarrito(form, datos)
                 );
             } catch (error) {
                 form.removeAttribute('aria-busy');
-                input.disabled = false;
-                ajustarBotonesCantidad(input);
-                status.textContent = 'No se pudo actualizar. Intenta nuevamente.';
+                button.disabled = false;
+                status.textContent = 'No se pudo agregar. Intenta nuevamente.';
             }
-        };
-
-        const programar = demora => {
-            clearTimeout(timer);
-            timer = setTimeout(sincronizar, demora);
-        };
-        prepararControlCantidad(input, programar);
-        form.addEventListener('submit', event => {
-            event.preventDefault();
-            sincronizar();
         });
     }
 }
 
 prepararCarrito();
-prepararControlesProductos();
+prepararBotonesAgregar();
 const copy = document.querySelector('[data-copiar-password]');
 copy?.addEventListener('click', async () => {
     const input = document.querySelector('#password-temporal');

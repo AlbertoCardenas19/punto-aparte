@@ -65,7 +65,7 @@ Estas son reglas aprobadas; consulta `estado-actual.md` para saber cuáles está
 
 ## Caja y atención al cliente
 
-- Se necesita apertura, cierre y arqueo diario de caja.
+- La librería todavía debe confirmar si cuenta el dinero al abrir y cerrar el día. Hasta definirlo, no se exige apertura de caja para vender ni se implementan apertura, cierre o arqueo.
 - La operación prevista es una caja en el local.
 - Se requiere una segunda pantalla para mostrar productos, cantidades, precios y total al cliente.
 - El diseño de referencia incluye búsqueda y filtros de categorías, compra actual, subtotal, descuentos, total y una acción destacada para cobrar.

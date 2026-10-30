@@ -6,22 +6,6 @@
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/caja.css' %}">{% endblock %}
 {% block body_class %}pa-caja{% endblock %}
 {% block main_class %}pa-caja-contenido{% endblock %}
-{% block navigation %}
-<header class="pa-caja-cabecera">
-
-    <a class="pa-caja-marca" href="{% url 'inicio' %}"><img class="pa-logo" src="{% static 'img/logo_punto_aparte.jpg' %}" alt="Punto Aparte, librería"><span>Sistema de caja</span></a>
-    <nav aria-label="Navegación de caja" class="d-flex flex-wrap gap-2">
-        <a class="pa-caja-activa" href="{% url 'ventas:caja' %}" aria-current="page">Venta</a>
-        <a href="{% url 'catalogo:lista_productos' %}">Productos</a>
-        <a href="{% url 'catalogo:lista_categorias' %}">Categorías</a>
-        {% if request.user.rol == 'JEFE' %}<a href="{% url 'usuarios:lista' %}">Usuarios</a>{% endif %}
-    </nav>
-    <div class="d-flex flex-wrap align-items-center gap-3">
-        <span>Caja · {{ request.user.get_full_name|default:request.user.username }}</span>
-        <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="btn btn-sm btn-outline-light" type="submit">Cerrar sesión</button></form>
-    </div>
-</header>
-{% endblock %}
 {% block content %}
 <div class="mb-4">
     <h1 class="h2 fw-bold mb-1">Nueva venta</h1>
@@ -43,32 +27,26 @@
         <div data-resultados-busqueda>
         <div class="pa-caja-productos">
             {% for producto in pagina %}
-            <article class="pa-caja-producto">
+            <article class="pa-caja-producto" data-producto-tarjeta data-producto-id="{{ producto.pk }}"
+                data-codigo-barras="{{ producto.codigo_barras|default:'' }}">
                 <h2 class="h6 fw-bold">{{ producto.nombre }}</h2>
-                <div class="pa-caja-meta-producto">
-                    <span>Stock: {{ producto.stock }}{% if producto.codigo_barras %} · {{ producto.codigo_barras }}{% endif %}</span>
-                    {% if producto.stock == 0 %}{% include "includes/sin_stock.html" %}{% endif %}
-                </div>
-                {% if producto.marca %}<p class="small text-secondary">{{ producto.marca }}</p>{% endif %}
                 <p class="pa-caja-precio">${{ producto.precio|localize }}</p>
-                <form method="post" data-producto-carrito-form data-producto-id="{{ producto.pk }}">
+                <div class="pa-caja-indicadores">
+                    {% if producto.stock == 0 %}{% include "includes/sin_stock.html" %}{% endif %}
+                    <span class="pa-en-compra" data-cantidad-en-carrito {% if producto.cantidad_carrito == 0 %}hidden{% endif %}>
+                        En compra: <strong>{{ producto.cantidad_carrito }}</strong>
+                    </span>
+                </div>
+                <form method="post" data-agregar-producto>
                     {% csrf_token %}
-                    <input type="hidden" name="accion" value="establecer">
+                    <input type="hidden" name="accion" value="agregar">
                     <input type="hidden" name="producto_id" value="{{ producto.id }}">
-                    <label class="small form-label" for="cantidad-{{ producto.pk }}">Cantidad en la compra</label>
-                    <div class="pa-cantidad-control">
-                        <button class="pa-cantidad-boton" type="button" data-cantidad-restar
-                            aria-label="Restar una unidad de {{ producto.nombre }}"
-                            {% if producto.cantidad_carrito == 0 %}disabled{% endif %}>−</button>
-                        <input class="pa-cantidad-valor" id="cantidad-{{ producto.pk }}" type="number"
-                            aria-label="Cantidad de {{ producto.nombre }}" name="cantidad"
-                            value="{{ producto.cantidad_carrito }}" min="0" max="{{ producto.stock }}"
-                            step="1" inputmode="numeric">
-                        <button class="pa-cantidad-boton" type="button" data-cantidad-sumar
-                            aria-label="Sumar una unidad de {{ producto.nombre }}"
-                            {% if producto.cantidad_carrito >= producto.stock %}disabled{% endif %}>+</button>
-                    </div>
-                    <p class="pa-estado-breve" role="status" data-producto-carrito-estado></p>
+                    <input type="hidden" name="cantidad" value="1">
+                    <button class="btn btn-outline-primary w-100" type="submit"
+                        {% if producto.stock == 0 or producto.cantidad_carrito >= producto.stock %}disabled{% endif %}>
+                        Agregar
+                    </button>
+                    <p class="pa-estado-breve" role="status" data-agregar-estado></p>
                 </form>
             </article>
             {% empty %}
@@ -111,7 +89,13 @@
         </div>
     </section>
 
-    <section class="col-12 col-xl-4">
+    <section class="col-12 col-xl-4 pa-carrito-columna">
+        <button class="pa-carrito-movil d-xl-none" type="button" data-bs-toggle="collapse"
+            data-bs-target="#compra-actual" aria-expanded="false" aria-controls="compra-actual">
+            <span>Compra actual</span>
+            <strong data-total-carrito-movil>${{ total_carrito|localize }}</strong>
+        </button>
+        <div class="collapse pa-carrito-contenido" id="compra-actual">
         <div class="pa-caja-panel" data-carrito-panel>
             <div class="pa-caja-compra">
                 <div class="d-flex justify-content-between align-items-center gap-2 pa-caja-resumen"><h2 class="h4 fw-bold mb-0">Compra actual</h2><span class="small text-secondary">{{ lineas_carrito|length }} producto{{ lineas_carrito|length|pluralize:"s" }}</span></div>
@@ -167,13 +151,8 @@
                     <span>${{ total_carrito|localize }}</span>
                 </div>
 
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="accion" value="confirmar">
-                    <button class="btn pa-caja-cobrar btn-lg w-100" type="submit">
-                        Cobrar ${{ total_carrito|localize }} en efectivo
-                    </button>
-                </form>
+                <button class="btn pa-caja-cobrar btn-lg w-100" type="button" data-bs-toggle="modal"
+                    data-bs-target="#modal-cobro">Cobrar ${{ total_carrito|localize }}</button>
                 {% else %}
                 <p class="text-secondary mb-0">
                     Aún no hay productos en el carrito.
@@ -181,6 +160,32 @@
                 {% endif %}
             </div>
         </div>
+        </div>
     </section>
 </div>
+
+{% if lineas_carrito %}
+<div class="modal fade" id="modal-cobro" tabindex="-1" aria-labelledby="modal-cobro-titulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="modal-cobro-titulo">Confirmar cobro</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p>Se registrará una venta por <strong>${{ total_carrito|localize }}</strong>.</p>
+                <p class="mb-0"><strong>Medio de pago:</strong> efectivo</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Volver</button>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="confirmar">
+                    <button class="btn btn-pa" type="submit">Confirmar venta en efectivo</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

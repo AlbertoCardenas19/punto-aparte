@@ -15,8 +15,9 @@
     <div class="col-12 col-md-6 col-xl-4">
         <div class="card h-100">
             <div class="card-body">
-                <h2 class="h5 card-title">Abrir caja</h2>
-                <a class="btn btn-pa" href="{% url 'ventas:caja' %}">Abrir caja</a>
+                <h2 class="h5 card-title">Nueva venta</h2>
+                <p class="card-text text-secondary">Busca productos y registra una venta en efectivo.</p>
+                <a class="btn btn-pa" href="{% url 'ventas:caja' %}">Ir a Venta</a>
             </div>
         </div>
     </div>
@@ -35,7 +36,29 @@
         </div>
     </div>
 
+    <div class="col-12 col-md-6 col-xl-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h5 card-title">Ventas</h2>
+                <p class="card-text text-secondary">
+                    {% if request.user.rol == "JEFE" %}Consulta las ventas registradas.{% else %}Consulta tus ventas registradas.{% endif %}
+                </p>
+                <a class="btn btn-outline-primary" href="{% url 'ventas:lista' %}">Consultar ventas</a>
+            </div>
+        </div>
+    </div>
+
     {% if request.user.rol == "JEFE" %}
+    <div class="col-12 col-md-6 col-xl-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h5 card-title">Inventario</h2>
+                <p class="card-text text-secondary">Registra ingresos, ajustes y consulta movimientos.</p>
+                <a class="btn btn-outline-primary" href="{% url 'catalogo:inventario' %}">Gestionar inventario</a>
+            </div>
+        </div>
+    </div>
+
     <div class="col-12 col-md-6 col-xl-4">
         <div class="card h-100">
             <div class="card-body">

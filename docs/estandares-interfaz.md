@@ -11,12 +11,16 @@ Lee este documento antes de modificar pantallas. Define requisitos aprobados; su
 
 ## Componentes y adaptación
 
+- En escritorio, usa una barra superior compacta para identidad y sesión, y un menú lateral para las secciones. En móvil, ofrece el mismo menú mediante un control visible y accesible.
+- Agrupa Productos y Categorías bajo Catálogo; ingresos, ajustes e historial bajo Inventario; y Usuarios bajo Administración, visible solo para Jefe. No muestres enlaces hacia pantallas pendientes o vacías.
 - Mantén tipografía, espaciado, botones, campos, tarjetas, tablas, estados y mensajes coherentes entre acceso, inicio, catálogo, stock, usuarios, caja y detalle de venta.
 - Centraliza estilos comunes en `static/css/punto-aparte.css`; limita los estilos de acceso y caja a sus variantes. Evita duplicar reglas o introducir excepciones de color y tamaño sin propósito.
 - Distingue acciones principales, secundarias y destructivas. Usa tamaños consistentes para funciones equivalentes y controles grandes donde lo requiera la operación de caja.
 - Las páginas deben adaptarse a escritorio y móvil, con etiquetas legibles, foco visible y navegación utilizable con teclado. Marca la sección activa de navegación.
 - En tablas con acciones por fila, agrúpalas en un menú desplegable «Acciones». Conserva las acciones y permisos existentes. El menú debe verse completo por encima de la tabla, sin recortes ni desplazamientos para alcanzar sus opciones.
 - Mantén las acciones globales fuera de las filas; no repitas el historial general por producto.
+- En Venta, conserva tarjetas compactas con nombre, precio, estado de stock y botón explícito «Agregar». Las cantidades se modifican en «Compra actual»; en móvil, el carrito puede plegarse, pero el total permanece visible.
+- Usa ventanas modales solo para tareas breves con comportamiento real, como confirmar un cobro en efectivo. No presentes integraciones pendientes como si estuvieran disponibles.
 
 ## Idioma, mensajes y errores
 

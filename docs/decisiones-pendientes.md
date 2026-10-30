@@ -6,7 +6,7 @@ Estas necesidades están mencionadas para el producto, pero no deben implementar
 | --- | --- |
 | Terminal Mercado Pago | Modelo exacto, API o SDK disponible, comportamiento cuando se pierde conexión, confirmación de pago y ambiente de pruebas. |
 | Emisión tributaria chilena | Proveedor/integración, requisitos de boleta y factura, datos de empresa y emisión de nota de crédito; validar el flujo aplicable antes de programarlo. |
-| Caja diaria | Datos de apertura, responsables, efectivo inicial, ingresos/retiros, arqueo, diferencias y cierre. |
+| Caja diaria | Confirmar primero si la librería cuenta el dinero al abrir y cerrar el día. Si la respuesta es afirmativa, definir responsables, efectivo inicial, ingresos/retiros, arqueo, diferencias y cierre. Mientras tanto, vender no requiere abrir caja. |
 | Anulación y devolución | Estados y transiciones, autorización del Jefe, tratamiento de stock y pago, y documento asociado. |
 | Descuentos | Cómo autoriza el dueño, catálogo de descuentos, topes, cálculo, qué significa “una vez por cliente” si no se exige identificar clientes en toda venta, e interacción con devoluciones. |
 | Segunda pantalla | Conexión con la caja, modo de actualización, recuperación tras desconexión y datos visibles. |
@@ -30,3 +30,4 @@ Las imágenes aprobadas de acceso, venta y cliente están disponibles en `docs/r
 - No afirmar integración de pago o emisión tributaria solo porque exista una opción en un `TextChoices`.
 - No considerar la página de detalle de venta como segunda pantalla de cliente.
 - No considerar una migración creada como prueba de que el flujo funcional está completo.
+- No mostrar una selección de documento tributario o datos de factura como si fueran funcionales antes de definir e integrar la emisión correspondiente.

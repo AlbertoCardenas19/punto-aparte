@@ -13,53 +13,63 @@
 
 <body class="pa-app {% block body_class %}{% endblock %}">
     {% block navigation %}
-    <nav class="navbar navbar-expand-lg navbar-dark navbar-pa">
-        <div class="container-fluid pa-nav-contenido">
-            <a class="navbar-brand fw-semibold" href="{% url 'inicio' %}"><img class="pa-logo" src="{% static 'img/logo_punto_aparte.jpg' %}" alt="Punto Aparte, librería"></a>
-
-            {% if request.user.is_authenticated %}
-            <div class="d-flex flex-wrap align-items-center gap-3">
-                <a class="nav-link {% if request.resolver_match.namespace == 'catalogo' and request.resolver_match.url_name != 'lista_categorias' and request.resolver_match.url_name != 'crear_categoria' %}active{% endif %}" {% if request.resolver_match.namespace == 'catalogo' and request.resolver_match.url_name != 'lista_categorias' and request.resolver_match.url_name != 'crear_categoria' %}aria-current="page"{% endif %} href="{% url 'catalogo:lista_productos' %}">
-                    Catálogo
-                </a>
-
-                <a class="nav-link {% if request.resolver_match.url_name == 'lista_categorias' or request.resolver_match.url_name == 'crear_categoria' %}active{% endif %}" {% if request.resolver_match.url_name == 'lista_categorias' or request.resolver_match.url_name == 'crear_categoria' %}aria-current="page"{% endif %} href="{% url 'catalogo:lista_categorias' %}">
-                    Categorías
-                </a>
-
-                {% if request.user.rol == "JEFE" %}
-                <a class="nav-link {% if request.resolver_match.namespace == 'usuarios' %}active{% endif %}" {% if request.resolver_match.namespace == 'usuarios' %}aria-current="page"{% endif %} href="{% url 'usuarios:lista' %}">
-                    Usuarios
-                </a>
-                {% endif %}
-
-                <form method="post" action="{% url 'logout' %}">
-                    {% csrf_token %}
-                    <button class="btn btn-sm btn-outline-light" type="submit">
-                        Cerrar sesión
-                    </button>
-                </form>
-            </div>
-            {% endif %}
+    {% if request.user.is_authenticated %}
+    <header class="pa-barra-superior">
+        <button class="pa-menu-movil d-lg-none" type="button" data-bs-toggle="offcanvas"
+            data-bs-target="#menu-movil" aria-controls="menu-movil" aria-label="Abrir menú principal">
+            <span aria-hidden="true">☰</span>
+        </button>
+        <a class="pa-marca" href="{% url 'inicio' %}">
+            <img class="pa-logo" src="{% static 'img/logo_punto_aparte.jpg' %}" alt="Punto Aparte, librería">
+            <span>Punto Aparte</span>
+        </a>
+        <div class="pa-sesion">
+            <span class="d-none d-md-inline">{{ request.user.get_full_name|default:request.user.username }}</span>
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button class="btn btn-sm btn-outline-light" type="submit">Cerrar sesión</button>
+            </form>
         </div>
-    </nav>
+    </header>
+
+    <div class="offcanvas offcanvas-start pa-menu-lateral-movil" tabindex="-1" id="menu-movil"
+        aria-labelledby="menu-movil-titulo">
+        <div class="offcanvas-header">
+            <h2 class="offcanvas-title h5" id="menu-movil-titulo">Menú</h2>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar menú"></button>
+        </div>
+        <div class="offcanvas-body">
+            {% include "includes/menu_principal.html" %}
+        </div>
+    </div>
+    {% endif %}
     {% endblock %}
 
-    <main class="{% block main_class %}container py-4{% endblock %}">
-        <div data-mensajes>
-            {% for message in messages %}
-            <div
-                class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %}">
-                {% if message.tags == 'error' %}
-                <span class="pa-icono-alerta" aria-hidden="true">!</span>
-                {% endif %}
-                {{ message }}
-            </div>
-            {% endfor %}
-        </div>
+    <div class="pa-estructura {% if not request.user.is_authenticated %}pa-estructura-sin-menu{% endif %}">
+        {% block sidebar %}
+        {% if request.user.is_authenticated %}
+        <aside class="pa-menu-lateral d-none d-lg-flex">
+            {% include "includes/menu_principal.html" %}
+        </aside>
+        {% endif %}
+        {% endblock %}
 
-        {% block content %}{% endblock %}
-    </main>
+        <main class="{% block main_class %}pa-contenido{% endblock %}">
+            <div data-mensajes>
+                {% for message in messages %}
+                <div
+                    class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %}">
+                    {% if message.tags == 'error' %}
+                    <span class="pa-icono-alerta" aria-hidden="true">!</span>
+                    {% endif %}
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
 
     <script src="{% static 'vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
     {% block extra_js %}{% endblock %}

@@ -27,7 +27,7 @@ Relaciones relevantes:
 
 ## Flujo de una venta implementado
 
-1. La vista de caja mantiene una selección temporal en la sesión.
+1. La vista de Venta mantiene una selección temporal en la sesión. La búsqueda consulta el catálogo activo en el servidor y pagina los resultados; un código de barras exacto puede agregar una unidad.
 2. La confirmación delega en `ventas/services.py`.
 3. El servicio valida el medio de pago, productos activos, cantidades y stock.
 4. Dentro de una transacción, bloquea las filas de producto, crea la venta y detalles, descuenta stock y registra movimientos de salida.
@@ -50,11 +50,22 @@ El detalle exacto debe confirmarse leyendo el árbol actual; no asumas que el ZI
 
 ## Interfaz
 
-Las plantillas extienden `templates/base.html`, que carga Bootstrap local y el sistema común de `static/css/punto-aparte.css`. Las variantes de acceso y caja se encuentran en `static/css/acceso.css` y `static/css/caja.css`. Reutiliza estos recursos; los estándares de presentación y las referencias visuales están en [estandares-interfaz.md](estandares-interfaz.md).
+Las plantillas extienden `templates/base.html`, que carga Bootstrap local y el sistema común de `static/css/punto-aparte.css`. Las páginas autenticadas comparten una barra superior compacta, un menú lateral de escritorio y un menú móvil. Las variantes de acceso y Venta se encuentran en `static/css/acceso.css` y `static/css/caja.css`.
+
+Las vistas actuales incluyen:
+
+- Venta con catálogo paginado, carrito de sesión y confirmación en efectivo.
+- Productos, categorías e inventario; los ingresos y ajustes conservan sus formularios dedicados.
+- Consulta de ventas: el Cajero ve las propias y el Jefe ve todas, con filtros de fecha y cajero según permiso.
+- Usuarios para Jefe.
+
+DataTables se sirve localmente y se usa en los listados de productos, categorías, inventario, movimientos, usuarios y ventas. El detalle interno de venta y «Compra actual» no usan paginación.
 
 ## Límites
 
 - `Venta` incluye opciones de tarjeta y transferencia en el modelo, pero el servicio observado solo permite confirmar efectivo.
 - El detalle de una venta es un comprobante interno imprimible; no es integración tributaria.
 - Una segunda pantalla de cliente no se observó en las plantillas revisadas.
+- La ventana de cobro confirma únicamente el flujo real en efectivo. La selección de documento y los datos de factura dependen de la definición e integración tributaria pendiente.
+- No existe apertura, cierre ni arqueo de caja; la librería debe confirmar primero si ese flujo corresponde a su operación.
 - Confirma en el código actual si existe el flujo antes de tomar decisiones basadas en esta fotografía.

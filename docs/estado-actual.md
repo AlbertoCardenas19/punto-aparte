@@ -4,16 +4,17 @@
 
 ## Actualización de la rama `work`
 
-Revisión documental del código al commit `036c6a9`; esta sección actualiza la fotografía del ZIP sin afirmar que los estándares aprobados estén todos implementados.
+Esta sección actualiza la fotografía del ZIP con la implementación vigente en `work`.
 
-- Hay estilos comunes para las páginas existentes y un logo original en los recursos estáticos.
-- El catálogo usa un menú de acciones por producto; el historial global está en el encabezado. El menú se traslada fuera del contenedor de la tabla para evitar recortes.
-- Catálogo y caja buscan al escribir por nombre, marca, categoría, código y descripción.
+- Las páginas autenticadas comparten una barra superior compacta y navegación lateral; el menú se abre desde un control visible en móvil. La pantalla inicial ofrece accesos según rol y no incluye indicadores de dashboard.
+- Venta carga doce productos por página, consulta todo el catálogo activo al buscar, ordena productos sin stock al final y permite agregar una unidad desde cada tarjeta. Las cantidades se editan en «Compra actual» y el cobro abre una confirmación real en efectivo.
+- Un código de barras exacto agrega una unidad cuando el producto está activo y tiene stock. La validación transaccional al confirmar la venta se mantiene en el servicio.
+- Productos muestra los datos operativos principales, un acceso explícito de lectura a los detalles y el menú administrativo «Acciones». Inventario reúne los accesos a ingresos, ajustes e historial para Jefe.
+- Existe consulta de ventas con DataTables y filtros por fechas; el Cajero ve solo las propias y el Jefe puede ver todas y filtrar por cajero.
+- Productos, categorías, inventario, movimientos, usuarios y ventas usan DataTables local con textos en español.
 - El alta desde la aplicación del Jefe genera y entrega una contraseña temporal una sola vez. `usuarios/0002_usuario_debe_cambiar_password.py` añade el indicador de cambio inicial con valor predeterminado `False`, compatible con cuentas existentes. Django Admin conserva su formulario separado anterior; no se debe asumir que comparte el nuevo flujo de alta.
-- El acceso sigue usando nombre de usuario. El acceso por correo y la capitalización de nombres son requisitos aprobados pendientes de implementación.
-- El modelo ya declara `email` con `unique=True`. No se auditó el contenido de bases reales; esto no demuestra ausencia de duplicados bajo una futura normalización.
-- La configuración mantiene `LANGUAGE_CODE = 'en-us'`; traducción completa de validaciones, errores junto a campos, ayuda de contraseña solo ante errores, mensajes discretos e ícono rojo de falta de stock requieren revisión e implementación según los estándares. El JavaScript actual todavía muestra un mensaje por búsqueda completada.
-- El error de sintaxis de caja y la repetición del historial descritos en la fotografía histórica se corrigieron. Los avisos del editor deben verificarse en su entorno; no se consideran errores funcionales confirmados.
+- El acceso acepta nombre de usuario o correo; los correos se normalizan y cuentan con restricción sin distinguir mayúsculas. Nombres de personas, productos, marcas y categorías aplican las normalizaciones acordadas.
+- No existen emisión tributaria, datos de factura, terminal de pago, pantalla cliente en vivo ni caja diaria. Esos flujos permanecen pendientes y no se muestran como disponibles.
 
 ## Implementado en la fotografía del ZIP
 
@@ -36,7 +37,6 @@ Revisión documental del código al commit `036c6a9`; esta sección actualiza la
 - Descuentos con autorización y restricciones de uso.
 - Flujo de anulación/devolución con motivo y autorización.
 - Segunda pantalla viva para el cliente.
-- Historial o reporte de ventas, según se confirme en la rama actual.
 - Pruebas automáticas de reglas críticas; los archivos `tests.py` revisados eran los vacíos generados por Django.
 
 ## Problemas históricos de la copia revisada (no asumir que siguen vigentes)

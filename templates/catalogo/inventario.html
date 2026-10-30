@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block extra_css %}{% include "includes/datatables_css.html" %}{% endblock %}
+{% block extra_js %}{% include "includes/datatables_js.html" %}{% endblock %}
+
+{% block title %}Inventario | Punto Aparte{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="h2 fw-bold mb-1">Inventario</h1>
+        <p class="text-secondary mb-0">Consulta existencias y registra ingresos o ajustes.</p>
+    </div>
+    <a class="btn btn-outline-primary" href="{% url 'catalogo:historial_stock' %}">Historial de stock</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <table class="table table-hover align-middle mb-0" data-tabla-listado data-orden-columna="0"
+            data-busqueda-ayuda="Producto">
+            <thead class="table-light">
+                <tr>
+                    <th class="all">Producto</th>
+                    <th>Stock</th>
+                    <th data-no-buscar>Estado</th>
+                    <th class="all" data-no-orden data-no-buscar>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for producto in productos %}
+                <tr>
+                    <td class="all fw-semibold">{{ producto.nombre }}</td>
+                    <td data-order="{{ producto.stock }}">
+                        {% if producto.stock == 0 %}{% include "includes/sin_stock.html" %}{% else %}{{ producto.stock }}{% endif %}
+                    </td>
+                    <td>
+                        {% if producto.activo %}<span class="badge text-bg-success">Activo</span>{% else %}<span class="badge text-bg-secondary">Inactivo</span>{% endif %}
+                    </td>
+                    <td class="all">
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button"
+                                data-bs-toggle="dropdown" aria-expanded="false"
+                                aria-label="Acciones de inventario para {{ producto.nombre }}">Acciones</button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{% url 'catalogo:ingresar_stock' producto.pk %}">Ingresar stock</a></li>
+                                <li><a class="dropdown-item" href="{% url 'catalogo:ajustar_stock' producto.pk %}">Ajustar stock</a></li>
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
