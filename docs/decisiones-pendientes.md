@@ -14,9 +14,15 @@ Estas necesidades están mencionadas para el producto, pero no deben implementar
 | Recepción de compras | Cómo se registra una recepción completa y cómo se resuelven discrepancias, daños o diferencias con la orden/documento del proveedor. |
 | Datos de cliente | Cuándo solicitar identificación y qué campos guardar para emitir factura o aplicar restricciones de descuento. |
 
+## Requisitos definidos pendientes de implementación
+
+Las reglas de identidad y acceso ya están aprobadas en [alcance-y-reglas.md](alcance-y-reglas.md#identidad-y-acceso). No requieren volver a preguntar si el acceso debe admitir correo. Sí requieren consulta los conflictos de datos detectados al revisar unicidad y cualquier decisión de flujo no definida.
+
+Los detalles visuales y de mensajes ya aprobados se encuentran en [estandares-interfaz.md](estandares-interfaz.md). Consulta [estado-actual.md](estado-actual.md) para distinguir los estándares de lo que ejecuta el código.
+
 ## Referencia visual
 
-El mockup aprobado está descrito en `Mockups_Punto_Aparte.pdf` (tres pantallas: acceso, caja y vista del cliente). El ZIP de código revisado no contenía ese archivo. Para rediseñar con fidelidad, agréguenlo al repositorio en `docs/referencias/` o incluyan imágenes exportadas de las pantallas.
+Las imágenes aprobadas de acceso, venta y cliente están disponibles en `docs/referencias/`. El logo original utilizado está en `static/img/logo_punto_aparte.jpg`. Consulta el inventario y uso de referencias en [estandares-interfaz.md](estandares-interfaz.md#referencias-y-marca).
 
 ## Supuestos que no se deben introducir
 

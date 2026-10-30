@@ -1,0 +1,31 @@
+# Estándares permanentes de interfaz
+
+Lee este documento antes de modificar pantallas. Define requisitos aprobados; su presencia aquí no significa que todos estén implementados. El estado observado se registra en [estado-actual.md](estado-actual.md). Las reglas de cuentas y negocio pertenecen a [alcance-y-reglas.md](alcance-y-reglas.md).
+
+## Referencias y marca
+
+- Toma la pantalla de venta como referencia visual común para todas las páginas, conservando la distribución adecuada para cada tarea.
+- Revisa `referencias/pantalla_venta.png`, `referencias/pantalla_login.png` y `referencias/pantalla_cliente.png`. Un mockup no autoriza implementar funciones pendientes ni una pantalla nueva.
+- Usa el logo original del repositorio: `static/img/logo_punto_aparte.jpg`. Si existe una fuente original en `docs/referencias/`, comprueba su correspondencia antes de sustituir el recurso. No inventes logos ni los extraigas de capturas. Incluye texto alternativo accesible.
+- Reutiliza la paleta de marca definida en `static/css/punto-aparte.css`: azul oscuro, acento rojo y fondos neutros claros. El encabezado de caja es azul oscuro, con texto y controles de buen contraste.
+
+## Componentes y adaptación
+
+- Mantén tipografía, espaciado, botones, campos, tarjetas, tablas, estados y mensajes coherentes entre acceso, inicio, catálogo, stock, usuarios, caja y detalle de venta.
+- Centraliza estilos comunes en `static/css/punto-aparte.css`; limita los estilos de acceso y caja a sus variantes. Evita duplicar reglas o introducir excepciones de color y tamaño sin propósito.
+- Distingue acciones principales, secundarias y destructivas. Usa tamaños consistentes para funciones equivalentes y controles grandes donde lo requiera la operación de caja.
+- Las páginas deben adaptarse a escritorio y móvil, con etiquetas legibles, foco visible y navegación utilizable con teclado. Marca la sección activa de navegación.
+- En tablas con acciones por fila, agrúpalas en un menú desplegable «Acciones». Conserva las acciones y permisos existentes. El menú debe verse completo por encima de la tabla, sin recortes ni desplazamientos para alcanzar sus opciones.
+- Mantén las acciones globales fuera de las filas; no repitas el historial general por producto.
+
+## Idioma, mensajes y errores
+
+- Toda la interfaz y los mensajes visibles para usuarios deben estar en español claro, incluidas validaciones, estados vacíos, ayudas y errores de Django.
+- Los mensajes de estado deben ser breves, discretos y estar alineados con el elemento relacionado. No muestres mensajes innecesarios por cada búsqueda; informa cuando no haya coincidencias o cuando ocurra un error que requiera atención.
+- Muestra los errores de formulario junto al campo correspondiente, en español y con estilo claro. Los errores generales deben quedar junto al formulario.
+- No muestres las reglas completas de contraseña mientras no haya un error. Ante un error, explica la corrección necesaria sin desactivar validadores ni revelar contraseñas.
+- Destaca la falta de stock en rojo e incluye el ícono circular de exclamación. Acompáñalo de texto claro; no dependas solo del color o del ícono para comunicar el aviso.
+
+## Verificación de cambios visuales
+
+Comprueba las páginas afectadas, sus formularios, estados vacíos y de error, navegación y menús en tamaños de escritorio y móvil. Verifica que las acciones sigan disponibles únicamente para sus roles. Aplica también las verificaciones de `AGENTS.md` y reporta cualquier comprobación que no se haya podido realizar.

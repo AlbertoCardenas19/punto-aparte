@@ -46,6 +46,7 @@ Bootstrap se sirve desde `static/vendor/bootstrap/`; no se necesita Node para ej
 ## Documentos
 
 - [`alcance-y-reglas.md`](docs/alcance-y-reglas.md): alcance, roles y reglas acordadas.
+- [`estandares-interfaz.md`](docs/estandares-interfaz.md): presentación, componentes, mensajes y referencias visuales.
 - [`arquitectura-actual.md`](docs/arquitectura-actual.md): aplicaciones, modelos y flujo de venta.
 - [`estado-actual.md`](docs/estado-actual.md): capacidades actuales y brechas verificadas.
 - [`decisiones-pendientes.md`](docs/decisiones-pendientes.md): decisiones que no se deben inventar.

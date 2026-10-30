@@ -2,7 +2,20 @@
 
 **Base de esta revisión:** ZIP `punto-aparte.zip`, inspeccionado el 30-10-2026. Este documento es una fotografía; el repositorio y la base de código activa son la fuente para saber qué existe hoy.
 
-## Implementado en el código revisado
+## Actualización de la rama `work`
+
+Revisión documental del código al commit `036c6a9`; esta sección actualiza la fotografía del ZIP sin afirmar que los estándares aprobados estén todos implementados.
+
+- Hay estilos comunes para las páginas existentes y un logo original en los recursos estáticos.
+- El catálogo usa un menú de acciones por producto; el historial global está en el encabezado. El menú se traslada fuera del contenedor de la tabla para evitar recortes.
+- Catálogo y caja buscan al escribir por nombre, marca, categoría, código y descripción.
+- El alta desde la aplicación del Jefe genera y entrega una contraseña temporal una sola vez. `usuarios/0002_usuario_debe_cambiar_password.py` añade el indicador de cambio inicial con valor predeterminado `False`, compatible con cuentas existentes. Django Admin conserva su formulario separado anterior; no se debe asumir que comparte el nuevo flujo de alta.
+- El acceso sigue usando nombre de usuario. El acceso por correo y la capitalización de nombres son requisitos aprobados pendientes de implementación.
+- El modelo ya declara `email` con `unique=True`. No se auditó el contenido de bases reales; esto no demuestra ausencia de duplicados bajo una futura normalización.
+- La configuración mantiene `LANGUAGE_CODE = 'en-us'`; traducción completa de validaciones, errores junto a campos, ayuda de contraseña solo ante errores, mensajes discretos e ícono rojo de falta de stock requieren revisión e implementación según los estándares. El JavaScript actual todavía muestra un mensaje por búsqueda completada.
+- El error de sintaxis de caja y la repetición del historial descritos en la fotografía histórica se corrigieron. Los avisos del editor deben verificarse en su entorno; no se consideran errores funcionales confirmados.
+
+## Implementado en la fotografía del ZIP
 
 - Configuración Django con PostgreSQL y variables de entorno.
 - Usuario personalizado con rol y nombre de usuario generado automáticamente.
@@ -26,7 +39,7 @@
 - Historial o reporte de ventas, según se confirme en la rama actual.
 - Pruebas automáticas de reglas críticas; los archivos `tests.py` revisados eran los vacíos generados por Django.
 
-## Problemas conocidos de la copia revisada
+## Problemas históricos de la copia revisada (no asumir que siguen vigentes)
 
 1. `templates/ventas/caja.html` contiene expresiones `producto.stock==0` sin espacios alrededor de `==`. La sintaxis de comparación de Django requiere espacios, por ejemplo `producto.stock == 0`; la plantilla puede lanzar `TemplateSyntaxError` al abrir la caja.
 2. Un analizador estático puede reportar `Venta.cajero_id` y `BootstrapFormMixin.fields` como atributos desconocidos. Django genera el atributo de clave foránea y las clases de formulario definen `fields` en tiempo de ejecución; confirma si es un aviso del editor o un error real. En el primer caso, usa atributos que el analizador reconozca o tipado apropiado, sin ocultar fallas de ejecución.

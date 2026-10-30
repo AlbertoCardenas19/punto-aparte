@@ -50,9 +50,7 @@ El detalle exacto debe confirmarse leyendo el árbol actual; no asumas que el ZI
 
 ## Interfaz
 
-Las plantillas extienden `templates/base.html`. Ese archivo concentra navegación, Bootstrap local y estilos comunes. Define ahí las reglas compartidas de color, tamaño y jerarquía de botones; evita copiar estilos inconsistentes entre páginas.
-
-El mockup original debe estar disponible para Codex como `docs/referencias/Mockups_Punto_Aparte.pdf` o como imágenes de sus pantallas. El ZIP revisado no lo incluía. La descripción textual no sustituye la inspección visual al hacer un rediseño.
+Las plantillas extienden `templates/base.html`, que carga Bootstrap local y el sistema común de `static/css/punto-aparte.css`. Las variantes de acceso y caja se encuentran en `static/css/acceso.css` y `static/css/caja.css`. Reutiliza estos recursos; los estándares de presentación y las referencias visuales están en [estandares-interfaz.md](estandares-interfaz.md).
 
 ## Límites
 

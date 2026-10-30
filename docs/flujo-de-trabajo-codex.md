@@ -1,5 +1,9 @@
 # Flujo de trabajo con Codex
 
+## Instrucciones permanentes
+
+Aplica `AGENTS.md` antes de cada tarea y consulta los documentos pertinentes. Antes de modificar pantallas, lee [estandares-interfaz.md](estandares-interfaz.md). Los prompts siguientes son ejemplos para tareas que piden revisión previa; no sustituyen la autorización ni el alcance indicado por el usuario en la tarea actual.
+
 ## Ciclo recomendado
 
 1. Encarga una tarea pequeña y concreta.

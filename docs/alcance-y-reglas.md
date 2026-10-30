@@ -13,6 +13,17 @@ Construir un POS para la operación de caja de una librería. La primera etapa c
 
 El usuario no inventa su nombre de cuenta: el sistema lo genera a partir de nombre + apellido + número correlativo para asegurar que sea único.
 
+## Identidad y acceso
+
+Estas son reglas aprobadas; consulta `estado-actual.md` para saber cuáles están implementadas.
+
+- Guarda nombres y apellidos con la inicial de cada palabra en mayúscula. Conserva la generación automática del nombre de usuario descrita en Roles.
+- El inicio de sesión debe aceptar nombre de usuario o correo. Esta regla reemplaza la restricción anterior a nombre de usuario; no implica que el acceso por correo ya esté implementado.
+- Los correos deben ser únicos. Antes de imponer o modificar su unicidad, incluida cualquier normalización para comparar correos, detecta duplicados. Si aparecen, consulta al usuario cómo resolverlos; no alteres, fusiones ni elimines datos automáticamente.
+- Las cuentas nuevas reciben una contraseña temporal segura generada por el sistema, nunca elegida por el Jefe. Se entrega una sola vez al Jefe, con opción de copiar, y solo se guarda su hash; no se registra en texto claro ni en logs.
+- En su primer inicio de sesión, el trabajador debe crear una contraseña nueva antes de entrar al resto del sistema. Solicita nueva contraseña y confirmación, sin pedir la temporal, y aplica los validadores de Django.
+- Las cuentas existentes continúan funcionando sin imponerles el cambio inicial.
+
 ## Catálogo
 
 - Producto: nombre, marca, descripción, precio entero en CLP, estado activo/inactivo y código de barras opcional.
