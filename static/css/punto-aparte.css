@@ -35,6 +35,7 @@
 .pa-app .btn { border-radius: .65rem; padding: .6rem 1.1rem; font-weight: 600; }
 .pa-app .btn-sm { padding: .35rem .75rem; font-size: .875rem; }
 .pa-app .btn-lg { padding: 1rem 1.5rem; font-size: 1.15rem; }
+.pa-app .btn:disabled, .pa-app .btn.disabled, .pa-app button:disabled { background: #e2e6ea !important; border-color: #c8cfd6 !important; color: #69737d !important; cursor: not-allowed; opacity: 1; }
 .pa-app .btn-pa { --bs-btn-color: #fff; --bs-btn-bg: var(--pa-navy); --bs-btn-border-color: var(--pa-navy); --bs-btn-hover-color: #fff; --bs-btn-hover-bg: #294e70; --bs-btn-hover-border-color: #294e70; --bs-btn-active-color: #fff; --bs-btn-active-bg: #102438; --bs-btn-active-border-color: #102438; --bs-btn-disabled-color: #fff; --bs-btn-disabled-bg: var(--pa-navy); --bs-btn-disabled-border-color: var(--pa-navy); --bs-btn-focus-shadow-rgb: 23,50,77; }
 .pa-app .btn-outline-primary, .pa-app .btn-outline-secondary { --bs-btn-color: var(--pa-navy); --bs-btn-border-color: #9aabba; --bs-btn-hover-color: #fff; --bs-btn-hover-bg: var(--pa-navy); --bs-btn-hover-border-color: var(--pa-navy); --bs-btn-active-color: #fff; --bs-btn-active-bg: var(--pa-navy); --bs-btn-active-border-color: var(--pa-navy); --bs-btn-focus-shadow-rgb: 23,50,77; }
 .pa-app .btn-outline-danger { --bs-btn-color: #ad2431; --bs-btn-border-color: #ad2431; --bs-btn-hover-bg: #ad2431; --bs-btn-hover-border-color: #ad2431; --bs-btn-active-bg: #ad2431; --bs-btn-active-border-color: #ad2431; }
@@ -57,3 +58,10 @@
 @media (max-width: 575.98px) { .pa-app .navbar .pa-nav-contenido { align-items: flex-start; } .pa-app .table td, .pa-app .table th { padding: .75rem; } }
 /* Los menús trasladados al body quedan por encima de tablas y tarjetas. */
 body > .dropdown-menu { z-index: 1080; border-color: var(--pa-border); border-radius: .75rem; padding: .5rem; }
+.pa-app div.dt-container .dt-layout-row { align-items: center; gap: .75rem; margin: 0 0 1rem; }
+.pa-app div.dt-container .dt-layout-row:last-child { margin: 1rem 0 0; }
+.pa-app div.dt-container .dt-search, .pa-app div.dt-container .dt-length { display: flex; align-items: center; gap: .5rem; }
+.pa-app div.dt-container .dt-search input, .pa-app div.dt-container .dt-length select { border-color: var(--pa-border); border-radius: .65rem; min-height: 2.5rem; }
+.pa-app div.dt-container .dt-info { color: var(--pa-muted); font-size: .875rem; }
+.pa-app table.dataTable > tbody > tr.child ul.dtr-details { width: 100%; }
+@media (max-width: 575.98px) { .pa-app div.dt-container .dt-layout-row { align-items: stretch; } .pa-app div.dt-container .dt-search, .pa-app div.dt-container .dt-length { justify-content: space-between; } }

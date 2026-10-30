@@ -52,7 +52,6 @@ def caja(request):
                 else:
                     carrito[id_texto] = nueva_cantidad
                     request.session[CLAVE_CARRITO] = carrito
-                    messages.success(request, "Producto agregado al carrito.")
 
             return redirect("ventas:caja")
 

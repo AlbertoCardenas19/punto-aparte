@@ -1,6 +1,4 @@
 from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
-from django.db.models import Q
 from django.shortcuts import redirect, render, get_object_or_404
 
 from usuarios.decorators import jefe_required
@@ -18,29 +16,15 @@ from django.db import transaction
 
 @login_required
 def lista_productos(request):
-    busqueda = request.GET.get("q", "").strip()
     productos = Producto.objects.prefetch_related("categorias")
 
     if request.user.rol != Usuario.Rol.JEFE:
         productos = productos.filter(activo=True)
 
-    if busqueda:
-        productos = productos.filter(
-            Q(nombre__icontains=busqueda)
-            | Q(descripcion__icontains=busqueda)
-            | Q(marca__icontains=busqueda)
-            | Q(codigo_barras__icontains=busqueda)
-            | Q(categorias__nombre__icontains=busqueda)
-        ).distinct()
-
-    pagina = Paginator(productos.order_by("nombre"), 25).get_page(
-        request.GET.get("page")
-    )
-
     return render(
         request,
         "catalogo/lista_productos.html",
-        {"pagina": pagina, "busqueda": busqueda},
+        {"productos": productos.order_by("nombre")},
     )
 
 
@@ -178,10 +162,8 @@ def historial_stock(request):
         .select_related("producto", "usuario")
         .order_by("-fecha")
     )
-    pagina = Paginator(movimientos, 50).get_page(request.GET.get("page"))
-
     return render(
         request,
         "catalogo/historial_stock.html",
-        {"pagina": pagina},
+        {"movimientos": movimientos},
     )

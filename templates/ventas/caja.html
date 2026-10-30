@@ -30,7 +30,7 @@
 <div class="row g-4">
     <section class="col-12 col-xl-8">
         <div class="pa-caja-panel">
-        <form data-busqueda-viva method="get" class="mb-4">
+        <form data-busqueda-viva method="get" class="pa-busqueda-productos">
             <label for="q" class="form-label">Buscar producto</label>
             <div class="input-group">
                 <input class="form-control" id="q" name="q" value="{{ busqueda }}"
@@ -44,7 +44,10 @@
             {% for producto in pagina %}
             <article class="pa-caja-producto">
                 <h2 class="h6 fw-bold">{{ producto.nombre }}</h2>
-                <p class="small text-secondary">Stock: {{ producto.stock }}{% if producto.codigo_barras %} · {{ producto.codigo_barras }}{% endif %}</p>
+                <div class="pa-caja-meta-producto">
+                    <span>Stock: {{ producto.stock }}{% if producto.codigo_barras %} · {{ producto.codigo_barras }}{% endif %}</span>
+                    {% if producto.stock == 0 %}{% include "includes/sin_stock.html" %}{% endif %}
+                </div>
                 {% if producto.marca %}<p class="small text-secondary">{{ producto.marca }}</p>{% endif %}
                 <p class="pa-caja-precio">${{ producto.precio|localize }}</p>
                 <form method="post" class="d-flex flex-wrap gap-2 align-items-end">
@@ -57,7 +60,6 @@
                             min="1" max="{{ producto.stock }}" {% if producto.stock == 0 %}disabled{% endif %}>
                     </div>
                     <button class="btn btn-outline-primary" type="submit" {% if producto.stock == 0 %}disabled{% endif %}>Agregar</button>
-                    {% if producto.stock == 0 %}{% include "includes/sin_stock.html" %}{% endif %}
                 </form>
             </article>
             {% empty %}
@@ -101,12 +103,12 @@
     </section>
 
     <section class="col-12 col-xl-4">
-        <div class="pa-caja-panel">
+        <div class="pa-caja-panel" data-carrito-panel>
             <div class="pa-caja-compra">
                 <div class="d-flex justify-content-between align-items-center gap-2 pa-caja-resumen"><h2 class="h4 fw-bold mb-0">Compra actual</h2><span class="small text-secondary">{{ lineas_carrito|length }} producto{{ lineas_carrito|length|pluralize:"s" }}</span></div>
 
                 {% if lineas_carrito %}
-                <form method="post" class="mb-3">
+                <form method="post" data-carrito-form>
                     {% csrf_token %}
                     <input type="hidden" name="accion" value="actualizar">
 
@@ -115,7 +117,8 @@
                             <thead>
                                 <tr>
                                     <th>Producto</th>
-                                    <th style="width: 90px">Unid.</th>
+                                    <th>Precio unitario</th>
+                                    <th>Unid.</th>
                                     <th>Subtotal</th>
                                 </tr>
                             </thead>
@@ -124,14 +127,20 @@
                                 <tr>
                                     <td>
                                         {{ linea.producto.nombre }}
-                                        <div class="small text-secondary">
-                                            ${{ linea.producto.precio|localize }} c/u
-                                        </div>
                                     </td>
+                                    <td>${{ linea.producto.precio|localize }}</td>
                                     <td>
-                                        <input class="form-control form-control-sm" type="number"
-                                            aria-label="Cantidad de {{ linea.producto.nombre }}" name="cantidad_{{ linea.producto.pk }}" value="{{ linea.cantidad }}"
-                                            min="0">
+                                        <div class="pa-cantidad-control">
+                                            <button class="pa-cantidad-boton" type="button" data-cantidad-restar
+                                                aria-label="Restar una unidad de {{ linea.producto.nombre }}">−</button>
+                                            <input class="pa-cantidad-valor" type="number"
+                                                aria-label="Cantidad de {{ linea.producto.nombre }}"
+                                                name="cantidad_{{ linea.producto.pk }}" value="{{ linea.cantidad }}"
+                                                min="0" max="{{ linea.producto.stock }}" step="1" inputmode="numeric">
+                                            <button class="pa-cantidad-boton" type="button" data-cantidad-sumar
+                                                aria-label="Sumar una unidad de {{ linea.producto.nombre }}"
+                                                {% if linea.cantidad >= linea.producto.stock %}disabled{% endif %}>+</button>
+                                        </div>
                                     </td>
                                     <td>${{ linea.subtotal|localize }}</td>
                                 </tr>
@@ -139,13 +148,7 @@
                             </tbody>
                         </table>
                     </div>
-
-                    <p class="small text-secondary">
-                        Ingresa 0 unidades para quitar un producto y luego actualiza.
-                    </p>
-                    <button class="btn btn-outline-primary" type="submit">
-                        Actualizar cantidades
-                    </button>
+                    <p class="pa-estado-breve" role="status" data-carrito-estado></p>
                 </form>
 
                 <hr>
@@ -162,7 +165,6 @@
                         Cobrar ${{ total_carrito|localize }} en efectivo
                     </button>
                 </form>
-                <p class="small text-secondary text-center mt-2 mb-0">El stock se actualiza al confirmar la venta.</p>
                 {% else %}
                 <p class="text-secondary mb-0">
                     Aún no hay productos en el carrito.
