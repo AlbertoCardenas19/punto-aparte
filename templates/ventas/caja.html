@@ -13,7 +13,7 @@
 </div>
 
 <div class="row g-4">
-    <section class="col-12 col-xl-8">
+    <section class="col-12 col-xxl-7">
         <div class="pa-caja-panel">
         <form data-busqueda-viva method="get" class="pa-busqueda-productos">
             <label for="q" class="form-label">Buscar producto</label>
@@ -29,8 +29,9 @@
             {% for producto in pagina %}
             <article class="pa-caja-producto" data-producto-tarjeta data-producto-id="{{ producto.pk }}"
                 data-codigo-barras="{{ producto.codigo_barras|default:'' }}">
-                <h2 class="h6 fw-bold">{{ producto.nombre }}</h2>
-                <p class="pa-caja-marca-producto">{{ producto.marca|default:"Sin marca" }}</p>
+                <h2 class="h6 fw-bold">
+                    {{ producto.nombre }}{% if producto.marca %} · {{ producto.marca }}{% endif %}
+                </h2>
                 <p class="pa-caja-precio">${{ producto.precio|localize }}</p>
                 <div class="pa-caja-indicadores">
                     <span class="pa-stock-disponible">Stock disponible: {{ producto.stock }}</span>
@@ -91,16 +92,26 @@
         </div>
     </section>
 
-    <section class="col-12 col-xl-4 pa-carrito-columna">
-        <button class="pa-carrito-movil d-xl-none" type="button" data-bs-toggle="collapse"
-            data-bs-target="#compra-actual" aria-expanded="false" aria-controls="compra-actual">
+    <section class="col-12 col-xxl-5 pa-carrito-columna">
+        <button class="pa-carrito-movil d-xxl-none" type="button" data-bs-toggle="collapse"
+            data-bs-target="#compra-actual" aria-expanded="{% if carrito_abierto %}true{% else %}false{% endif %}"
+            aria-controls="compra-actual">
             <span>Compra actual</span>
             <strong data-total-carrito-movil>${{ total_carrito|localize }}</strong>
         </button>
-        <div class="collapse pa-carrito-contenido" id="compra-actual">
+        <div class="collapse pa-carrito-contenido{% if carrito_abierto %} show{% endif %}" id="compra-actual">
         <div class="pa-caja-panel" data-carrito-panel>
             <div class="pa-caja-compra">
-                <div class="d-flex justify-content-between align-items-center gap-2 pa-caja-resumen"><h2 class="h4 fw-bold mb-0">Compra actual</h2><span class="small text-secondary">{{ lineas_carrito|length }} producto{{ lineas_carrito|length|pluralize:"s" }}</span></div>
+                <div class="d-flex justify-content-between align-items-center gap-3 pa-caja-resumen">
+                    <h2 class="h4 fw-bold mb-0">Compra actual</h2>
+                    <div class="d-flex flex-wrap justify-content-end align-items-center gap-2">
+                        <span class="small text-secondary">{{ lineas_carrito|length }} producto{{ lineas_carrito|length|pluralize:"s" }}</span>
+                        {% if lineas_carrito %}
+                        <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal"
+                            data-bs-target="#modal-vaciar-venta">Vaciar venta</button>
+                        {% endif %}
+                    </div>
+                </div>
 
                 {% if lineas_carrito %}
                 <form method="post" data-carrito-form>
@@ -120,11 +131,11 @@
                             <tbody>
                                 {% for linea in lineas_carrito %}
                                 <tr>
-                                    <td>
+                                    <td data-label="Producto">
                                         {{ linea.producto.nombre }}
                                     </td>
-                                    <td>${{ linea.producto.precio|localize }}</td>
-                                    <td>
+                                    <td data-label="Precio unitario">${{ linea.producto.precio|localize }}</td>
+                                    <td data-label="Unid.">
                                         <div class="pa-cantidad-control">
                                             <button class="pa-cantidad-boton" type="button" data-cantidad-restar
                                                 aria-label="Restar una unidad de {{ linea.producto.nombre }}">−</button>
@@ -137,7 +148,7 @@
                                                 {% if linea.cantidad >= linea.producto.stock %}disabled{% endif %}>+</button>
                                         </div>
                                     </td>
-                                    <td>${{ linea.subtotal|localize }}</td>
+                                    <td data-label="Subtotal">${{ linea.subtotal|localize }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -167,6 +178,29 @@
 </div>
 
 {% if lineas_carrito %}
+<div class="modal fade" id="modal-vaciar-venta" tabindex="-1"
+    aria-labelledby="modal-vaciar-venta-titulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="modal-vaciar-venta-titulo">Vaciar venta</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">Se quitarán todos los productos de la compra actual.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Volver</button>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="vaciar">
+                    <button class="btn btn-outline-danger" type="submit">Confirmar y vaciar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="modal-cobro" tabindex="-1" aria-labelledby="modal-cobro-titulo" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">

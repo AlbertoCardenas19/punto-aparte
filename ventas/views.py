@@ -66,6 +66,10 @@ def caja(request):
     if request.method == "POST":
         accion = request.POST.get("accion")
 
+        if accion == "vaciar":
+            request.session.pop(CLAVE_CARRITO, None)
+            return redirect(f"{request.path}?carrito=abierto")
+
         if accion == "agregar":
             try:
                 producto_id = int(request.POST.get("producto_id", ""))
@@ -204,12 +208,18 @@ def caja(request):
             carrito.get(str(producto.pk), 0)
         )
 
-    productos_carrito = Producto.objects.filter(pk__in=carrito.keys())
+    productos_carrito = {
+        str(producto.pk): producto
+        for producto in Producto.objects.filter(pk__in=carrito.keys())
+    }
     lineas_carrito = []
     total_carrito = 0
 
-    for producto in productos_carrito:
-        cantidad = int(carrito[str(producto.pk)])
+    for producto_id, cantidad_guardada in carrito.items():
+        producto = productos_carrito.get(producto_id)
+        if not producto:
+            continue
+        cantidad = int(cantidad_guardada)
         subtotal = producto.precio * cantidad
         total_carrito += subtotal
         lineas_carrito.append({
@@ -226,6 +236,7 @@ def caja(request):
             "busqueda": busqueda,
             "lineas_carrito": lineas_carrito,
             "total_carrito": total_carrito,
+            "carrito_abierto": request.GET.get("carrito") == "abierto",
         },
     )
     if codigo_encontrado is not None:

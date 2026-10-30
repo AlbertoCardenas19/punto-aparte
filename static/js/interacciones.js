@@ -253,14 +253,19 @@ function aplicarActualizacionCarrito(doc) {
     const nextMessages = doc.querySelector('[data-mensajes]');
     if (currentMessages && nextMessages) currentMessages.replaceWith(nextMessages);
 
-    const nextModal = doc.querySelector('#modal-cobro');
-    nextModal?.remove();
-    document.querySelector('#modal-cobro')?.remove();
+    const modales = ['modal-cobro', 'modal-vaciar-venta'].map(id => {
+        const modal = doc.querySelector(`#${id}`);
+        modal?.remove();
+        document.querySelector(`#${id}`)?.remove();
+        return modal;
+    });
 
     const currentPanel = document.querySelector('[data-carrito-panel]');
     currentPanel.replaceWith(nextPanel);
     prepararCarrito(nextPanel);
-    if (nextModal) document.body.append(nextModal);
+    modales.forEach(modal => {
+        if (modal) document.body.append(modal);
+    });
 
     const currentMobileTotal = document.querySelector('[data-total-carrito-movil]');
     const nextMobileTotal = doc.querySelector('[data-total-carrito-movil]');

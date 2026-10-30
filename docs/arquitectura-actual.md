@@ -56,7 +56,7 @@ Las plantillas extienden `templates/base.html`, que carga Bootstrap local y el s
 Las vistas actuales incluyen:
 
 - Venta con catálogo paginado, carrito de sesión y confirmación en efectivo.
-- Productos y categorías con administración de estado; inventario concentra los ingresos y ajustes en formularios dedicados que permanecen listos para registrar el movimiento siguiente.
+- Productos y categorías con administración de estado; inventario concentra los ingresos y ajustes en formularios dedicados. Un ingreso guardado vuelve al listado de Inventario, mientras que un ajuste permanece en su formulario para facilitar otro registro.
 - Consulta de ventas: el Cajero ve las propias y el Jefe ve todas, con filtros de fecha y cajero según permiso.
 - Usuarios para Jefe.
 

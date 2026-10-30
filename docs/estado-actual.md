@@ -7,7 +7,7 @@
 Esta sección actualiza la fotografía del ZIP con la implementación vigente en `work`.
 
 - Las páginas autenticadas comparten una barra superior compacta y navegación lateral; el menú se abre desde un control visible en móvil. La pantalla inicial ofrece accesos según rol y no incluye indicadores de dashboard.
-- Venta carga doce productos por página, consulta todo el catálogo activo al buscar, ordena productos sin stock al final y permite agregar una unidad desde cada tarjeta. Las cantidades se editan en «Compra actual» y el cobro abre una confirmación real en efectivo.
+- Venta carga doce productos por página, consulta todo el catálogo activo al buscar, ordena productos sin stock al final y permite agregar una unidad desde cada tarjeta. «Compra actual» respeta el orden de incorporación, permite vaciar la selección con confirmación y mantiene sus controles adaptables; el cobro abre una confirmación real en efectivo.
 - Un código de barras exacto agrega una unidad cuando el producto está activo y tiene stock. La validación transaccional al confirmar la venta se mantiene en el servicio.
 - Productos muestra los datos operativos principales, abre sus detalles de lectura en una ventana modal y limita el menú administrativo a editar y desactivar. Inventario reúne exclusivamente los accesos a ingresos, ajustes e historial para Jefe.
 - Categorías permite editar, desactivar y reactivar desde su tabla. Las categorías inactivas permanecen visibles y vinculadas a sus productos existentes, pero no se ofrecen al asignar categorías a productos nuevos.

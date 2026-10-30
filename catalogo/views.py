@@ -151,7 +151,9 @@ def desactivar_producto(request, producto_id):
 @jefe_required
 def ingresar_stock(request, producto_id):
     producto = get_object_or_404(Producto, pk=producto_id)
-    form = IngresoStockForm(request.POST or None)
+    form = IngresoStockForm(
+        request.POST if request.method == "POST" else None
+    )
 
     if request.method == "POST" and form.is_valid():
         with transaction.atomic():
@@ -173,7 +175,7 @@ def ingresar_stock(request, producto_id):
                 usuario=request.user,
             )
 
-        return redirect(f"{request.path}?registrado=1")
+        return redirect("catalogo:inventario")
 
     return render(
         request,
@@ -182,7 +184,6 @@ def ingresar_stock(request, producto_id):
             "form": form,
             "producto": producto,
             "titulo": "Registrar ingreso de stock",
-            "registro_completado": request.GET.get("registrado") == "1",
         },
     )
 
