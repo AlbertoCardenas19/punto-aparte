@@ -6,7 +6,7 @@
     --pa-border: #d9e1eb;
     --pa-surface: #f1f4f8;
 }
-.pa-app { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--pa-ink); background: var(--pa-surface); line-height: 1.6; }
+.pa-app { overflow-x: hidden; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--pa-ink); background: var(--pa-surface); line-height: 1.6; }
 .pa-app h1, .pa-app h2, .pa-app h3 { color: var(--pa-ink); letter-spacing: -.02em; }
 .pa-app .text-secondary { color: var(--pa-muted) !important; }
 .pa-app .pa-barra-superior { min-height: 4.5rem; background: var(--pa-navy); color: #fff; border-bottom: 3px solid var(--pa-red); display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .65rem clamp(1rem, 2.5vw, 2rem); position: sticky; top: 0; z-index: 1040; }
@@ -34,6 +34,9 @@
 .pa-app .navbar .nav-link:hover, .pa-app .navbar .nav-link.active { background: #304b68; color: #fff; }
 .pa-app .card { border: 1px solid var(--pa-border); border-radius: 1.25rem; box-shadow: none; background: #fff; }
 .pa-app .card-body { padding: clamp(1.25rem, 2vw, 2rem); }
+.pa-app .pa-card-con-accion { display: flex; flex-direction: column; }
+.pa-app .pa-card-con-accion .btn { align-self: flex-start; margin-top: auto; }
+.pa-app .pa-card-con-accion .card-text { margin-bottom: 1.5rem; }
 .pa-app .card-title { font-weight: 700; margin-bottom: 1rem; }
 .pa-app .form-control, .pa-app .form-select { border-color: var(--pa-border); border-radius: .65rem; color: var(--pa-ink); min-height: 2.75rem; }
 .pa-app .form-control:focus, .pa-app .form-select:focus, .pa-app .form-check-input:focus { border-color: #60738e; box-shadow: 0 0 0 .25rem rgb(23 50 77 / 18%); }
@@ -78,9 +81,10 @@
 .pa-app .pa-detalle-producto dt { color: var(--pa-muted); font-size: .8rem; font-weight: 700; margin-bottom: .2rem; }
 .pa-app .pa-detalle-producto dd { margin: 0; overflow-wrap: anywhere; }
 .pa-app .pa-venta-total { font-size: 1.25rem; }
-.pa-app .pa-venta-flotante { position: fixed; right: clamp(1rem, 2.5vw, 2rem); bottom: max(1rem, env(safe-area-inset-bottom)); z-index: 1030; border-radius: .8rem; background: var(--pa-navy); box-shadow: 0 .5rem 1.5rem rgb(27 45 72 / 25%); color: #fff; font-size: 1.05rem; font-weight: 750; padding: 1rem 1.55rem; text-decoration: none; }
+.pa-app .pa-venta-flotante { position: fixed; right: clamp(2rem, 4vw, 4rem); bottom: max(2rem, env(safe-area-inset-bottom)); z-index: 1030; border-radius: .8rem; background: var(--pa-navy); box-shadow: 0 .5rem 1.5rem rgb(27 45 72 / 25%); color: #fff; font-size: 1.1rem; font-weight: 750; padding: 1.1rem 1.75rem; text-decoration: none; }
 .pa-app .pa-venta-flotante:hover, .pa-app .pa-venta-flotante:focus-visible { background: #294e70; color: #fff; }
-.pa-app .pa-encabezado-acciones { margin-left: auto; }
+.pa-app .pa-encabezado-pagina { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 1rem 1.5rem; margin-bottom: 1.5rem; }
+.pa-app .pa-encabezado-acciones { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .75rem; margin-left: auto; }
 .pa-app .pa-producto-predictivo { position: relative; }
 .pa-app .pa-sugerencias-producto { position: absolute; z-index: 1020; top: calc(100% - 1.7rem); left: 0; right: 0; max-height: 20rem; overflow-y: auto; border: 1px solid var(--pa-border); border-radius: .65rem; background: #fff; box-shadow: 0 .8rem 2rem rgb(27 45 72 / 16%); }
 .pa-app .pa-sugerencia-producto { display: flex; width: 100%; justify-content: space-between; gap: 1rem; border: 0; border-bottom: 1px solid var(--pa-border); background: #fff; color: var(--pa-ink); padding: .75rem 1rem; text-align: left; }
@@ -92,7 +96,7 @@
 .pa-app .pa-producto-seleccionado span { display: block; color: var(--pa-muted); font-size: .875rem; }
 .pa-app :is(a, button):focus-visible { outline: 3px solid #6f91b5; outline-offset: 3px; }
 @media (max-width: 991.98px) { .pa-app .pa-estructura { display: block; min-height: calc(100vh - 4.5rem); min-height: calc(100dvh - 4.5rem); } }
-@media (max-width: 575.98px) { .pa-app .pa-marca span { display: none; } .pa-app .pa-barra-superior { flex-wrap: wrap; gap: .6rem; } .pa-app .pa-sesion { width: 100%; justify-content: space-between; } .pa-app .pa-sesion-identidad { font-size: .8rem; } .pa-app .table td, .pa-app .table th { padding: .75rem; } .pa-app .pa-form-acciones { margin-top: 1.5rem; } .pa-app .pa-venta-flotante { right: .65rem; bottom: max(.65rem, env(safe-area-inset-bottom)); padding: .75rem .9rem; font-size: .9rem; } .pa-app .pa-encabezado-acciones { width: 100%; justify-content: flex-start !important; } .pa-app .pa-producto-seleccionado { align-items: flex-start; flex-direction: column; } }
+@media (max-width: 575.98px) { .pa-app .pa-marca span { display: none; } .pa-app .pa-barra-superior { flex-wrap: wrap; gap: .6rem; } .pa-app .pa-sesion { width: 100%; justify-content: space-between; } .pa-app .pa-sesion-identidad { font-size: .8rem; } .pa-app .table td, .pa-app .table th { padding: .75rem; } .pa-app .pa-form-acciones { margin-top: 1.5rem; } .pa-app .pa-venta-flotante { right: 1.25rem; bottom: max(1.4rem, env(safe-area-inset-bottom)); padding: .85rem 1.05rem; font-size: .95rem; } .pa-app .pa-encabezado-acciones { width: 100%; justify-content: flex-start; margin-left: 0; } .pa-app .pa-producto-seleccionado { align-items: flex-start; flex-direction: column; } }
 /* Los menús trasladados al body quedan por encima de tablas y tarjetas. */
 body > .dropdown-menu { z-index: 1080; border-color: var(--pa-border); border-radius: .75rem; padding: .5rem; }
 .pa-app div.dt-container .dt-layout-row { align-items: center; gap: .75rem; margin: 0 0 1rem; }

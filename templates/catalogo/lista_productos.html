@@ -6,15 +6,25 @@
 {% block title %}Catálogo | Punto Aparte{% endblock %}
 
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+<div class="pa-encabezado-pagina">
     <div>
         <h1 class="h2 fw-bold mb-1">Catálogo de productos</h1>
         <p class="text-secondary mb-0">Consulta los productos y sus precios.</p>
     </div>
 
-    <div class="d-flex flex-wrap gap-2">
-        <a class="btn btn-outline-primary" href="{% url 'catalogo:exportar_productos' %}"
-            data-exportar-productos>Exportar productos</a>
+    <div class="pa-encabezado-acciones">
+        <div class="dropdown">
+            <button class="btn btn-outline-primary dropdown-toggle" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false">Exportar</button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" data-exportar-productos
+                    href="{% url 'catalogo:exportar_productos' 'csv' %}">CSV</a></li>
+                <li><a class="dropdown-item" data-exportar-productos
+                    href="{% url 'catalogo:exportar_productos' 'xlsx' %}">Excel (XLSX)</a></li>
+                <li><a class="dropdown-item" data-exportar-productos
+                    href="{% url 'catalogo:exportar_productos' 'pdf' %}">PDF</a></li>
+            </ul>
+        </div>
         {% if request.user.rol == "JEFE" %}
         <a class="btn btn-pa" href="{% url 'catalogo:crear_producto' %}">
             Agregar producto
@@ -80,9 +90,13 @@
                                 <li>
                                     <form method="post" action="{% url 'catalogo:cambiar_estado_producto' producto.pk %}">
                                         {% csrf_token %}
-                                        <button class="dropdown-item {% if producto.activo %}text-danger{% endif %}" type="submit">
-                                            {% if producto.activo %}Desactivar{% else %}Activar{% endif %}
-                                        </button>
+                                        {% if producto.activo %}
+                                        <button class="dropdown-item text-danger" type="button"
+                                            data-confirmar-desactivacion data-tipo="producto"
+                                            data-nombre="{{ producto.nombre|escape }}">Desactivar</button>
+                                        {% else %}
+                                        <button class="dropdown-item" type="submit">Activar</button>
+                                        {% endif %}
                                     </form>
                                 </li>
                             </ul>

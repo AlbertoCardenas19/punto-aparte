@@ -10,7 +10,7 @@
 <div class="row g-3">
     <div class="col-12 col-md-6 col-xl-4">
         <div class="card h-100">
-            <div class="card-body">
+            <div class="card-body pa-card-con-accion">
                 <h2 class="h5 card-title">Nueva venta</h2>
                 <p class="card-text text-secondary">Busca productos y registra una venta en efectivo.</p>
                 <a class="btn btn-pa" href="{% url 'ventas:caja' %}">Ir a Venta</a>
@@ -20,7 +20,7 @@
 
     <div class="col-12 col-md-6 col-xl-4">
         <div class="card h-100">
-            <div class="card-body">
+            <div class="card-body pa-card-con-accion">
                 <h2 class="h5 card-title">Catálogo</h2>
                 <p class="card-text text-secondary">
                     Consulta los productos disponibles.
@@ -34,7 +34,7 @@
 
     <div class="col-12 col-md-6 col-xl-4">
         <div class="card h-100">
-            <div class="card-body">
+            <div class="card-body pa-card-con-accion">
                 <h2 class="h5 card-title">Ventas</h2>
                 <p class="card-text text-secondary">
                     {% if request.user.rol == "JEFE" %}Consulta las ventas registradas.{% else %}Consulta tus ventas registradas.{% endif %}
@@ -47,7 +47,7 @@
     {% if request.user.rol == "JEFE" %}
     <div class="col-12 col-md-6 col-xl-4">
         <div class="card h-100">
-            <div class="card-body">
+            <div class="card-body pa-card-con-accion">
                 <h2 class="h5 card-title">Inventario</h2>
                 <p class="card-text text-secondary">Registra ingresos, ajustes y consulta movimientos.</p>
                 <a class="btn btn-outline-primary" href="{% url 'catalogo:inventario' %}">Gestionar inventario</a>
@@ -57,7 +57,7 @@
 
     <div class="col-12 col-md-6 col-xl-4">
         <div class="card h-100">
-            <div class="card-body">
+            <div class="card-body pa-card-con-accion">
                 <h2 class="h5 card-title">Usuarios</h2>
                 <p class="card-text text-secondary">
                     Crea cuentas y administra sus estados y roles.

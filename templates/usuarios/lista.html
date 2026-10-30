@@ -6,12 +6,14 @@
 {% block title %}Usuarios | Punto Aparte{% endblock %}
 
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+<div class="pa-encabezado-pagina">
     <div>
         <h1 class="h2 fw-bold mb-1">Usuarios</h1>
         <p class="text-secondary mb-0">Administra las cuentas, roles y estados.</p>
     </div>
-    <a class="btn btn-pa" href="{% url 'usuarios:crear' %}">Crear cuenta</a>
+    <div class="pa-encabezado-acciones">
+        <a class="btn btn-pa" href="{% url 'usuarios:crear' %}">Crear cuenta</a>
+    </div>
 </div>
 
 <div class="card">
@@ -57,10 +59,15 @@
                                 <li>
                                     <form method="post" action="{% url 'usuarios:cambiar_estado' usuario.id %}">
                                         {% csrf_token %}
-                                        <button class="dropdown-item {% if usuario.is_active %}text-danger{% endif %}"
-                                            type="submit">
-                                            {% if usuario.is_active %}Desactivar{% else %}Activar{% endif %}
+                                        {% if usuario.is_active %}
+                                        <button class="dropdown-item text-danger" type="button"
+                                            data-confirmar-desactivacion data-tipo="cuenta"
+                                            data-nombre="{{ usuario.get_full_name|default:usuario.username|escape }}">
+                                            Desactivar
                                         </button>
+                                        {% else %}
+                                        <button class="dropdown-item" type="submit">Activar</button>
+                                        {% endif %}
                                     </form>
                                 </li>
                                 {% endif %}

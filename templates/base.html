@@ -70,6 +70,30 @@
         </main>
     </div>
 
+    {% if request.user.is_authenticated %}
+    <div class="modal fade" id="modal-confirmar-desactivacion" tabindex="-1"
+        aria-labelledby="modal-confirmar-desactivacion-titulo" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="modal-confirmar-desactivacion-titulo"
+                        data-desactivacion-titulo>Confirmar desactivación</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0" data-desactivacion-mensaje></p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button>
+                    <button class="btn btn-outline-danger" type="button" data-confirmar-desactivacion-submit>
+                        Desactivar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     {% block venta_flotante %}
     {% if request.user.is_authenticated and not request.user.debe_cambiar_password %}
     {% if request.user.rol == "JEFE" or request.user.rol == "CAJERO" %}

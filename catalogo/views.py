@@ -1,4 +1,3 @@
-import csv
 import unicodedata
 
 from django.contrib.auth.decorators import login_required
@@ -19,7 +18,10 @@ from .forms import (
 )
 
 from .models import Categoria, MovimientoStock, Producto
-from .exportaciones import exportar_movimientos
+from .exportaciones import (
+    exportar_movimientos,
+    exportar_productos as crear_exportacion_productos,
+)
 
 
 @login_required
@@ -40,15 +42,10 @@ def _productos_visibles(usuario):
     return productos
 
 
-def _texto_csv(valor):
-    texto = str(valor or "")
-    if texto.startswith(("=", "+", "-", "@")):
-        return f"'{texto}"
-    return texto
-
-
 @login_required
-def exportar_productos(request):
+def exportar_productos(request, formato):
+    if formato not in {"csv", "xlsx", "pdf"}:
+        return HttpResponse(status=404)
     productos = _productos_visibles(request.user)
     busqueda = request.GET.get("q", "").strip()
 
@@ -61,36 +58,10 @@ def exportar_productos(request):
             | Q(categorias__nombre__icontains=busqueda)
         ).distinct()
 
-    response = HttpResponse(content_type="text/csv; charset=utf-8")
-    response["Content-Disposition"] = 'attachment; filename="productos.csv"'
-    response.write("\ufeff")
-    writer = csv.writer(response, delimiter=";")
-    writer.writerow([
-        "Producto",
-        "Marca",
-        "Descripción",
-        "Código de barras",
-        "Categorías",
-        "Precio",
-        "Stock",
-        "Estado",
-    ])
-
-    for producto in productos.order_by("nombre"):
-        writer.writerow([
-            _texto_csv(producto.nombre),
-            _texto_csv(producto.marca),
-            _texto_csv(producto.descripcion),
-            _texto_csv(producto.codigo_barras),
-            _texto_csv(", ".join(
-                categoria.nombre for categoria in producto.categorias.all()
-            )),
-            producto.precio,
-            producto.stock,
-            "Activo" if producto.activo else "Inactivo",
-        ])
-
-    return response
+    return crear_exportacion_productos(
+        productos.order_by("nombre"),
+        formato,
+    )
 
 
 @login_required

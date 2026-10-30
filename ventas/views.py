@@ -281,7 +281,6 @@ def caja(request):
             "medios_pago": Venta.MedioPago,
             "medio_pago_seleccionado": medio_pago_seleccionado,
             "error_cobro": error_cobro,
-            "pantalla_cliente_token": _token_pantalla_cliente(request),
         },
     )
     if codigo_encontrado is not None:

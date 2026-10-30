@@ -1,5 +1,34 @@
 /* Menús fuera del contenedor desplazable, sin alterar acciones ni permisos. */
 const menus = new Map();
+let formularioDesactivacion = null;
+const modalDesactivacion = document.querySelector('#modal-confirmar-desactivacion');
+
+document.addEventListener('click', event => {
+    const trigger = event.target.closest('[data-confirmar-desactivacion]');
+    if (!trigger || !modalDesactivacion) return;
+    formularioDesactivacion = trigger.closest('form');
+    const tipo = trigger.dataset.tipo;
+    const nombre = trigger.dataset.nombre;
+    const articulo = tipo === 'producto' ? 'el' : 'la';
+    modalDesactivacion.querySelector('[data-desactivacion-titulo]').textContent =
+        `Desactivar ${tipo}`;
+    modalDesactivacion.querySelector('[data-desactivacion-mensaje]').textContent =
+        `¿Quieres desactivar ${articulo} ${tipo} «${nombre}»?`;
+    bootstrap.Modal.getOrCreateInstance(modalDesactivacion).show();
+});
+
+modalDesactivacion?.querySelector('[data-confirmar-desactivacion-submit]')
+    .addEventListener('click', event => {
+        if (!formularioDesactivacion) return;
+        event.currentTarget.disabled = true;
+        formularioDesactivacion.requestSubmit();
+    });
+
+modalDesactivacion?.addEventListener('hidden.bs.modal', () => {
+    formularioDesactivacion = null;
+    modalDesactivacion.querySelector('[data-confirmar-desactivacion-submit]').disabled = false;
+});
+
 document.addEventListener('show.bs.dropdown', event => {
     const toggle = event.target;
     const menu = toggle.parentElement.querySelector('.dropdown-menu');

@@ -11,57 +11,68 @@
 <body class="pa-cliente" data-estado-cliente-url="{{ estado_url }}"
     data-pantalla-cliente-token="{{ pantalla_cliente_token }}"
     data-ultima-venta="{{ ultima_venta_id|default:'' }}">
-    <header class="pa-cliente-encabezado">
-        <img src="{% static 'img/logo_punto_aparte.jpg' %}" alt="Punto Aparte, librería">
-        <div>
-            <p class="pa-cliente-marca">Punto Aparte</p>
-            <p class="mb-0">Gracias por tu compra</p>
-        </div>
-    </header>
-
     <main class="pa-cliente-contenido">
-        <section class="pa-cliente-espera" data-cliente-espera {% if lineas %}hidden{% endif %}>
-            <h1>Bienvenido</h1>
-            <p>Tu compra aparecerá aquí cuando comience la venta.</p>
-        </section>
+        <div class="pa-cliente-panel">
+            <header class="pa-cliente-encabezado">
+                <div class="pa-cliente-identidad">
+                    <img src="{% static 'img/logo_punto_aparte.jpg' %}" alt="Punto Aparte, librería">
+                    <div>
+                        <p class="pa-cliente-marca">Punto Aparte</p>
+                        <p class="pa-cliente-preferencia">Gracias por preferirnos</p>
+                    </div>
+                </div>
+                <p class="pa-cliente-seccion">Tu compra</p>
+            </header>
 
-        <section data-cliente-compra {% if not lineas %}hidden{% endif %}>
-            <h1>Tu compra</h1>
-            <div class="table-responsive">
-                <table class="table align-middle">
-                    <thead>
-                        <tr>
-                            <th>Producto</th>
-                            <th>Cantidad</th>
-                            <th>Precio unitario</th>
-                            <th>Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody data-cliente-productos>
-                        {% for linea in lineas %}
-                        <tr>
-                            <td>{{ linea.producto.nombre }}</td>
-                            <td>{{ linea.cantidad }}</td>
-                            <td>${{ linea.producto.precio|localize }}</td>
-                            <td>${{ linea.subtotal|localize }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            <div class="pa-cliente-total">
-                <span>Total</span>
-                <strong data-cliente-total>${{ total|localize }}</strong>
-            </div>
-        </section>
+            <section class="pa-cliente-espera" data-cliente-espera {% if lineas %}hidden{% endif %}>
+                <h1>Bienvenido</h1>
+                <p>Tu compra aparecerá aquí cuando comience la venta.</p>
+            </section>
 
-        <p class="pa-cliente-estado" role="status" data-cliente-estado></p>
+            <section class="pa-cliente-compra" data-cliente-compra {% if not lineas %}hidden{% endif %}>
+                <h1>Productos agregados</h1>
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Cantidad</th>
+                                <th>Precio unitario</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody data-cliente-productos>
+                            {% for linea in lineas %}
+                            <tr>
+                                <td data-label="Producto">{{ linea.producto.nombre }}</td>
+                                <td data-label="Cantidad">{{ linea.cantidad }}</td>
+                                <td data-label="Precio unitario">${{ linea.producto.precio|localize }}</td>
+                                <td data-label="Total">${{ linea.subtotal|localize }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pa-cliente-resumen">
+                    <div class="pa-cliente-total">
+                        <span>Total</span>
+                        <strong data-cliente-total>${{ total|localize }}</strong>
+                    </div>
+                </div>
+                <p class="pa-cliente-ayuda">Revisa los productos y el total de tu compra.</p>
+            </section>
+
+            <p class="pa-cliente-estado" role="status" data-cliente-estado></p>
+        </div>
     </main>
 
     <div class="pa-cliente-modal" role="dialog" aria-modal="true"
         aria-labelledby="gracias-compra-titulo" data-cliente-gracias hidden>
         <div class="pa-cliente-modal-contenido">
+            <span class="pa-cliente-modal-sello" aria-hidden="true">✓</span>
+            <p class="pa-cliente-modal-marca">Punto Aparte</p>
             <h2 id="gracias-compra-titulo">Gracias por su compra</h2>
+            <p>Esperamos verte nuevamente.</p>
         </div>
     </div>
 

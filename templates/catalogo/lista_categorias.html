@@ -6,14 +6,16 @@
 {% block title %}Categorías | Punto Aparte{% endblock %}
 
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+<div class="pa-encabezado-pagina">
     <div>
         <h1 class="h2 fw-bold mb-1">Categorías</h1>
         <p class="text-secondary mb-0">Consulta las categorías disponibles para organizar el catálogo.</p>
     </div>
 
     {% if request.user.rol == "JEFE" %}
-    <a class="btn btn-pa" href="{% url 'catalogo:crear_categoria' %}">Agregar categoría</a>
+    <div class="pa-encabezado-acciones">
+        <a class="btn btn-pa" href="{% url 'catalogo:crear_categoria' %}">Agregar categoría</a>
+    </div>
     {% endif %}
 </div>
 
@@ -46,9 +48,13 @@
                                 <li>
                                     <form method="post" action="{% url 'catalogo:cambiar_estado_categoria' categoria.pk %}">
                                         {% csrf_token %}
-                                        <button class="dropdown-item {% if categoria.activo %}text-danger{% endif %}" type="submit">
-                                            {% if categoria.activo %}Desactivar{% else %}Activar{% endif %}
-                                        </button>
+                                        {% if categoria.activo %}
+                                        <button class="dropdown-item text-danger" type="button"
+                                            data-confirmar-desactivacion data-tipo="categoría"
+                                            data-nombre="{{ categoria.nombre|escape }}">Desactivar</button>
+                                        {% else %}
+                                        <button class="dropdown-item" type="submit">Activar</button>
+                                        {% endif %}
                                     </form>
                                 </li>
                             </ul>

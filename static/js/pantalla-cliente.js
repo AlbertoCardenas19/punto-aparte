@@ -25,13 +25,14 @@ function actualizarPantalla(datos) {
 
     for (const producto of datos.productos) {
         const fila = document.createElement('tr');
-        for (const valor of [
-            producto.nombre,
-            producto.cantidad,
-            moneda.format(producto.precio_unitario),
-            moneda.format(producto.subtotal),
+        for (const [etiqueta, valor] of [
+            ['Producto', producto.nombre],
+            ['Cantidad', producto.cantidad],
+            ['Precio unitario', moneda.format(producto.precio_unitario)],
+            ['Total', moneda.format(producto.subtotal)],
         ]) {
             const celda = document.createElement('td');
+            celda.dataset.label = etiqueta;
             celda.textContent = valor;
             fila.append(celda);
         }

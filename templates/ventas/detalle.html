@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}Venta #{{ venta.pk }} | Punto Aparte{% endblock %}
+{% block venta_flotante %}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -51,15 +52,14 @@
                     </table>
                 </div>
 
-                <a class="btn btn-pa" href="{% url 'ventas:caja' %}">
-                    Nueva venta
-                </a>
-                <a class="btn btn-outline-primary" href="{% url 'ventas:lista' %}">
-                    Consultar ventas
-                </a>
-                <button class="btn btn-outline-secondary" onclick="window.print()">
-                    Imprimir
-                </button>
+                <div class="d-flex flex-wrap gap-3 pa-form-acciones">
+                    <a class="btn btn-outline-primary" href="{% url 'ventas:lista' %}">
+                        Consultar ventas
+                    </a>
+                    <button class="btn btn-outline-secondary" onclick="window.print()">
+                        Imprimir
+                    </button>
+                </div>
             </div>
         </div>
     </div>

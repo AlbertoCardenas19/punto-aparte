@@ -56,7 +56,7 @@ Las plantillas extienden `templates/base.html`, que carga Bootstrap local y el s
 Las vistas actuales incluyen:
 
 - Venta con catálogo paginado, carrito de sesión, selección de medio de pago y pantalla del cliente de solo lectura.
-- Productos con exportación CSV y categorías con administración de estado. «Movimientos de stock» abre directamente el historial y ofrece un único acceso al formulario separado. El formulario busca productos de forma predictiva y mantiene los ingresos y ajustes como operaciones internas distintas. El historial se exporta según la búsqueda visible a CSV, XLSX o PDF sin dependencias externas.
+- Productos y movimientos de stock se exportan según la búsqueda visible a CSV, XLSX o PDF sin dependencias externas. Categorías conserva la administración de estado. «Movimientos de stock» abre directamente el historial y ofrece un único acceso al formulario separado; el formulario busca productos de forma predictiva y mantiene los ingresos y ajustes como operaciones internas distintas.
 - Consulta de ventas: el Cajero ve las propias y el Jefe ve todas, con filtros de fecha y cajero según permiso.
 - Usuarios para Jefe.
 

@@ -1,4 +1,10 @@
 <nav class="pa-menu" aria-label="Navegación principal">
+    <p class="pa-menu-grupo">General</p>
+    <a class="pa-menu-enlace {% if request.resolver_match.url_name == 'inicio' %}active{% endif %}"
+        href="{% url 'inicio' %}" {% if request.resolver_match.url_name == 'inicio' %}aria-current="page"{% endif %}>
+        Inicio
+    </a>
+
     <p class="pa-menu-grupo">Catálogo</p>
     <a class="pa-menu-enlace {% if request.resolver_match.url_name == 'lista_productos' or request.resolver_match.url_name == 'crear_producto' or request.resolver_match.url_name == 'editar_producto' or request.resolver_match.url_name == 'exportar_productos' %}active{% endif %}"
         href="{% url 'catalogo:lista_productos' %}" {% if request.resolver_match.url_name == 'lista_productos' or request.resolver_match.url_name == 'crear_producto' or request.resolver_match.url_name == 'editar_producto' %}aria-current="page"{% endif %}>
