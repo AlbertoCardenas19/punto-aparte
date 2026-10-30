@@ -19,3 +19,9 @@
 .pa-caja .pa-caja-total { font-size: clamp(1.4rem, 2vw, 1.8rem); gap: .75rem; flex-wrap: wrap; }
 .pa-caja .pa-caja-cobrar { --bs-btn-color: white; --bs-btn-bg: #13294c; --bs-btn-border-color: #13294c; --bs-btn-hover-color: white; --bs-btn-hover-bg: #203e65; --bs-btn-hover-border-color: #203e65; --bs-btn-active-color: white; --bs-btn-active-bg: #0c1c35; --bs-btn-active-border-color: #0c1c35; --bs-btn-focus-shadow-rgb: 19, 41, 76; min-height: 4.5rem; font-weight: 700; border-radius: .85rem; }
 @media (max-width: 575.98px) { .pa-caja .pa-caja-productos { grid-template-columns: 1fr; } }
+/* Encabezado de marca con navegación de alto contraste. */
+.pa-caja .pa-caja-cabecera { background: var(--pa-navy); color: #fff; border-bottom: 3px solid var(--pa-red); }
+.pa-caja .pa-caja-marca { display: flex; align-items: center; gap: 1rem; color: #fff; }
+.pa-caja .pa-caja-marca span { font-size: 1rem; font-weight: 500; }
+.pa-caja .pa-caja-cabecera nav a { color: #fff; }
+.pa-caja .pa-caja-cabecera nav a:hover, .pa-caja .pa-caja-cabecera nav a:focus-visible, .pa-caja .pa-caja-cabecera .pa-caja-activa { color: #fff; background: #304b68; }

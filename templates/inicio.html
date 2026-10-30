@@ -13,7 +13,7 @@
 
 <div class="row g-3">
     <div class="col-12 col-md-6 col-xl-4">
-        <div class="card h-100 border-0 shadow-sm">
+        <div class="card h-100">
             <div class="card-body">
                 <h2 class="h5 card-title">Abrir caja</h2>
                 <a class="btn btn-pa" href="{% url 'ventas:caja' %}">Abrir caja</a>
@@ -22,7 +22,7 @@
     </div>
 
     <div class="col-12 col-md-6 col-xl-4">
-        <div class="card h-100 border-0 shadow-sm">
+        <div class="card h-100">
             <div class="card-body">
                 <h2 class="h5 card-title">Catálogo</h2>
                 <p class="card-text text-secondary">
@@ -37,7 +37,7 @@
 
     {% if request.user.rol == "JEFE" %}
     <div class="col-12 col-md-6 col-xl-4">
-        <div class="card h-100 border-0 shadow-sm">
+        <div class="card h-100">
             <div class="card-body">
                 <h2 class="h5 card-title">Usuarios</h2>
                 <p class="card-text text-secondary">

@@ -7,49 +7,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Punto Aparte{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'vendor/bootstrap/css/bootstrap.min.css' %}">
-    <style>
-        :root {
-            --pa-navy: #17324d;
-            --pa-red: #c93440;
-        }
-
-        body {
-            background: #f4f6f8;
-        }
-
-        .navbar-pa {
-            background: var(--pa-navy);
-        }
-
-        .btn-pa {
-            color: #fff;
-            background: var(--pa-red);
-            border-color: var(--pa-red);
-        }
-
-        .btn-pa:hover {
-            color: #fff;
-            background: #a92732;
-            border-color: #a92732;
-        }
-    </style>
+    <link rel="stylesheet" href="{% static 'css/punto-aparte.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 
-<body class="{% block body_class %}{% endblock %}">
+<body class="pa-app {% block body_class %}{% endblock %}">
     {% block navigation %}
     <nav class="navbar navbar-expand-lg navbar-dark navbar-pa">
-        <div class="container">
-            <a class="navbar-brand fw-semibold" href="{% url 'inicio' %}">Punto Aparte</a>
+        <div class="container-fluid pa-nav-contenido">
+            <a class="navbar-brand fw-semibold" href="{% url 'inicio' %}"><img class="pa-logo" src="{% static 'img/logo_punto_aparte.jpg' %}" alt="Punto Aparte, librería"></a>
 
             {% if request.user.is_authenticated %}
-            <div class="d-flex align-items-center gap-3">
-                <a class="nav-link text-white" href="{% url 'catalogo:lista_productos' %}">
+            <div class="d-flex flex-wrap align-items-center gap-3">
+                <a class="nav-link {% if request.resolver_match.namespace == 'catalogo' %}active{% endif %}" {% if request.resolver_match.namespace == 'catalogo' %}aria-current="page"{% endif %} href="{% url 'catalogo:lista_productos' %}">
                     Catálogo
                 </a>
 
                 {% if request.user.rol == "JEFE" %}
-                <a class="nav-link text-white" href="{% url 'usuarios:lista' %}">
+                <a class="nav-link {% if request.resolver_match.namespace == 'usuarios' %}active{% endif %}" {% if request.resolver_match.namespace == 'usuarios' %}aria-current="page"{% endif %} href="{% url 'usuarios:lista' %}">
                     Usuarios
                 </a>
                 {% endif %}

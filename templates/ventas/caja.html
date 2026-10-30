@@ -8,8 +8,8 @@
 {% block main_class %}pa-caja-contenido{% endblock %}
 {% block navigation %}
 <header class="pa-caja-cabecera">
-    {# Identidad temporal: no hay un archivo independiente del logo. #}
-    <a class="pa-caja-marca" href="{% url 'inicio' %}">Punto Aparte<small>Sistema de caja</small></a>
+
+    <a class="pa-caja-marca" href="{% url 'inicio' %}"><img class="pa-logo" src="{% static 'img/logo_punto_aparte.jpg' %}" alt="Punto Aparte, librería"><span>Sistema de caja</span></a>
     <nav aria-label="Navegación de caja" class="d-flex flex-wrap gap-2">
         <a class="pa-caja-activa" href="{% url 'ventas:caja' %}" aria-current="page">Venta</a>
         <a href="{% url 'catalogo:lista_productos' %}">Productos</a>
@@ -17,7 +17,7 @@
     </nav>
     <div class="d-flex flex-wrap align-items-center gap-3">
         <span>Caja · {{ request.user.get_full_name|default:request.user.username }}</span>
-        <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary" type="submit">Cerrar sesión</button></form>
+        <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="btn btn-sm btn-outline-light" type="submit">Cerrar sesión</button></form>
     </div>
 </header>
 {% endblock %}
