@@ -7,6 +7,8 @@ from html import escape
 from django.http import HttpResponse
 from django.utils import timezone
 
+from config.formatos import formatear_clp
+
 
 ENCABEZADOS_MOVIMIENTOS = (
     "Fecha",
@@ -201,6 +203,7 @@ def _exportar_pdf(
     nombre_archivo,
     titulo,
     anchos,
+    mensaje_vacio,
 ):
     lineas = list(_lineas_pdf(encabezados, filas, anchos))
     paginas = []
@@ -213,7 +216,7 @@ def _exportar_pdf(
                 encabezado + encabezado_tabla + detalle[inicio:inicio + 44]
             )
     else:
-        paginas = [encabezado + ["No hay movimientos para exportar."]]
+        paginas = [encabezado + [mensaje_vacio]]
     response = HttpResponse(
         _crear_pdf(paginas),
         content_type="application/pdf",
@@ -246,6 +249,7 @@ def exportar_movimientos(movimientos, formato):
         "movimientos_stock",
         "Movimientos de stock",
         (16, 24, 10, 7, 8, 8, 30, 18),
+        "No hay movimientos para exportar.",
     )
 
 
@@ -269,7 +273,7 @@ def exportar_productos(productos, formato):
             ", ".join(
                 categoria.nombre for categoria in producto.categorias.all()
             ),
-            producto.precio,
+            formatear_clp(producto.precio),
             producto.stock,
             "Activo" if producto.activo else "Inactivo",
         )
@@ -291,4 +295,5 @@ def exportar_productos(productos, formato):
         "productos",
         "Productos",
         (24, 18, 28, 16, 20, 10, 8, 10),
+        "No hay productos para exportar.",
     )

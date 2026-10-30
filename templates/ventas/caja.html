@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static l10n %}
+{% load static punto_aparte %}
 
 {% block title %}Caja | Punto Aparte{% endblock %}
 
@@ -34,7 +34,7 @@
                 <h2 class="h6 fw-bold">
                     {{ producto.nombre }}{% if producto.marca %} · {{ producto.marca }}{% endif %}
                 </h2>
-                <p class="pa-caja-precio">${{ producto.precio|localize }}</p>
+                <p class="pa-caja-precio">{{ producto.precio|clp }}</p>
                 <div class="pa-caja-indicadores">
                     <span class="pa-stock-disponible">Stock disponible: {{ producto.stock }}</span>
                     {% if producto.stock == 0 %}{% include "includes/sin_stock.html" %}{% endif %}
@@ -99,7 +99,7 @@
             data-bs-target="#compra-actual" aria-expanded="{% if carrito_abierto %}true{% else %}false{% endif %}"
             aria-controls="compra-actual">
             <span>Compra actual</span>
-            <strong data-total-carrito-movil>${{ total_carrito|localize }}</strong>
+            <strong data-total-carrito-movil>{{ total_carrito|clp }}</strong>
         </button>
         <div class="collapse pa-carrito-contenido{% if carrito_abierto %} show{% endif %}" id="compra-actual">
         <div class="pa-caja-panel" data-carrito-panel>
@@ -108,12 +108,20 @@
                     <h2 class="h4 fw-bold mb-0">Compra actual</h2>
                     <div class="d-flex flex-wrap justify-content-end align-items-center gap-2">
                         <span class="small text-secondary">{{ lineas_carrito|length }} producto{{ lineas_carrito|length|pluralize:"s" }}</span>
-                        {% if lineas_carrito %}
+                        {% if hay_carrito %}
                         <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal"
                             data-bs-target="#modal-vaciar-venta">Vaciar venta</button>
                         {% endif %}
                     </div>
                 </div>
+
+                {% if problemas_carrito %}
+                <div class="alert alert-danger py-2 small" role="alert">
+                    {% for problema in problemas_carrito %}
+                    <p class="mb-0{% if not forloop.last %} mb-1{% endif %}">{{ problema }}</p>
+                    {% endfor %}
+                </div>
+                {% endif %}
 
                 {% if lineas_carrito %}
                 <form method="post" data-carrito-form>
@@ -136,7 +144,7 @@
                                     <td data-label="Producto">
                                         {{ linea.producto.nombre }}
                                     </td>
-                                    <td data-label="Precio unitario">${{ linea.precio_unitario|localize }}</td>
+                                    <td data-label="Precio unitario">{{ linea.precio_unitario|clp }}</td>
                                     <td data-label="Unid.">
                                         <div class="pa-cantidad-control">
                                             <button class="pa-cantidad-boton" type="button" data-cantidad-restar
@@ -147,10 +155,13 @@
                                                 min="0" max="{{ linea.producto.stock }}" step="1" inputmode="numeric">
                                             <button class="pa-cantidad-boton" type="button" data-cantidad-sumar
                                                 aria-label="Sumar una unidad de {{ linea.producto.nombre }}"
-                                                {% if linea.cantidad >= linea.producto.stock %}disabled{% endif %}>+</button>
+                                                {% if not linea.disponible or linea.cantidad >= linea.producto.stock %}disabled{% endif %}>+</button>
                                         </div>
+                                        {% if not linea.disponible %}
+                                        <span class="small text-danger">Producto inactivo</span>
+                                        {% endif %}
                                     </td>
-                                    <td data-label="Subtotal">${{ linea.subtotal|localize }}</td>
+                                    <td data-label="Subtotal">{{ linea.subtotal|clp }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -163,11 +174,13 @@
 
                 <div class="pa-caja-total d-flex justify-content-between fw-bold mb-3">
                     <span>Total</span>
-                    <span>${{ total_carrito|localize }}</span>
+                    <span>{{ total_carrito|clp }}</span>
                 </div>
 
+                {% if not problemas_carrito %}
                 <button class="btn pa-caja-cobrar btn-lg w-100" type="button" data-bs-toggle="modal"
-                    data-bs-target="#modal-cobro">Cobrar ${{ total_carrito|localize }}</button>
+                    data-bs-target="#modal-cobro">Cobrar {{ total_carrito|clp }}</button>
+                {% endif %}
                 {% else %}
                 <p class="text-secondary mb-0">
                     Aún no hay productos en el carrito.
@@ -179,7 +192,7 @@
     </section>
 </div>
 
-{% if lineas_carrito %}
+{% if hay_carrito %}
 <div class="modal fade" id="modal-vaciar-venta" tabindex="-1"
     aria-labelledby="modal-vaciar-venta-titulo" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -203,6 +216,8 @@
     </div>
 </div>
 
+{% if lineas_carrito %}
+{% if not problemas_carrito %}
 <div class="modal fade" id="modal-cobro" tabindex="-1" aria-labelledby="modal-cobro-titulo" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -211,7 +226,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
-                <p>Se registrará una venta por <strong>${{ total_carrito|localize }}</strong>.</p>
+                <p>Se registrará una venta por <strong>{{ total_carrito|clp }}</strong>.</p>
                 <form id="form-cobro" method="post" data-form-cobro>
                     {% csrf_token %}
                     <input type="hidden" name="accion" value="confirmar">
@@ -250,5 +265,7 @@
         </div>
     </div>
 </div>
+{% endif %}
+{% endif %}
 {% endif %}
 {% endblock %}

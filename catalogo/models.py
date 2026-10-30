@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models.functions import Lower
 
 
 def normalizar_mayuscula_inicial(valor):
@@ -17,6 +18,15 @@ class Categoria(models.Model):
         verbose_name = "categoría"
         verbose_name_plural = "categorías"
         ordering = ("nombre",)
+        constraints = [
+            models.UniqueConstraint(
+                Lower("nombre"),
+                name="catalogo_categoria_nombre_ci_unique",
+                violation_error_message=(
+                    "Ya existe una categoría con este nombre."
+                ),
+            ),
+        ]
 
     def __str__(self):
         return self.nombre
@@ -56,6 +66,7 @@ class Producto(models.Model):
     def save(self, *args, **kwargs):
         self.nombre = normalizar_mayuscula_inicial(self.nombre)
         self.marca = normalizar_mayuscula_inicial(self.marca)
+        self.codigo_barras = (self.codigo_barras or "").strip() or None
         return super().save(*args, **kwargs)
 
 
@@ -86,6 +97,13 @@ class MovimientoStock(models.Model):
         null=True,
         blank=True,
         editable=False,
+    )
+    venta = models.ForeignKey(
+        "ventas.Venta",
+        on_delete=models.PROTECT,
+        related_name="movimientos_stock",
+        null=True,
+        blank=True,
     )
 
     class Meta:

@@ -114,6 +114,7 @@ Bootstrap, jQuery y DataTables se sirven desde `static/vendor/`; no se necesita 
 - [`estandares-interfaz.md`](docs/estandares-interfaz.md): presentación, componentes, mensajes y referencias visuales.
 - [`arquitectura-actual.md`](docs/arquitectura-actual.md): aplicaciones, modelos y flujo de venta.
 - [`estado-actual.md`](docs/estado-actual.md): capacidades actuales y brechas verificadas.
+- [`revision-opencode.md`](docs/revision-opencode.md): estado y evidencia de los hallazgos técnicos revisados.
 - [`decisiones-pendientes.md`](docs/decisiones-pendientes.md): decisiones que no se deben inventar.
 - [`flujo-de-trabajo-codex.md`](docs/flujo-de-trabajo-codex.md): prompts para orientar y acotar sesiones.
 

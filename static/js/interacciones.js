@@ -108,6 +108,8 @@ for (const table of document.querySelectorAll('[data-tabla-listado]')) {
             const busqueda = dataTable.search().trim();
             for (const exportLink of exportLinks) {
                 const url = new URL(exportLink.href);
+                const filtros = new URLSearchParams(location.search);
+                url.search = filtros.toString();
                 if (busqueda) url.searchParams.set('q', busqueda);
                 else url.searchParams.delete('q');
                 exportLink.href = url;
@@ -343,10 +345,16 @@ for (const form of document.querySelectorAll('[data-busqueda-viva]')) {
                 await response.text(), 'text/html'
             );
             reemplazarResultadosBusqueda(doc, url);
-            if (response.headers.get('X-Codigo-Encontrado') === '1') {
+            const codigoEstado = response.headers.get('X-Codigo-Estado');
+            if (codigoEstado === 'agregado') {
                 aplicarActualizacionCarrito(doc);
             }
-            status.textContent = '';
+            const mensajesCodigo = {
+                no_encontrado: 'No se encontró un producto activo con ese código.',
+                sin_stock: 'Producto encontrado, pero está sin stock.',
+                limite_stock: 'Ya agregaste todo el stock disponible.',
+            };
+            status.textContent = mensajesCodigo[codigoEstado] || '';
         } catch (error) {
             status.textContent = 'No se pudo buscar. Usa el botón Buscar para intentarlo nuevamente.';
         }

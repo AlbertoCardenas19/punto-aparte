@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load l10n %}
+{% load punto_aparte %}
 
 {% block extra_css %}{% include "includes/datatables_css.html" %}{% endblock %}
 {% block extra_js %}{% include "includes/datatables_js.html" %}{% endblock %}
@@ -65,8 +65,8 @@
                     <td data-order="{{ venta.fecha|date:'Y-m-d H:i:s' }}">{{ venta.fecha|date:"d/m/Y H:i" }}</td>
                     <td>{{ venta.cajero.get_full_name|default:venta.cajero.username }}</td>
                     <td>{{ venta.get_medio_pago_display }}</td>
-                    <td data-order="{{ venta.total }}">${{ venta.total|localize }}</td>
-                    <td><span class="badge {% if venta.estado == 'COMPLETADA' %}text-bg-success{% else %}text-bg-secondary{% endif %}">{{ venta.get_estado_display }}</span></td>
+                    <td data-order="{{ venta.total }}">{{ venta.total|clp }}</td>
+                    <td><span class="badge {% if venta.estado == 'COMPLETADA' %}text-bg-success{% elif venta.estado == 'ANULADA' %}text-bg-danger{% else %}text-bg-secondary{% endif %}">{{ venta.get_estado_display }}</span></td>
                     <td class="all"><a class="btn btn-sm btn-outline-primary" href="{% url 'ventas:detalle' venta.pk %}">Ver detalle</a></td>
                 </tr>
                 {% endfor %}

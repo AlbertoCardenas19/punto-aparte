@@ -11,6 +11,7 @@ from .services import PreciosCambiaron, confirmar_venta
 from .views import (
     CLAVE_CARRITO,
     CLAVE_IDEMPOTENCIA_VENTA,
+    CLAVE_PANTALLA_CLIENTE,
     CLAVE_PRECIOS_CARRITO,
 )
 
@@ -59,6 +60,12 @@ class ConfirmarVentaTests(TestCase):
             MovimientoStock.objects.filter(
                 tipo=MovimientoStock.Tipo.SALIDA,
             ).count(), 1,
+        )
+        self.assertEqual(
+            MovimientoStock.objects.get(
+                tipo=MovimientoStock.Tipo.SALIDA,
+            ).venta,
+            primera,
         )
         self.assertEqual(self.producto.stock, 8)
 
@@ -144,9 +151,85 @@ class ConfirmarVentaTests(TestCase):
 
         self.assertEqual(respuesta.status_code, 200)
         self.assertContains(respuesta, "Uno o más precios cambiaron")
-        self.assertContains(respuesta, "$2400")
+        self.assertContains(respuesta, "$2.400")
         self.assertFalse(Venta.objects.exists())
         self.assertEqual(
             self.client.session[CLAVE_PRECIOS_CARRITO],
             {str(self.producto.pk): 1200},
         )
+
+
+class EstadoCarritoTests(TestCase):
+    def setUp(self):
+        self.cajero = Usuario.objects.create_user(
+            username="ignorado",
+            first_name="Ana",
+            last_name="Pérez",
+            email="ana2@example.com",
+            password="clave-segura",
+        )
+        self.producto = Producto.objects.create(
+            nombre="Cuaderno", precio=1234, stock=2, codigo_barras="7801"
+        )
+        self.client.force_login(self.cajero)
+
+    def _guardar_carrito(self, producto=None):
+        producto = producto or self.producto
+        sesion = self.client.session
+        sesion[CLAVE_CARRITO] = {str(producto.pk): 1}
+        sesion[CLAVE_PRECIOS_CARRITO] = {str(producto.pk): producto.precio}
+        sesion.save()
+
+    def test_producto_inactivo_permanece_visible_y_bloquea_cobro(self):
+        self._guardar_carrito()
+        self.producto.activo = False
+        self.producto.save(update_fields=["activo"])
+
+        response = self.client.get(reverse("ventas:caja"))
+
+        self.assertContains(response, "Cuaderno")
+        self.assertContains(response, "está inactivo")
+        self.assertNotContains(response, "data-bs-target=\"#modal-cobro\"")
+
+    def test_producto_eliminado_no_se_omite_sin_explicacion(self):
+        sesion = self.client.session
+        sesion[CLAVE_CARRITO] = {"999999": 1}
+        sesion[CLAVE_PRECIOS_CARRITO] = {"999999": 500}
+        sesion.save()
+
+        response = self.client.get(reverse("ventas:caja"))
+
+        self.assertContains(response, "ya no existe")
+        self.assertNotContains(response, "data-bs-target=\"#modal-cobro\"")
+
+    def test_escaneo_distingue_no_encontrado_sin_stock_y_agregado(self):
+        url = reverse("ventas:caja")
+        cabeceras = {"HTTP_X_REQUESTED_WITH": "XMLHttpRequest"}
+
+        no_encontrado = self.client.post(
+            url, {"accion": "escanear", "codigo": "otro"}, **cabeceras
+        )
+        self.producto.stock = 0
+        self.producto.save(update_fields=["stock"])
+        sin_stock = self.client.post(
+            url, {"accion": "escanear", "codigo": "7801"}, **cabeceras
+        )
+        self.producto.stock = 2
+        self.producto.save(update_fields=["stock"])
+        agregado = self.client.post(
+            url, {"accion": "escanear", "codigo": "7801"}, **cabeceras
+        )
+
+        self.assertEqual(no_encontrado.headers["X-Codigo-Estado"], "no_encontrado")
+        self.assertEqual(sin_stock.headers["X-Codigo-Estado"], "sin_stock")
+        self.assertEqual(agregado.headers["X-Codigo-Estado"], "agregado")
+
+    def test_pantalla_cliente_carga_el_carrito_en_la_primera_respuesta(self):
+        self._guardar_carrito()
+
+        response = self.client.get(reverse("ventas:pantalla_cliente"))
+
+        self.assertContains(response, "Cuaderno")
+        self.assertContains(response, "$1.234")
+        self.assertContains(response, "data-cliente-compra")
+        self.assertTrue(self.client.session[CLAVE_PANTALLA_CLIENTE])

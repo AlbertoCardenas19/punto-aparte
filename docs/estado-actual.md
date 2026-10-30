@@ -16,6 +16,7 @@ Esta sección actualiza la fotografía del ZIP con la implementación vigente en
 - El alta desde la aplicación del Jefe genera y entrega una contraseña temporal una sola vez. Los reenvíos del mismo formulario no duplican la cuenta ni vuelven a mostrar la contraseña. `usuarios/0002_usuario_debe_cambiar_password.py` añade el indicador de cambio inicial con valor predeterminado `False`, compatible con cuentas existentes. El primer Jefe se crea mediante `inicializar_jefe`; `createsuperuser` está deshabilitado. Django Admin permite consultar cuentas, pero no crearlas, editarlas ni eliminarlas.
 - El acceso acepta nombre de usuario o correo; los correos se normalizan y cuentan con restricción sin distinguir mayúsculas. Nombres de personas, productos, marcas y categorías aplican las normalizaciones acordadas.
 - La pantalla del cliente es de solo lectura, puede abrirse desde la navegación en estado de espera, usa la misma sesión de caja y se actualiza periódicamente. Al confirmar una venta agradece durante cinco segundos antes de volver al estado de espera. No existen emisión tributaria, datos de factura, integración con terminal o banco ni caja diaria.
+- Las confirmaciones de venta y los movimientos manuales de stock son idempotentes. Las salidas de inventario creadas por una venta quedan relacionadas con ella, y los productos inactivos o eliminados de un carrito abierto bloquean el cobro con una explicación contextual.
 
 ## Implementado en la fotografía del ZIP
 
@@ -37,7 +38,7 @@ Esta sección actualiza la fotografía del ZIP con la implementación vigente en
 - Apertura, cierre y arqueo diario.
 - Descuentos con autorización y restricciones de uso.
 - Flujo de anulación/devolución con motivo y autorización.
-- Pruebas automáticas de reglas críticas; los archivos `tests.py` revisados eran los vacíos generados por Django.
+- Pruebas de concurrencia real sobre PostgreSQL. Existen pruebas automatizadas de reglas críticas, pero el entorno de esta revisión solo permitió ejecutarlas con SQLite.
 
 ## Problemas históricos de la copia revisada (no asumir que siguen vigentes)
 
@@ -55,3 +56,5 @@ Esta sección actualiza la fotografía del ZIP con la implementación vigente en
 - `python manage.py check` informó cero problemas del sistema.
 
 No guardes contraseñas ni valores reales del `.env` en este archivo. Antes de ejecutar verificaciones, confirma que el entorno virtual y base de datos correctos están activos.
+
+El estado detallado de los hallazgos técnicos se mantiene en [revision-opencode.md](revision-opencode.md).

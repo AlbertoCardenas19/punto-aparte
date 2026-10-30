@@ -33,11 +33,16 @@ def _lineas_del_carrito(carrito, precios_vistos=None):
         for producto in Producto.objects.filter(pk__in=carrito.keys())
     }
     lineas = []
+    problemas = []
     total = 0
 
     for producto_id, cantidad_guardada in carrito.items():
         producto = productos.get(producto_id)
         if not producto:
+            problemas.append(
+                f"El producto con identificador {producto_id} ya no existe. "
+                "Vacía la venta antes de continuar."
+            )
             continue
         cantidad = int(cantidad_guardada)
         precio_unitario = int(
@@ -50,9 +55,15 @@ def _lineas_del_carrito(carrito, precios_vistos=None):
             "cantidad": cantidad,
             "precio_unitario": precio_unitario,
             "subtotal": subtotal,
+            "disponible": producto.activo,
         })
+        if not producto.activo:
+            problemas.append(
+                f"«{producto.nombre}» está inactivo. Quítalo de la compra "
+                "antes de cobrar."
+            )
 
-    return lineas, total
+    return lineas, total, problemas
 
 
 def _asegurar_precios_carrito(request, carrito):
@@ -147,7 +158,7 @@ def caja(request):
     carrito = request.session.get(CLAVE_CARRITO, {})
     precios_vistos = _asegurar_precios_carrito(request, carrito)
     clave_idempotencia = _clave_idempotencia_venta(request)
-    codigo_encontrado = None
+    codigo_estado = None
     error_cobro = None
     medio_pago_seleccionado = Venta.MedioPago.EFECTIVO
     solicitud_dinamica = (
@@ -209,9 +220,11 @@ def caja(request):
                 codigo_barras=codigo,
                 activo=True,
             ).first()
-            codigo_encontrado = producto is not None
-
-            if producto and producto.stock > 0:
+            if not producto:
+                codigo_estado = "no_encontrado"
+            elif producto.stock <= 0:
+                codigo_estado = "sin_stock"
+            else:
                 id_texto = str(producto.pk)
                 nueva_cantidad = int(carrito.get(id_texto, 0)) + 1
                 if nueva_cantidad <= producto.stock:
@@ -222,6 +235,9 @@ def caja(request):
                         ] = precios_vistos
                     carrito[id_texto] = nueva_cantidad
                     request.session[CLAVE_CARRITO] = carrito
+                    codigo_estado = "agregado"
+                else:
+                    codigo_estado = "limite_stock"
 
             if not solicitud_dinamica:
                 return redirect("ventas:caja")
@@ -245,16 +261,20 @@ def caja(request):
                     precios_vistos.pop(id_texto, None)
                     continue
 
-                producto = Producto.objects.filter(
-                    pk=id_texto,
-                    activo=True,
-                ).first()
+                producto = Producto.objects.filter(pk=id_texto).first()
 
                 if not producto:
                     messages.error(
-                        request, "Se quitó un producto no disponible.")
-                    carrito.pop(id_texto)
-                    precios_vistos.pop(id_texto, None)
+                        request,
+                        "Un producto de la compra ya no existe. "
+                        "Vacía la venta antes de continuar.",
+                    )
+                elif not producto.activo:
+                    messages.error(
+                        request,
+                        f"«{producto.nombre}» está inactivo. "
+                        "Reduce su cantidad a cero para quitarlo.",
+                    )
                 elif cantidad > producto.stock:
                     messages.error(
                         request,
@@ -361,7 +381,7 @@ def caja(request):
             carrito.get(str(producto.pk), 0)
         )
 
-    lineas_carrito, total_carrito = _lineas_del_carrito(
+    lineas_carrito, total_carrito, problemas_carrito = _lineas_del_carrito(
         carrito,
         precios_vistos,
     )
@@ -374,6 +394,8 @@ def caja(request):
             "busqueda": busqueda,
             "lineas_carrito": lineas_carrito,
             "total_carrito": total_carrito,
+            "problemas_carrito": problemas_carrito,
+            "hay_carrito": bool(carrito),
             "carrito_abierto": request.GET.get("carrito") == "abierto",
             "medios_pago": Venta.MedioPago,
             "medio_pago_seleccionado": medio_pago_seleccionado,
@@ -381,10 +403,8 @@ def caja(request):
             "clave_idempotencia": clave_idempotencia,
         },
     )
-    if codigo_encontrado is not None:
-        respuesta.headers["X-Codigo-Encontrado"] = (
-            "1" if codigo_encontrado else "0"
-        )
+    if codigo_estado is not None:
+        respuesta.headers["X-Codigo-Estado"] = codigo_estado
     return respuesta
 
 
@@ -392,12 +412,17 @@ def caja(request):
 @login_required
 def pantalla_cliente(request):
     token = _token_pantalla_cliente(request)
+    carrito = request.session.get(CLAVE_CARRITO, {})
+    lineas, total, _ = _lineas_del_carrito(
+        carrito,
+        _asegurar_precios_carrito(request, carrito),
+    )
     return render(
         request,
         "ventas/pantalla_cliente.html",
         {
-            "lineas": [],
-            "total": 0,
+            "lineas": lineas,
+            "total": total,
             "estado_url": reverse("ventas:estado_pantalla_cliente"),
             "pantalla_cliente_token": token,
             "ultima_venta_id": request.session.get(
@@ -413,7 +438,7 @@ def pantalla_cliente(request):
 def estado_pantalla_cliente(request):
     _validar_token_pantalla_cliente(request)
     carrito = request.session.get(CLAVE_CARRITO, {})
-    lineas, total = _lineas_del_carrito(
+    lineas, total, _ = _lineas_del_carrito(
         carrito,
         _asegurar_precios_carrito(request, carrito),
     )

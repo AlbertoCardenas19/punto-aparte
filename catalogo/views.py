@@ -6,6 +6,7 @@ from django.db.models import Count, Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render, get_object_or_404
 from django.urls import reverse
+from django.utils.dateparse import parse_date
 from django.utils import timezone
 
 from usuarios.decorators import jefe_required
@@ -66,19 +67,24 @@ def exportar_productos(request, formato):
     productos = _productos_visibles(request.user)
     busqueda = request.GET.get("q", "").strip()
 
-    if busqueda:
-        productos = productos.filter(
-            Q(nombre__icontains=busqueda)
-            | Q(marca__icontains=busqueda)
-            | Q(descripcion__icontains=busqueda)
-            | Q(codigo_barras__icontains=busqueda)
-            | Q(categorias__nombre__icontains=busqueda)
-        ).distinct()
+    productos = _filtrar_productos_por_busqueda(productos, busqueda)
 
     return crear_exportacion_productos(
         productos.order_by("nombre"),
         formato,
     )
+
+
+def _filtrar_productos_por_busqueda(productos, busqueda):
+    for termino in busqueda.split():
+        productos = productos.filter(
+            Q(nombre__icontains=termino)
+            | Q(marca__icontains=termino)
+            | Q(descripcion__icontains=termino)
+            | Q(codigo_barras__icontains=termino)
+            | Q(categorias__nombre__icontains=termino)
+        )
+    return productos.distinct()
 
 
 @login_required
@@ -110,6 +116,22 @@ def _movimientos_stock_filtrados(request):
         .order_by("-fecha")
     )
     busqueda = request.GET.get("q", "").strip()
+    tipo = request.GET.get("tipo", "").strip()
+    producto_id = request.GET.get("producto", "").strip()
+    usuario_id = request.GET.get("usuario", "").strip()
+    desde = request.GET.get("desde", "").strip()
+    hasta = request.GET.get("hasta", "").strip()
+
+    if tipo in MovimientoStock.Tipo.values:
+        movimientos = movimientos.filter(tipo=tipo)
+    if producto_id.isdigit():
+        movimientos = movimientos.filter(producto_id=int(producto_id))
+    if usuario_id.isdigit():
+        movimientos = movimientos.filter(usuario_id=int(usuario_id))
+    if parse_date(desde):
+        movimientos = movimientos.filter(fecha__date__gte=desde)
+    if parse_date(hasta):
+        movimientos = movimientos.filter(fecha__date__lte=hasta)
     if busqueda:
         def normalizar(texto):
             return "".join(
@@ -126,8 +148,12 @@ def _movimientos_stock_filtrados(request):
                 ),
                 movimiento.producto.nombre,
                 movimiento.get_tipo_display(),
+                str(movimiento.cantidad),
+                str(movimiento.stock_anterior),
+                str(movimiento.stock_nuevo),
                 movimiento.motivo,
-                movimiento.usuario.username,
+                movimiento.usuario.get_full_name().strip()
+                or movimiento.usuario.username,
             )))
             if all(termino in contenido for termino in terminos):
                 coincidencias.append(movimiento)
@@ -339,6 +365,12 @@ def registrar_movimiento_stock(request):
         if request.method == "POST"
         else inicial.get("producto")
     )
+    if (
+        request.method == "POST"
+        and form.is_bound
+        and form.cleaned_data.get("producto")
+    ):
+        producto_seleccionado_id = form.cleaned_data["producto"].pk
     producto_seleccionado = None
     if str(producto_seleccionado_id or "").isdigit():
         producto_seleccionado = Producto.objects.filter(

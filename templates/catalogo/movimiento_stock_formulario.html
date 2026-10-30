@@ -33,15 +33,13 @@
                                 data-cambiar-producto>Cambiar</button>
                         </div>
                         <div data-producto-buscador {% if producto_seleccionado %}hidden{% endif %}>
-                            <input class="form-control" id="buscar-producto-stock" type="search"
-                                placeholder="Busca por nombre, marca o código" autocomplete="off"
-                                role="combobox" aria-autocomplete="list" aria-expanded="false"
-                                aria-controls="sugerencias-producto-stock" data-buscar-producto-stock>
+                            {{ form.producto_busqueda }}
                             <div class="pa-sugerencias-producto" id="sugerencias-producto-stock"
                                 role="listbox" data-sugerencias-producto hidden></div>
                             <p class="pa-estado-breve" role="status" data-producto-stock-estado></p>
                         </div>
                         {% for error in form.producto.errors %}<p class="pa-error-campo">{{ error }}</p>{% endfor %}
+                        {% for error in form.producto_busqueda.errors %}<p class="pa-error-campo">{{ error }}</p>{% endfor %}
                     </div>
 
                     <div class="mb-3">

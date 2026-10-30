@@ -11,11 +11,10 @@ const estado = document.querySelector('[data-cliente-estado]');
 const modalGracias = document.querySelector('[data-cliente-gracias]');
 let ultimaVenta = pantallaCliente.dataset.ultimaVenta || '';
 let temporizadorGracias;
-const moneda = new Intl.NumberFormat('es-CL', {
-    style: 'currency',
-    currency: 'CLP',
+const numeroClp = new Intl.NumberFormat('es-CL', {
     maximumFractionDigits: 0,
 });
+const formatearClp = valor => `$${numeroClp.format(valor)}`;
 
 function actualizarPantalla(datos) {
     const tieneProductos = datos.productos.length > 0;
@@ -28,8 +27,8 @@ function actualizarPantalla(datos) {
         for (const [etiqueta, valor] of [
             ['Producto', producto.nombre],
             ['Cantidad', producto.cantidad],
-            ['Precio unitario', moneda.format(producto.precio_unitario)],
-            ['Total', moneda.format(producto.subtotal)],
+            ['Precio unitario', formatearClp(producto.precio_unitario)],
+            ['Total', formatearClp(producto.subtotal)],
         ]) {
             const celda = document.createElement('td');
             celda.dataset.label = etiqueta;
@@ -38,7 +37,7 @@ function actualizarPantalla(datos) {
         }
         productos.append(fila);
     }
-    total.textContent = moneda.format(datos.total);
+    total.textContent = formatearClp(datos.total);
     estado.textContent = '';
 
     const ventaConfirmada = String(datos.ultima_venta_id || '');

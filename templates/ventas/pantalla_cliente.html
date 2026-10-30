@@ -1,4 +1,4 @@
-{% load static l10n %}
+{% load static punto_aparte %}
 <!doctype html>
 <html lang="es">
 <head>
@@ -46,8 +46,8 @@
                             <tr>
                                 <td data-label="Producto">{{ linea.producto.nombre }}</td>
                                 <td data-label="Cantidad">{{ linea.cantidad }}</td>
-                                <td data-label="Precio unitario">${{ linea.producto.precio|localize }}</td>
-                                <td data-label="Total">${{ linea.subtotal|localize }}</td>
+                                <td data-label="Precio unitario">{{ linea.precio_unitario|clp }}</td>
+                                <td data-label="Total">{{ linea.subtotal|clp }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -56,7 +56,7 @@
                 <div class="pa-cliente-resumen">
                     <div class="pa-cliente-total">
                         <span>Total</span>
-                        <strong data-cliente-total>${{ total|localize }}</strong>
+                        <strong data-cliente-total>{{ total|clp }}</strong>
                     </div>
                 </div>
                 <p class="pa-cliente-ayuda">Revisa los productos y el total de tu compra.</p>

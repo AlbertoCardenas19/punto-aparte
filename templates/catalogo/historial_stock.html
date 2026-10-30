@@ -60,7 +60,7 @@
                     <td>{{ movimiento.stock_anterior }}</td>
                     <td>{{ movimiento.stock_nuevo }}</td>
                     <td>{{ movimiento.motivo }}</td>
-                    <td>{{ movimiento.usuario.username }}</td>
+                    <td>{{ movimiento.usuario.get_full_name|default:movimiento.usuario.username }}</td>
                 </tr>
                 {% endfor %}
             </tbody>

@@ -24,7 +24,7 @@ Relaciones relevantes:
 - `Venta` → `Usuario` cajero: muchas ventas por usuario.
 - `DetalleVenta` → `Venta`: varios detalles por venta.
 - `DetalleVenta` → `Producto`: referencia al producto y, además, conserva nombre, precio unitario y subtotal de la operación.
-- `MovimientoStock` → `Producto` y `Usuario`: registra producto afectado y responsable.
+- `MovimientoStock` → `Producto` y `Usuario`: registra producto afectado y responsable. Las salidas creadas al confirmar una venta también se relacionan con `Venta`; el campo es nullable para conservar movimientos manuales e históricos sin asociación inequívoca.
 
 ## Flujo de una venta implementado
 
@@ -56,7 +56,7 @@ Las plantillas extienden `templates/base.html`, que carga Bootstrap local y el s
 Las vistas actuales incluyen:
 
 - Venta con catálogo paginado, carrito de sesión, selección de medio de pago y pantalla del cliente de solo lectura.
-- Productos y movimientos de stock se exportan según la búsqueda visible a CSV, XLSX o PDF sin dependencias externas. Categorías conserva la administración de estado. «Movimientos de stock» abre directamente el historial y ofrece un único acceso al formulario separado; el formulario busca productos de forma predictiva y mantiene los ingresos y ajustes como operaciones internas distintas.
+- Productos y movimientos de stock se exportan según la búsqueda y los filtros visibles a CSV, XLSX o PDF sin dependencias externas. Categorías conserva la administración de estado. «Movimientos de stock» abre directamente el historial y ofrece un único acceso al formulario separado; el formulario busca productos de forma predictiva y, sin JavaScript, resuelve una búsqueda textual única. Mantiene los ingresos y ajustes como operaciones internas distintas.
 - Consulta de ventas: el Cajero ve las propias y el Jefe ve todas, con filtros de fecha y cajero según permiso.
 - Usuarios para Jefe.
 
@@ -85,3 +85,4 @@ DataTables se sirve localmente y se usa en los listados de productos, categoría
 - La aplicación no dispone de una comprobación fiable de conectividad para imponer automáticamente efectivo cuando no hay internet; el cajero recibe esa indicación en el cobro. La selección de documento y los datos de factura dependen de la definición e integración tributaria pendiente.
 - No existe apertura, cierre ni arqueo de caja; la librería debe confirmar primero si ese flujo corresponde a su operación.
 - Confirma en el código actual si existe el flujo antes de tomar decisiones basadas en esta fotografía.
+- El backend de correo para producción, el dominio, la terminación HTTPS, HSTS y la confianza en encabezados de proxy dependen de decisiones de despliegue todavía pendientes.

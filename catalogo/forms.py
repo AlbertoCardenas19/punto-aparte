@@ -17,7 +17,15 @@ class CategoriaForm(BootstrapFormMixin, forms.ModelForm):
         fields = ("nombre",)
 
     def clean_nombre(self):
-        return normalizar_mayuscula_inicial(self.cleaned_data["nombre"])
+        nombre = normalizar_mayuscula_inicial(self.cleaned_data["nombre"])
+        existentes = Categoria.objects.filter(nombre__iexact=nombre)
+        if self.instance.pk:
+            existentes = existentes.exclude(pk=self.instance.pk)
+        if existentes.exists():
+            raise forms.ValidationError(
+                "Ya existe una categoría con este nombre."
+            )
+        return nombre
 
 
 class ProductoForm(BootstrapFormMixin, forms.ModelForm):
@@ -62,12 +70,27 @@ class ProductoForm(BootstrapFormMixin, forms.ModelForm):
 class MovimientoStockForm(BootstrapFormMixin, forms.Form):
     producto = forms.ModelChoiceField(
         queryset=Producto.objects.none(),
-        label="Producto",
+        label="Producto seleccionado",
+        required=False,
         widget=forms.HiddenInput(),
         error_messages={
             "required": "Selecciona un producto de las sugerencias.",
             "invalid_choice": "El producto seleccionado no está disponible.",
         },
+    )
+    producto_busqueda = forms.CharField(
+        required=False,
+        label="Producto",
+        widget=forms.SearchInput(attrs={
+            "id": "buscar-producto-stock",
+            "placeholder": "Busca por nombre, marca o código",
+            "autocomplete": "off",
+            "role": "combobox",
+            "aria-autocomplete": "list",
+            "aria-expanded": "false",
+            "aria-controls": "sugerencias-producto-stock",
+            "data-buscar-producto-stock": "",
+        }),
     )
     tipo = forms.ChoiceField(
         choices=(
@@ -98,6 +121,27 @@ class MovimientoStockForm(BootstrapFormMixin, forms.Form):
 
     def clean(self):
         cleaned_data = super().clean()
+        producto = cleaned_data.get("producto")
+        busqueda = (cleaned_data.get("producto_busqueda") or "").strip()
+        if not producto and busqueda:
+            coincidencias = Producto.objects.filter(
+                Q(nombre__icontains=busqueda)
+                | Q(marca__icontains=busqueda)
+                | Q(codigo_barras__icontains=busqueda)
+            ).order_by("nombre", "marca")[:2]
+            coincidencias = list(coincidencias)
+            if len(coincidencias) == 1:
+                cleaned_data["producto"] = coincidencias[0]
+            elif len(coincidencias) > 1:
+                self.add_error(
+                    "producto_busqueda",
+                    "Hay varias coincidencias. Escribe un nombre o código más específico.",
+                )
+        if not cleaned_data.get("producto"):
+            self.add_error(
+                "producto_busqueda",
+                "Selecciona una sugerencia o escribe una búsqueda que identifique un solo producto.",
+            )
         tipo = cleaned_data.get("tipo")
 
         if tipo == MovimientoStock.Tipo.INGRESO and cleaned_data.get("cantidad") is None:

@@ -135,6 +135,7 @@ def confirmar_venta(*, lineas, cajero, medio_pago, clave_idempotencia):
             stock_nuevo=stock_nuevo,
             motivo=f"Venta #{venta.pk}",
             usuario=cajero,
+            venta=venta,
         )
 
     return venta, True
