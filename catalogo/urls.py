@@ -7,8 +7,14 @@ app_name = "catalogo"
 
 urlpatterns = [
     path("", views.lista_productos, name="lista_productos"),
+    path("exportar/", views.exportar_productos, name="exportar_productos"),
     path("categorias/", views.lista_categorias, name="lista_categorias"),
     path("inventario/", views.inventario, name="inventario"),
+    path(
+        "inventario/movimiento/nuevo/",
+        views.registrar_movimiento_stock,
+        name="registrar_movimiento_stock",
+    ),
     path("productos/nuevo/", views.crear_producto, name="crear_producto"),
     path("categorias/nueva/", views.crear_categoria, name="crear_categoria"),
     path(
@@ -27,9 +33,9 @@ urlpatterns = [
         name="editar_producto",
     ),
     path(
-        "productos/<int:producto_id>/desactivar/",
-        views.desactivar_producto,
-        name="desactivar_producto",
+        "productos/<int:producto_id>/estado/",
+        views.cambiar_estado_producto,
+        name="cambiar_estado_producto",
     ),
     path(
         "productos/<int:producto_id>/stock/ingreso/",

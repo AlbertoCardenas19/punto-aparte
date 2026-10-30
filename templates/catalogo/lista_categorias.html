@@ -47,7 +47,7 @@
                                     <form method="post" action="{% url 'catalogo:cambiar_estado_categoria' categoria.pk %}">
                                         {% csrf_token %}
                                         <button class="dropdown-item {% if categoria.activo %}text-danger{% endif %}" type="submit">
-                                            {% if categoria.activo %}Desactivar{% else %}Reactivar{% endif %}
+                                            {% if categoria.activo %}Desactivar{% else %}Activar{% endif %}
                                         </button>
                                     </form>
                                 </li>

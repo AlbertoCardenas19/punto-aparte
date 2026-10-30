@@ -3,7 +3,12 @@ from django.db.models import Q
 
 from config.forms import BootstrapFormMixin
 
-from .models import Categoria, Producto, normalizar_mayuscula_inicial
+from .models import (
+    Categoria,
+    MovimientoStock,
+    Producto,
+    normalizar_mayuscula_inicial,
+)
 
 
 class CategoriaForm(BootstrapFormMixin, forms.ModelForm):
@@ -54,19 +59,51 @@ class ProductoForm(BootstrapFormMixin, forms.ModelForm):
         return codigo.strip() or None
 
 
-class IngresoStockForm(BootstrapFormMixin, forms.Form):
-    cantidad = forms.IntegerField(min_value=1, label="Unidades que ingresan")
+class ProductoStockChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        return f"{obj.nombre} · Stock actual: {obj.stock}"
+
+
+class MovimientoStockForm(BootstrapFormMixin, forms.Form):
+    producto = ProductoStockChoiceField(
+        queryset=Producto.objects.none(),
+        label="Producto",
+        empty_label="Selecciona un producto",
+    )
+    tipo = forms.ChoiceField(
+        choices=(
+            (MovimientoStock.Tipo.INGRESO, "Ingreso"),
+            (MovimientoStock.Tipo.AJUSTE, "Ajuste"),
+        ),
+        label="Tipo de movimiento",
+    )
+    cantidad = forms.IntegerField(
+        min_value=1,
+        required=False,
+        label="Cantidad recibida",
+    )
+    stock_nuevo = forms.IntegerField(
+        min_value=0,
+        required=False,
+        label="Stock contado",
+    )
     motivo = forms.CharField(
         max_length=255,
         label="Motivo",
         widget=forms.Textarea(attrs={"rows": 3}),
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["producto"].queryset = Producto.objects.order_by("nombre")
 
-class AjusteStockForm(BootstrapFormMixin, forms.Form):
-    stock_nuevo = forms.IntegerField(min_value=0, label="Stock contado")
-    motivo = forms.CharField(
-        max_length=255,
-        label="Motivo del ajuste",
-        widget=forms.Textarea(attrs={"rows": 3}),
-    )
+    def clean(self):
+        cleaned_data = super().clean()
+        tipo = cleaned_data.get("tipo")
+
+        if tipo == MovimientoStock.Tipo.INGRESO and cleaned_data.get("cantidad") is None:
+            self.add_error("cantidad", "Indica la cantidad recibida.")
+        if tipo == MovimientoStock.Tipo.AJUSTE and cleaned_data.get("stock_nuevo") is None:
+            self.add_error("stock_nuevo", "Indica el stock contado.")
+
+        return cleaned_data

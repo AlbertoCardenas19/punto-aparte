@@ -12,14 +12,15 @@
         <p class="text-secondary mb-0">Consulta los productos y sus precios.</p>
     </div>
 
-    {% if request.user.rol == "JEFE" %}
     <div class="d-flex flex-wrap gap-2">
-        <a class="btn btn-outline-primary" href="{% url 'catalogo:inventario' %}">Inventario</a>
+        <a class="btn btn-outline-primary" href="{% url 'catalogo:exportar_productos' %}"
+            data-exportar-productos>Exportar productos</a>
+        {% if request.user.rol == "JEFE" %}
         <a class="btn btn-pa" href="{% url 'catalogo:crear_producto' %}">
             Agregar producto
         </a>
+        {% endif %}
     </div>
-    {% endif %}
 </div>
 
 <div class="card">
@@ -31,6 +32,7 @@
                     <th class="all">Producto</th>
                     <th data-no-buscar>Precio</th>
                     <th data-no-buscar>Stock</th>
+                    <th data-no-buscar>Estado</th>
                     <th class="all" data-no-orden data-no-buscar>Detalle</th>
                     {% if request.user.rol == "JEFE" %}
                     <th class="all" data-no-orden data-no-buscar>Acciones</th>
@@ -42,7 +44,6 @@
                 <tr>
                     <td class="all fw-semibold" data-search="{{ producto.nombre }} {{ producto.descripcion }} {{ producto.marca }} {{ producto.codigo_barras }} {% for categoria in producto.categorias.all %}{{ categoria.nombre }} {% endfor %}">
                         {{ producto.nombre }}
-                        {% if request.user.rol == "JEFE" and not producto.activo %}<span class="badge text-bg-secondary ms-1">Inactivo</span>{% endif %}
                     </td>
                     <td data-order="{{ producto.precio }}">${{ producto.precio }}</td>
                     <td data-order="{{ producto.stock }}">
@@ -51,6 +52,9 @@
                         {% else %}
                         {{ producto.stock }}
                         {% endif %}
+                    </td>
+                    <td>
+                        {% if producto.activo %}<span class="badge text-bg-success">Activo</span>{% else %}<span class="badge text-bg-secondary">Inactivo</span>{% endif %}
                     </td>
                     <td class="all">
                         <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal"
@@ -73,14 +77,14 @@
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li><a class="dropdown-item" href="{% url 'catalogo:editar_producto' producto.id %}">Editar</a></li>
-                                {% if producto.activo %}
                                 <li>
-                                    <form method="post" action="{% url 'catalogo:desactivar_producto' producto.pk %}">
+                                    <form method="post" action="{% url 'catalogo:cambiar_estado_producto' producto.pk %}">
                                         {% csrf_token %}
-                                        <button class="dropdown-item text-danger" type="submit">Desactivar</button>
+                                        <button class="dropdown-item {% if producto.activo %}text-danger{% endif %}" type="submit">
+                                            {% if producto.activo %}Desactivar{% else %}Activar{% endif %}
+                                        </button>
                                     </form>
                                 </li>
-                                {% endif %}
                             </ul>
                         </div>
                     </td>

@@ -19,13 +19,13 @@
 .pa-app .pa-estructura-sin-menu { display: block; min-height: 100vh; min-height: 100dvh; }
 .pa-app .pa-menu-lateral { background: #fff; border-right: 1px solid var(--pa-border); padding: 1.5rem 1rem; }
 .pa-app .pa-menu { display: flex; flex-direction: column; gap: .25rem; width: 100%; }
-.pa-app .pa-menu-grupo { color: var(--pa-muted); font-size: .72rem; font-weight: 800; letter-spacing: .08em; margin: 1.25rem .75rem .35rem; text-transform: uppercase; }
-.pa-app .pa-menu-grupo:first-of-type { margin-top: 1rem; }
+.pa-app .pa-menu-grupo { border-top: 1px solid var(--pa-border); color: var(--pa-muted); font-size: .72rem; font-weight: 800; letter-spacing: .08em; margin: 1rem .75rem .35rem; padding-top: 1rem; text-transform: uppercase; }
+.pa-app .pa-menu-grupo:first-child { border-top: 0; margin-top: 0; padding-top: 0; }
 .pa-app .pa-menu-enlace { color: var(--pa-ink); border-radius: .7rem; padding: .65rem .75rem; text-decoration: none; }
 .pa-app .pa-menu-enlace:hover, .pa-app .pa-menu-enlace:focus-visible { background: #edf2f7; color: var(--pa-ink); }
 .pa-app .pa-menu-enlace.active { background: #e1eaf4; color: var(--pa-navy); font-weight: 700; box-shadow: inset 3px 0 var(--pa-red); }
 .pa-app .pa-menu-lateral-movil { --bs-offcanvas-width: min(20rem, 88vw); color: var(--pa-ink); }
-.pa-app .pa-contenido { min-width: 0; width: 100%; max-width: 1760px; padding: 2rem clamp(1rem, 3vw, 3rem) 3rem; }
+.pa-app .pa-contenido { min-width: 0; width: 100%; max-width: 1760px; padding: 2rem clamp(1rem, 3vw, 3rem) 6rem; }
 .pa-app .navbar-pa { background: var(--pa-navy); padding: 1rem 0; border-bottom: 3px solid var(--pa-red); }
 .pa-app .pa-nav-contenido { padding-inline: clamp(1rem, 3vw, 3rem); gap: 1rem; }
 .pa-app .pa-logo { width: 64px; height: 64px; object-fit: contain; border-radius: 50%; background: white; flex-shrink: 0; }
@@ -78,9 +78,11 @@
 .pa-app .pa-detalle-producto dt { color: var(--pa-muted); font-size: .8rem; font-weight: 700; margin-bottom: .2rem; }
 .pa-app .pa-detalle-producto dd { margin: 0; overflow-wrap: anywhere; }
 .pa-app .pa-venta-total { font-size: 1.25rem; }
+.pa-app .pa-venta-flotante { position: fixed; right: clamp(1rem, 2.5vw, 2rem); bottom: max(1rem, env(safe-area-inset-bottom)); z-index: 1030; border-radius: 999px; background: var(--pa-red); box-shadow: 0 .5rem 1.5rem rgb(27 45 72 / 25%); color: #fff; font-weight: 750; padding: .85rem 1.35rem; text-decoration: none; }
+.pa-app .pa-venta-flotante:hover, .pa-app .pa-venta-flotante:focus-visible { background: #a92631; color: #fff; }
 .pa-app :is(a, button):focus-visible { outline: 3px solid #6f91b5; outline-offset: 3px; }
 @media (max-width: 991.98px) { .pa-app .pa-estructura { display: block; min-height: calc(100vh - 4.5rem); min-height: calc(100dvh - 4.5rem); } }
-@media (max-width: 575.98px) { .pa-app .pa-marca span { display: none; } .pa-app .pa-barra-superior { flex-wrap: wrap; gap: .6rem; } .pa-app .pa-sesion { width: 100%; justify-content: space-between; } .pa-app .pa-sesion-identidad { font-size: .8rem; } .pa-app .table td, .pa-app .table th { padding: .75rem; } .pa-app .pa-form-acciones { margin-top: 1.5rem; } }
+@media (max-width: 575.98px) { .pa-app .pa-marca span { display: none; } .pa-app .pa-barra-superior { flex-wrap: wrap; gap: .6rem; } .pa-app .pa-sesion { width: 100%; justify-content: space-between; } .pa-app .pa-sesion-identidad { font-size: .8rem; } .pa-app .table td, .pa-app .table th { padding: .75rem; } .pa-app .pa-form-acciones { margin-top: 1.5rem; } .pa-app .pa-venta-flotante { right: .75rem; bottom: max(.75rem, env(safe-area-inset-bottom)); padding: .7rem 1rem; font-size: .9rem; } }
 /* Los menús trasladados al body quedan por encima de tablas y tarjetas. */
 body > .dropdown-menu { z-index: 1080; border-color: var(--pa-border); border-radius: .75rem; padding: .5rem; }
 .pa-app div.dt-container .dt-layout-row { align-items: center; gap: .75rem; margin: 0 0 1rem; }

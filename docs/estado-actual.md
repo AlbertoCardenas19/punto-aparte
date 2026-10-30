@@ -7,15 +7,15 @@
 Esta sección actualiza la fotografía del ZIP con la implementación vigente en `work`.
 
 - Las páginas autenticadas comparten una barra superior compacta y navegación lateral; el menú se abre desde un control visible en móvil. La pantalla inicial ofrece accesos según rol y no incluye indicadores de dashboard.
-- Venta carga doce productos por página, consulta todo el catálogo activo al buscar, ordena productos sin stock al final y permite agregar una unidad desde cada tarjeta. «Compra actual» respeta el orden de incorporación, permite vaciar la selección con confirmación y mantiene sus controles adaptables; el cobro abre una confirmación real en efectivo.
+- Venta carga doce productos por página, consulta todo el catálogo activo al buscar, ordena productos sin stock al final y permite agregar una unidad desde cada tarjeta. «Compra actual» respeta el orden de incorporación, permite vaciar la selección con confirmación y mantiene sus controles adaptables; el cobro registra efectivo, tarjeta o transferencia y exige confirmación manual para los dos últimos.
 - Un código de barras exacto agrega una unidad cuando el producto está activo y tiene stock. La validación transaccional al confirmar la venta se mantiene en el servicio.
-- Productos muestra los datos operativos principales, abre sus detalles de lectura en una ventana modal y limita el menú administrativo a editar y desactivar. Inventario reúne exclusivamente los accesos a ingresos, ajustes e historial para Jefe.
+- Productos muestra estado, exporta a CSV según la búsqueda visible, abre sus detalles en una ventana modal y permite editar, activar o desactivar. Inventario ofrece un selector buscable y un formulario único que conserva separados los ingresos y ajustes.
 - Categorías permite editar, desactivar y reactivar desde su tabla. Las categorías inactivas permanecen visibles y vinculadas a sus productos existentes, pero no se ofrecen al asignar categorías a productos nuevos.
 - Existe consulta de ventas con DataTables y filtros por fechas; el Cajero ve solo las propias y el Jefe puede ver todas y filtrar por cajero.
 - Productos, categorías, inventario, movimientos, usuarios y ventas usan DataTables local con textos en español.
 - El alta desde la aplicación del Jefe genera y entrega una contraseña temporal una sola vez. `usuarios/0002_usuario_debe_cambiar_password.py` añade el indicador de cambio inicial con valor predeterminado `False`, compatible con cuentas existentes. Django Admin conserva su formulario separado anterior; no se debe asumir que comparte el nuevo flujo de alta.
 - El acceso acepta nombre de usuario o correo; los correos se normalizan y cuentan con restricción sin distinguir mayúsculas. Nombres de personas, productos, marcas y categorías aplican las normalizaciones acordadas.
-- No existen emisión tributaria, datos de factura, terminal de pago, pantalla cliente en vivo ni caja diaria. Esos flujos permanecen pendientes y no se muestran como disponibles.
+- La pantalla del cliente es de solo lectura, usa la misma sesión de caja y se actualiza periódicamente. No existen emisión tributaria, datos de factura, integración con terminal o banco ni caja diaria.
 
 ## Implementado en la fotografía del ZIP
 
@@ -31,13 +31,12 @@ Esta sección actualiza la fotografía del ZIP con la implementación vigente en
 
 ## Incompleto o no observado
 
-- La pantalla de caja solo confirma efectivo, aunque el modelo enumera tarjeta y transferencia.
+- Tarjeta y transferencia dependen de confirmación manual; no hay integración automática con el terminal o el banco ni detección fiable de conectividad.
 - Integración real con terminal Mercado Pago.
 - Emisión de boleta, factura y nota de crédito.
 - Apertura, cierre y arqueo diario.
 - Descuentos con autorización y restricciones de uso.
 - Flujo de anulación/devolución con motivo y autorización.
-- Segunda pantalla viva para el cliente.
 - Pruebas automáticas de reglas críticas; los archivos `tests.py` revisados eran los vacíos generados por Django.
 
 ## Problemas históricos de la copia revisada (no asumir que siguen vigentes)

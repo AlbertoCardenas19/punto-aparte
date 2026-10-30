@@ -28,8 +28,8 @@ Relaciones relevantes:
 
 ## Flujo de una venta implementado
 
-1. La vista de Venta mantiene una selección temporal en la sesión. La búsqueda consulta el catálogo activo en el servidor y pagina los resultados; un código de barras exacto puede agregar una unidad.
-2. La confirmación delega en `ventas/services.py`.
+1. La vista de Venta mantiene una selección temporal en la sesión. La búsqueda consulta el catálogo activo en el servidor y pagina los resultados; un código de barras exacto puede agregar una unidad. La pantalla del cliente consulta ese mismo carrito mediante un endpoint protegido por la sesión y un token aleatorio.
+2. El cajero selecciona efectivo, tarjeta o transferencia. Tarjeta y transferencia requieren confirmación manual; después, la confirmación delega en `ventas/services.py`.
 3. El servicio valida el medio de pago, productos activos, cantidades y stock.
 4. Dentro de una transacción, bloquea las filas de producto, crea la venta y detalles, descuenta stock y registra movimientos de salida.
 5. La vista limpia el carrito y redirige al detalle interno de la venta.
@@ -55,8 +55,8 @@ Las plantillas extienden `templates/base.html`, que carga Bootstrap local y el s
 
 Las vistas actuales incluyen:
 
-- Venta con catálogo paginado, carrito de sesión y confirmación en efectivo.
-- Productos y categorías con administración de estado; inventario concentra los ingresos y ajustes en formularios dedicados. Un ingreso guardado vuelve al listado de Inventario, mientras que un ajuste permanece en su formulario para facilitar otro registro.
+- Venta con catálogo paginado, carrito de sesión, selección de medio de pago y pantalla del cliente de solo lectura.
+- Productos con exportación CSV y categorías con administración de estado; Inventario usa un único formulario para seleccionar producto y registrar ingresos o ajustes, manteniendo ambos tipos internos separados.
 - Consulta de ventas: el Cajero ve las propias y el Jefe ve todas, con filtros de fecha y cajero según permiso.
 - Usuarios para Jefe.
 
@@ -64,9 +64,9 @@ DataTables se sirve localmente y se usa en los listados de productos, categoría
 
 ## Límites
 
-- `Venta` incluye opciones de tarjeta y transferencia en el modelo, pero el servicio observado solo permite confirmar efectivo.
+- Tarjeta y transferencia se confirman manualmente. No existe conexión con el terminal Mercado Pago ni con el banco.
 - El detalle de una venta es un comprobante interno imprimible; no es integración tributaria.
-- Una segunda pantalla de cliente no se observó en las plantillas revisadas.
-- La ventana de cobro confirma únicamente el flujo real en efectivo. La selección de documento y los datos de factura dependen de la definición e integración tributaria pendiente.
+- La pantalla del cliente se actualiza por consultas periódicas al servidor y solo expone el carrito de la misma sesión. No constituye una integración externa.
+- La aplicación no dispone de una comprobación fiable de conectividad para imponer automáticamente efectivo cuando no hay internet; el cajero recibe esa indicación en el cobro. La selección de documento y los datos de factura dependen de la definición e integración tributaria pendiente.
 - No existe apertura, cierre ni arqueo de caja; la librería debe confirmar primero si ese flujo corresponde a su operación.
 - Confirma en el código actual si existe el flujo antes de tomar decisiones basadas en esta fotografía.

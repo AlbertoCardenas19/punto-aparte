@@ -67,11 +67,11 @@ Estas son reglas aprobadas; consulta `estado-actual.md` para saber cuáles está
 
 - La librería todavía debe confirmar si cuenta el dinero al abrir y cerrar el día. Hasta definirlo, no se exige apertura de caja para vender ni se implementan apertura, cierre o arqueo.
 - La operación prevista es una caja en el local.
-- Se requiere una segunda pantalla para mostrar productos, cantidades, precios y total al cliente.
+- La pantalla del cliente muestra productos, cantidades, precios y total del carrito asociado a la misma sesión de caja.
 - El diseño de referencia incluye búsqueda y filtros de categorías, compra actual, subtotal, descuentos, total y una acción destacada para cobrar.
 
 ## Fuera del alcance actual
 
 - Administración de listas escolares.
 - Fechas de vencimiento o lotes de vencimiento de productos.
-- Suponer que la terminal, facturación electrónica, descuentos, segunda pantalla o caja diaria ya están implementados: son requisitos, pero la revisión del código indica que siguen pendientes.
+- Suponer que la terminal, facturación electrónica, descuentos o caja diaria ya están implementados: son requisitos, pero la revisión del código indica que siguen pendientes.

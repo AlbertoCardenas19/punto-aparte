@@ -1,10 +1,15 @@
+import secrets
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db.models import Case, IntegerField, Q, Value, When
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.dateparse import parse_date
+from django.views.decorators.cache import never_cache
 
 from catalogo.models import Producto
 from usuarios.models import Usuario
@@ -14,6 +19,47 @@ from .services import VentaNoValida, confirmar_venta
 
 
 CLAVE_CARRITO = "carrito_venta"
+CLAVE_PANTALLA_CLIENTE = "token_pantalla_cliente"
+
+
+def _lineas_del_carrito(carrito):
+    productos = {
+        str(producto.pk): producto
+        for producto in Producto.objects.filter(pk__in=carrito.keys())
+    }
+    lineas = []
+    total = 0
+
+    for producto_id, cantidad_guardada in carrito.items():
+        producto = productos.get(producto_id)
+        if not producto:
+            continue
+        cantidad = int(cantidad_guardada)
+        subtotal = producto.precio * cantidad
+        total += subtotal
+        lineas.append({
+            "producto": producto,
+            "cantidad": cantidad,
+            "subtotal": subtotal,
+        })
+
+    return lineas, total
+
+
+def _token_pantalla_cliente(request):
+    token = request.session.get(CLAVE_PANTALLA_CLIENTE)
+    if not token:
+        token = secrets.token_urlsafe(32)
+        request.session[CLAVE_PANTALLA_CLIENTE] = token
+    return token
+
+
+def _validar_token_pantalla_cliente(request):
+    esperado = request.session.get(CLAVE_PANTALLA_CLIENTE, "")
+    recibido = request.headers.get("X-Pantalla-Cliente-Token", "")
+    if not esperado or not recibido or not secrets.compare_digest(esperado, recibido):
+        raise PermissionDenied
+    return recibido
 
 
 @login_required
@@ -59,6 +105,8 @@ def lista_ventas(request):
 def caja(request):
     carrito = request.session.get(CLAVE_CARRITO, {})
     codigo_encontrado = None
+    error_cobro = None
+    medio_pago_seleccionado = Venta.MedioPago.EFECTIVO
     solicitud_dinamica = (
         request.headers.get("X-Requested-With") == "XMLHttpRequest"
     )
@@ -164,23 +212,32 @@ def caja(request):
                 return redirect("ventas:caja")
 
         if accion == "confirmar":
+            medio_pago_seleccionado = request.POST.get("medio_pago", "")
             lineas = [
                 {"producto_id": producto_id, "cantidad": cantidad}
                 for producto_id, cantidad in carrito.items()
             ]
 
-            try:
-                venta = confirmar_venta(
-                    lineas=lineas,
-                    cajero=request.user,
-                    medio_pago=Venta.MedioPago.EFECTIVO,
-                )
-            except VentaNoValida as error:
-                messages.error(request, str(error))
-                return redirect("ventas:caja")
-
-            request.session.pop(CLAVE_CARRITO, None)
-            return redirect("ventas:detalle", venta_id=venta.pk)
+            if (
+                medio_pago_seleccionado in {
+                    Venta.MedioPago.TARJETA,
+                    Venta.MedioPago.TRANSFERENCIA,
+                }
+                and request.POST.get("pago_confirmado") != "1"
+            ):
+                error_cobro = "Confirma que el pago fue aprobado o verificado."
+            else:
+                try:
+                    venta = confirmar_venta(
+                        lineas=lineas,
+                        cajero=request.user,
+                        medio_pago=medio_pago_seleccionado,
+                    )
+                except VentaNoValida as error:
+                    error_cobro = str(error)
+                else:
+                    request.session.pop(CLAVE_CARRITO, None)
+                    return redirect("ventas:detalle", venta_id=venta.pk)
 
     busqueda = request.GET.get("q", "").strip()
     productos = Producto.objects.filter(activo=True)
@@ -208,25 +265,7 @@ def caja(request):
             carrito.get(str(producto.pk), 0)
         )
 
-    productos_carrito = {
-        str(producto.pk): producto
-        for producto in Producto.objects.filter(pk__in=carrito.keys())
-    }
-    lineas_carrito = []
-    total_carrito = 0
-
-    for producto_id, cantidad_guardada in carrito.items():
-        producto = productos_carrito.get(producto_id)
-        if not producto:
-            continue
-        cantidad = int(cantidad_guardada)
-        subtotal = producto.precio * cantidad
-        total_carrito += subtotal
-        lineas_carrito.append({
-            "producto": producto,
-            "cantidad": cantidad,
-            "subtotal": subtotal,
-        })
+    lineas_carrito, total_carrito = _lineas_del_carrito(carrito)
 
     respuesta = render(
         request,
@@ -237,6 +276,10 @@ def caja(request):
             "lineas_carrito": lineas_carrito,
             "total_carrito": total_carrito,
             "carrito_abierto": request.GET.get("carrito") == "abierto",
+            "medios_pago": Venta.MedioPago,
+            "medio_pago_seleccionado": medio_pago_seleccionado,
+            "error_cobro": error_cobro,
+            "pantalla_cliente_token": _token_pantalla_cliente(request),
         },
     )
     if codigo_encontrado is not None:
@@ -244,6 +287,42 @@ def caja(request):
             "1" if codigo_encontrado else "0"
         )
     return respuesta
+
+
+@never_cache
+@login_required
+def pantalla_cliente(request):
+    _token_pantalla_cliente(request)
+    return render(
+        request,
+        "ventas/pantalla_cliente.html",
+        {
+            "lineas": [],
+            "total": 0,
+            "estado_url": reverse("ventas:estado_pantalla_cliente"),
+        },
+    )
+
+
+@never_cache
+@login_required
+def estado_pantalla_cliente(request):
+    _validar_token_pantalla_cliente(request)
+    lineas, total = _lineas_del_carrito(
+        request.session.get(CLAVE_CARRITO, {})
+    )
+    return JsonResponse({
+        "productos": [
+            {
+                "nombre": linea["producto"].nombre,
+                "cantidad": linea["cantidad"],
+                "precio_unitario": linea["producto"].precio,
+                "subtotal": linea["subtotal"],
+            }
+            for linea in lineas
+        ],
+        "total": total,
+    })
 
 
 @login_required

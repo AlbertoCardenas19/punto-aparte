@@ -1,0 +1,61 @@
+{% load static l10n %}
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pantalla del cliente | Punto Aparte</title>
+    <link rel="stylesheet" href="{% static 'vendor/bootstrap/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/pantalla-cliente.css' %}">
+</head>
+<body class="pa-cliente" data-estado-cliente-url="{{ estado_url }}">
+    <header class="pa-cliente-encabezado">
+        <img src="{% static 'img/logo_punto_aparte.jpg' %}" alt="Punto Aparte, librería">
+        <div>
+            <p class="pa-cliente-marca">Punto Aparte</p>
+            <p class="mb-0">Gracias por tu compra</p>
+        </div>
+    </header>
+
+    <main class="pa-cliente-contenido">
+        <section class="pa-cliente-espera" data-cliente-espera {% if lineas %}hidden{% endif %}>
+            <h1>Bienvenido</h1>
+            <p>Tu compra aparecerá aquí cuando comience la venta.</p>
+        </section>
+
+        <section data-cliente-compra {% if not lineas %}hidden{% endif %}>
+            <h1>Tu compra</h1>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Cantidad</th>
+                            <th>Precio unitario</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody data-cliente-productos>
+                        {% for linea in lineas %}
+                        <tr>
+                            <td>{{ linea.producto.nombre }}</td>
+                            <td>{{ linea.cantidad }}</td>
+                            <td>${{ linea.producto.precio|localize }}</td>
+                            <td>${{ linea.subtotal|localize }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="pa-cliente-total">
+                <span>Total</span>
+                <strong data-cliente-total>${{ total|localize }}</strong>
+            </div>
+        </section>
+
+        <p class="pa-cliente-estado" role="status" data-cliente-estado></p>
+    </main>
+
+    <script src="{% static 'js/pantalla-cliente.js' %}" defer></script>
+</body>
+</html>

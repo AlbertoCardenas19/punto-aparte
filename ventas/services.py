@@ -11,10 +11,8 @@ class VentaNoValida(Exception):
 
 @transaction.atomic
 def confirmar_venta(*, lineas, cajero, medio_pago):
-    if medio_pago != Venta.MedioPago.EFECTIVO:
-        raise VentaNoValida(
-            "Por ahora solo se pueden confirmar ventas en efectivo."
-        )
+    if medio_pago not in Venta.MedioPago.values:
+        raise VentaNoValida("Selecciona un medio de pago válido.")
 
     cantidades = {}
 

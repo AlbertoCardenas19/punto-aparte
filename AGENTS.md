@@ -32,7 +32,7 @@ Punto Aparte es un sistema de punto de venta (POS) para una librería en Talca, 
 - Una venta acepta un solo medio de pago. Sin conexión a internet solo se permite efectivo. Las transferencias las confirma el cajero.
 - Las anulaciones y devoluciones son procesos distintos y requieren motivo y autorización de Jefe según la regla acordada.
 - Los descuentos requieren autorización del dueño, tienen vigencia, se usan una vez por cliente y no se combinan. Su alcance (producto o total) debe respetar la decisión documentada antes de implementarse.
-- Mantén el foco en la caja POS. La emisión tributaria chilena, terminal Mercado Pago y segunda pantalla tienen decisiones e integración pendientes; no simules que ya están resueltas.
+- Mantén el foco en la caja POS. La emisión tributaria chilena y la integración con terminal Mercado Pago siguen pendientes; no simules que ya están resueltas. La pantalla del cliente implementada consulta únicamente el carrito de su misma sesión local.
 
 ## Convenciones técnicas
 

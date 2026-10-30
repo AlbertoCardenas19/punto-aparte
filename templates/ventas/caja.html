@@ -7,9 +7,15 @@
 {% block body_class %}pa-caja{% endblock %}
 {% block main_class %}pa-caja-contenido{% endblock %}
 {% block content %}
-<div class="mb-4">
-    <h1 class="h2 fw-bold mb-1">Nueva venta</h1>
-    <p class="text-secondary">Busca y selecciona los productos.</p>
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+        <h1 class="h2 fw-bold mb-1">Nueva venta</h1>
+        <p class="text-secondary mb-0">Busca y selecciona los productos.</p>
+    </div>
+    <a class="btn btn-outline-primary" target="_blank" rel="noopener"
+        href="{% url 'ventas:pantalla_cliente' %}#{{ pantalla_cliente_token|urlencode }}">
+        Abrir pantalla del cliente
+    </a>
 </div>
 
 <div class="row g-4">
@@ -210,15 +216,39 @@
             </div>
             <div class="modal-body">
                 <p>Se registrará una venta por <strong>${{ total_carrito|localize }}</strong>.</p>
-                <p class="mb-0"><strong>Medio de pago:</strong> efectivo</p>
+                <form id="form-cobro" method="post" data-form-cobro>
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="confirmar">
+
+                    <fieldset>
+                        <legend class="h6 fw-bold">Medio de pago</legend>
+                        <div class="pa-medios-pago">
+                            {% for valor, etiqueta in medios_pago.choices %}
+                            <label class="pa-medio-pago">
+                                <input class="form-check-input" type="radio" name="medio_pago"
+                                    value="{{ valor }}" {% if medio_pago_seleccionado == valor %}checked{% endif %} required>
+                                <span>{{ etiqueta }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </fieldset>
+
+                    <p class="small text-secondary mt-3 mb-2" data-instruccion-pago></p>
+                    <div class="form-check" data-confirmacion-pago hidden>
+                        <input class="form-check-input" type="checkbox" name="pago_confirmado" value="1"
+                            id="pago-confirmado">
+                        <label class="form-check-label" for="pago-confirmado" data-confirmacion-pago-texto></label>
+                    </div>
+                    <p class="small text-secondary mt-3 mb-0">
+                        El sistema no dispone de una comprobación fiable de conexión. Si no hay internet,
+                        usa únicamente efectivo.
+                    </p>
+                    {% if error_cobro %}<p class="pa-error-campo" role="alert">{{ error_cobro }}</p>{% endif %}
+                </form>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Volver</button>
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="accion" value="confirmar">
-                    <button class="btn btn-pa" type="submit">Confirmar venta en efectivo</button>
-                </form>
+                <button class="btn btn-pa" type="submit" form="form-cobro">Confirmar venta</button>
             </div>
         </div>
     </div>

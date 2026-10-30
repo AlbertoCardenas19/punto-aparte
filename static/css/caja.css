@@ -28,6 +28,9 @@
 .pa-caja .pa-cantidad-control :focus-visible { outline: 3px solid #6f91b5; outline-offset: 2px; position: relative; z-index: 1; }
 .pa-caja .pa-caja-total { font-size: clamp(1.4rem, 2vw, 1.8rem); gap: .75rem; flex-wrap: wrap; }
 .pa-caja .pa-caja-cobrar { --bs-btn-color: white; --bs-btn-bg: #13294c; --bs-btn-border-color: #13294c; --bs-btn-hover-color: white; --bs-btn-hover-bg: #203e65; --bs-btn-hover-border-color: #203e65; --bs-btn-active-color: white; --bs-btn-active-bg: #0c1c35; --bs-btn-active-border-color: #0c1c35; --bs-btn-focus-shadow-rgb: 19, 41, 76; min-height: 4.5rem; font-weight: 700; border-radius: .85rem; }
+.pa-caja .pa-medios-pago { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; }
+.pa-caja .pa-medio-pago { display: flex; align-items: center; gap: .5rem; min-width: 0; border: 1px solid var(--pa-border); border-radius: .7rem; padding: .75rem; font-size: .9rem; }
+.pa-caja .pa-medio-pago:has(input:checked) { border-color: var(--pa-navy); background: #edf2f7; }
 .pa-caja .pa-carrito-movil { width: 100%; border: 0; border-radius: .9rem; background: var(--pa-navy); color: #fff; display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1rem 1.15rem; font-size: 1rem; }
 .pa-caja .pa-carrito-movil strong { font-size: 1.15rem; }
 .pa-caja .modal { color: var(--pa-ink); }
@@ -50,4 +53,5 @@
     .pa-caja .pa-caja-compra td::before { content: attr(data-label); color: var(--pa-muted); font-size: .72rem; font-weight: 600; margin-bottom: .25rem; }
     .pa-caja .pa-caja-compra td:first-child, .pa-caja .pa-caja-compra td:nth-child(3) { grid-column: 1 / -1; }
     .pa-caja .pa-cantidad-control { grid-template-columns: 2.5rem minmax(3rem, 3.5rem) 2.5rem; max-width: 100%; }
+    .pa-caja .pa-medios-pago { grid-template-columns: 1fr; }
 }

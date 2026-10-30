@@ -9,7 +9,6 @@ Estas necesidades están mencionadas para el producto, pero no deben implementar
 | Caja diaria | Confirmar primero si la librería cuenta el dinero al abrir y cerrar el día. Si la respuesta es afirmativa, definir responsables, efectivo inicial, ingresos/retiros, arqueo, diferencias y cierre. Mientras tanto, vender no requiere abrir caja. |
 | Anulación y devolución | Estados y transiciones, autorización del Jefe, tratamiento de stock y pago, y documento asociado. |
 | Descuentos | Cómo autoriza el dueño, catálogo de descuentos, topes, cálculo, qué significa “una vez por cliente” si no se exige identificar clientes en toda venta, e interacción con devoluciones. |
-| Segunda pantalla | Conexión con la caja, modo de actualización, recuperación tras desconexión y datos visibles. |
 | Uso sin internet | Alcance de la operación offline, sincronización posterior y comportamiento de pagos distintos de efectivo. |
 | Recepción de compras | Cómo se registra una recepción completa y cómo se resuelven discrepancias, daños o diferencias con la orden/documento del proveedor. |
 | Datos de cliente | Cuándo solicitar identificación y qué campos guardar para emitir factura o aplicar restricciones de descuento. |
