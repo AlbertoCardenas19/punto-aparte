@@ -71,14 +71,18 @@ for (const table of document.querySelectorAll('[data-tabla-listado]')) {
         },
     });
 
-    const exportLink = document.querySelector('[data-exportar-productos]');
-    if (exportLink && table.closest('.card')) {
+    const exportLinks = [
+        ...document.querySelectorAll('[data-exportar-productos], [data-exportar-movimientos]'),
+    ];
+    if (exportLinks.length && table.closest('.card')) {
         const actualizarExportacion = () => {
-            const url = new URL(exportLink.href);
             const busqueda = dataTable.search().trim();
-            if (busqueda) url.searchParams.set('q', busqueda);
-            else url.searchParams.delete('q');
-            exportLink.href = url;
+            for (const exportLink of exportLinks) {
+                const url = new URL(exportLink.href);
+                if (busqueda) url.searchParams.set('q', busqueda);
+                else url.searchParams.delete('q');
+                exportLink.href = url;
+            }
         };
         dataTable.on('search', actualizarExportacion);
         actualizarExportacion();
@@ -101,33 +105,128 @@ if (movimientoStockForm) {
     actualizarTipo();
 
     const buscar = movimientoStockForm.querySelector('[data-buscar-producto-stock]');
-    const select = movimientoStockForm.querySelector('[name="producto"]');
+    const productoId = movimientoStockForm.querySelector('[name="producto"]');
     const estado = movimientoStockForm.querySelector('[data-producto-stock-estado]');
-    const opciones = [...select.options].map(option => ({
-        value: option.value,
-        text: option.textContent,
-    }));
-    const normalizar = texto => texto.normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const sugerencias = movimientoStockForm.querySelector('[data-sugerencias-producto]');
+    const buscador = movimientoStockForm.querySelector('[data-producto-buscador]');
+    const seleccionado = movimientoStockForm.querySelector('[data-producto-seleccionado]');
+    const nombreSeleccionado = seleccionado.querySelector('[data-producto-seleccionado-nombre]');
+    const detalleSeleccionado = seleccionado.querySelector('[data-producto-seleccionado-detalle]');
+    const cambiar = seleccionado.querySelector('[data-cambiar-producto]');
+    let temporizador, controller;
+
+    const cerrarSugerencias = () => {
+        sugerencias.hidden = true;
+        sugerencias.replaceChildren();
+        buscar.setAttribute('aria-expanded', 'false');
+    };
+    const elegirProducto = producto => {
+        productoId.value = producto.id;
+        nombreSeleccionado.textContent = producto.nombre;
+        detalleSeleccionado.textContent = [
+            producto.marca,
+            producto.codigo,
+            `Stock actual: ${producto.stock}`,
+        ].filter(Boolean).join(' · ');
+        buscador.hidden = true;
+        seleccionado.hidden = false;
+        estado.textContent = '';
+        cerrarSugerencias();
+    };
+    const mostrarSugerencias = resultados => {
+        sugerencias.replaceChildren(...resultados.map(producto => {
+            const boton = document.createElement('button');
+            boton.type = 'button';
+            boton.className = 'pa-sugerencia-producto';
+            boton.setAttribute('role', 'option');
+            const informacion = document.createElement('span');
+            const nombre = document.createElement('strong');
+            const detalle = document.createElement('span');
+            const stock = document.createElement('span');
+            nombre.textContent = producto.nombre;
+            detalle.textContent = [producto.marca, producto.codigo]
+                .filter(Boolean).join(' · ');
+            stock.className = 'pa-sugerencia-stock';
+            stock.textContent = `Stock: ${producto.stock}`;
+            informacion.append(nombre, detalle);
+            boton.append(informacion, stock);
+            boton.addEventListener('click', () => elegirProducto(producto));
+            return boton;
+        }));
+        sugerencias.hidden = resultados.length === 0;
+        buscar.setAttribute('aria-expanded', String(resultados.length > 0));
+    };
+    const consultar = async () => {
+        const termino = buscar.value.trim();
+        controller?.abort();
+        if (!termino) {
+            estado.textContent = '';
+            cerrarSugerencias();
+            return;
+        }
+        controller = new AbortController();
+        const url = new URL(movimientoStockForm.dataset.sugerenciasUrl, location.origin);
+        url.searchParams.set('q', termino);
+        estado.textContent = 'Buscando…';
+        try {
+            const response = await fetch(url, {
+                signal: controller.signal,
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+            });
+            if (!response.ok) throw new Error('HTTP');
+            const {resultados} = await response.json();
+            mostrarSugerencias(resultados);
+            estado.textContent = resultados.length
+                ? ''
+                : 'No se encontraron productos.';
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                cerrarSugerencias();
+                estado.textContent = 'No se pudieron cargar las sugerencias.';
+            }
+        }
+    };
 
     buscar.addEventListener('input', () => {
-        const seleccion = select.value;
-        const termino = normalizar(buscar.value.trim());
-        const coincidencias = opciones.filter(option => (
-            !option.value
-            || option.value === seleccion
-            || normalizar(option.text).includes(termino)
-        ));
-        select.replaceChildren(...coincidencias.map(({value, text}) => {
-            const option = document.createElement('option');
-            option.value = value;
-            option.textContent = text;
-            option.selected = value === seleccion;
-            return option;
-        }));
-        estado.textContent = coincidencias.some(option => option.value)
-            ? ''
-            : 'No se encontraron productos.';
+        productoId.value = '';
+        clearTimeout(temporizador);
+        temporizador = setTimeout(consultar, 180);
+    });
+    buscar.addEventListener('keydown', event => {
+        const opciones = [...sugerencias.querySelectorAll('[role="option"]')];
+        if (event.key === 'ArrowDown' && opciones.length) {
+            event.preventDefault();
+            opciones[0].focus();
+        } else if (event.key === 'Escape') {
+            cerrarSugerencias();
+        }
+    });
+    sugerencias.addEventListener('keydown', event => {
+        const opciones = [...sugerencias.querySelectorAll('[role="option"]')];
+        const indice = opciones.indexOf(document.activeElement);
+        if (event.key === 'ArrowDown' && indice < opciones.length - 1) {
+            event.preventDefault();
+            opciones[indice + 1].focus();
+        } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            if (indice > 0) opciones[indice - 1].focus();
+            else buscar.focus();
+        } else if (event.key === 'Escape') {
+            cerrarSugerencias();
+            buscar.focus();
+        }
+    });
+    cambiar.addEventListener('click', () => {
+        productoId.value = '';
+        seleccionado.hidden = true;
+        buscador.hidden = false;
+        buscar.value = '';
+        buscar.focus();
+    });
+    document.addEventListener('click', event => {
+        if (!movimientoStockForm.querySelector('[data-producto-predictivo]').contains(event.target)) {
+            cerrarSugerencias();
+        }
     });
 }
 

@@ -1,12 +1,16 @@
 const pantallaCliente = document.body;
 const estadoUrl = pantallaCliente.dataset.estadoClienteUrl;
-const tokenPantalla = location.hash.slice(1);
-history.replaceState(null, '', location.pathname);
+const tokenPantalla = location.hash.slice(1)
+    || pantallaCliente.dataset.pantallaClienteToken;
+if (location.hash) history.replaceState(null, '', location.pathname);
 const espera = document.querySelector('[data-cliente-espera]');
 const compra = document.querySelector('[data-cliente-compra]');
 const productos = document.querySelector('[data-cliente-productos]');
 const total = document.querySelector('[data-cliente-total]');
 const estado = document.querySelector('[data-cliente-estado]');
+const modalGracias = document.querySelector('[data-cliente-gracias]');
+let ultimaVenta = pantallaCliente.dataset.ultimaVenta || '';
+let temporizadorGracias;
 const moneda = new Intl.NumberFormat('es-CL', {
     style: 'currency',
     currency: 'CLP',
@@ -35,6 +39,16 @@ function actualizarPantalla(datos) {
     }
     total.textContent = moneda.format(datos.total);
     estado.textContent = '';
+
+    const ventaConfirmada = String(datos.ultima_venta_id || '');
+    if (ventaConfirmada && ventaConfirmada !== ultimaVenta) {
+        ultimaVenta = ventaConfirmada;
+        modalGracias.hidden = false;
+        clearTimeout(temporizadorGracias);
+        temporizadorGracias = setTimeout(() => {
+            modalGracias.hidden = true;
+        }, 5000);
+    }
 }
 
 async function consultarEstado() {

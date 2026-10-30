@@ -1,11 +1,13 @@
 import csv
+import unicodedata
 
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Count, Q
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render, get_object_or_404
 from django.urls import reverse
+from django.utils import timezone
 
 from usuarios.decorators import jefe_required
 from usuarios.models import Usuario
@@ -17,6 +19,7 @@ from .forms import (
 )
 
 from .models import Categoria, MovimientoStock, Producto
+from .exportaciones import exportar_movimientos
 
 
 @login_required
@@ -104,7 +107,81 @@ def lista_categorias(request):
 
 @jefe_required
 def inventario(request):
-    return render(request, "catalogo/inventario.html")
+    movimientos = _movimientos_stock_filtrados(request)
+    return render(
+        request,
+        "catalogo/historial_stock.html",
+        {"movimientos": movimientos},
+    )
+
+
+def _movimientos_stock_filtrados(request):
+    movimientos = (
+        MovimientoStock.objects
+        .select_related("producto", "usuario")
+        .order_by("-fecha")
+    )
+    busqueda = request.GET.get("q", "").strip()
+    if busqueda:
+        def normalizar(texto):
+            return "".join(
+                caracter for caracter in unicodedata.normalize("NFD", texto)
+                if unicodedata.category(caracter) != "Mn"
+            ).lower()
+
+        terminos = normalizar(busqueda).split()
+        coincidencias = []
+        for movimiento in movimientos:
+            contenido = normalizar(" ".join((
+                timezone.localtime(movimiento.fecha).strftime(
+                    "%d/%m/%Y %H:%M %Y-%m-%d"
+                ),
+                movimiento.producto.nombre,
+                movimiento.get_tipo_display(),
+                movimiento.motivo,
+                movimiento.usuario.username,
+            )))
+            if all(termino in contenido for termino in terminos):
+                coincidencias.append(movimiento)
+        return coincidencias
+    return movimientos
+
+
+@jefe_required
+def sugerencias_productos_stock(request):
+    termino = request.GET.get("q", "").strip()
+    productos = Producto.objects.none()
+    if termino:
+        productos = (
+            Producto.objects.filter(
+                Q(nombre__icontains=termino)
+                | Q(marca__icontains=termino)
+                | Q(codigo_barras__icontains=termino)
+            )
+            .order_by("nombre", "marca")[:8]
+        )
+    return JsonResponse({
+        "resultados": [
+            {
+                "id": producto.pk,
+                "nombre": producto.nombre,
+                "marca": producto.marca,
+                "codigo": producto.codigo_barras or "Sin código",
+                "stock": producto.stock,
+            }
+            for producto in productos
+        ],
+    })
+
+
+@jefe_required
+def exportar_movimientos_stock(request, formato):
+    if formato not in {"csv", "xlsx", "pdf"}:
+        return HttpResponse(status=404)
+    return exportar_movimientos(
+        _movimientos_stock_filtrados(request),
+        formato,
+    )
 
 
 @jefe_required
@@ -256,7 +333,10 @@ def registrar_movimiento_stock(request):
                     return render(
                         request,
                         "catalogo/movimiento_stock_formulario.html",
-                        {"form": form},
+                        {
+                            "form": form,
+                            "producto_seleccionado": producto,
+                        },
                     )
                 cantidad = abs(nuevo - anterior)
 
@@ -274,22 +354,27 @@ def registrar_movimiento_stock(request):
 
         return redirect("catalogo:inventario")
 
+    producto_seleccionado_id = (
+        request.POST.get("producto")
+        if request.method == "POST"
+        else inicial.get("producto")
+    )
+    producto_seleccionado = None
+    if str(producto_seleccionado_id or "").isdigit():
+        producto_seleccionado = Producto.objects.filter(
+            pk=producto_seleccionado_id
+        ).first()
+
     return render(
         request,
         "catalogo/movimiento_stock_formulario.html",
-        {"form": form},
+        {
+            "form": form,
+            "producto_seleccionado": producto_seleccionado,
+        },
     )
 
 
 @jefe_required
 def historial_stock(request):
-    movimientos = (
-        MovimientoStock.objects
-        .select_related("producto", "usuario")
-        .order_by("-fecha")
-    )
-    return render(
-        request,
-        "catalogo/historial_stock.html",
-        {"movimientos": movimientos},
-    )
+    return redirect("catalogo:inventario")

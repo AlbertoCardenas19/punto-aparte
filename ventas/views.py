@@ -20,6 +20,7 @@ from .services import VentaNoValida, confirmar_venta
 
 CLAVE_CARRITO = "carrito_venta"
 CLAVE_PANTALLA_CLIENTE = "token_pantalla_cliente"
+CLAVE_ULTIMA_VENTA_CLIENTE = "ultima_venta_pantalla_cliente"
 
 
 def _lineas_del_carrito(carrito):
@@ -237,6 +238,7 @@ def caja(request):
                     error_cobro = str(error)
                 else:
                     request.session.pop(CLAVE_CARRITO, None)
+                    request.session[CLAVE_ULTIMA_VENTA_CLIENTE] = venta.pk
                     return redirect("ventas:detalle", venta_id=venta.pk)
 
     busqueda = request.GET.get("q", "").strip()
@@ -292,7 +294,7 @@ def caja(request):
 @never_cache
 @login_required
 def pantalla_cliente(request):
-    _token_pantalla_cliente(request)
+    token = _token_pantalla_cliente(request)
     return render(
         request,
         "ventas/pantalla_cliente.html",
@@ -300,6 +302,11 @@ def pantalla_cliente(request):
             "lineas": [],
             "total": 0,
             "estado_url": reverse("ventas:estado_pantalla_cliente"),
+            "pantalla_cliente_token": token,
+            "ultima_venta_id": request.session.get(
+                CLAVE_ULTIMA_VENTA_CLIENTE,
+                "",
+            ),
         },
     )
 
@@ -322,6 +329,10 @@ def estado_pantalla_cliente(request):
             for linea in lineas
         ],
         "total": total,
+        "ultima_venta_id": request.session.get(
+            CLAVE_ULTIMA_VENTA_CLIENTE,
+            "",
+        ),
     })
 
 

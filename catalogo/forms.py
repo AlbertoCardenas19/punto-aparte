@@ -59,16 +59,15 @@ class ProductoForm(BootstrapFormMixin, forms.ModelForm):
         return codigo.strip() or None
 
 
-class ProductoStockChoiceField(forms.ModelChoiceField):
-    def label_from_instance(self, obj):
-        return f"{obj.nombre} · Stock actual: {obj.stock}"
-
-
 class MovimientoStockForm(BootstrapFormMixin, forms.Form):
-    producto = ProductoStockChoiceField(
+    producto = forms.ModelChoiceField(
         queryset=Producto.objects.none(),
         label="Producto",
-        empty_label="Selecciona un producto",
+        widget=forms.HiddenInput(),
+        error_messages={
+            "required": "Selecciona un producto de las sugerencias.",
+            "invalid_choice": "El producto seleccionado no está disponible.",
+        },
     )
     tipo = forms.ChoiceField(
         choices=(
@@ -95,7 +94,7 @@ class MovimientoStockForm(BootstrapFormMixin, forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["producto"].queryset = Producto.objects.order_by("nombre")
+        self.fields["producto"].queryset = Producto.objects.all()
 
     def clean(self):
         cleaned_data = super().clean()

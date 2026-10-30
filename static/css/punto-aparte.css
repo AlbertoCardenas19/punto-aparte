@@ -78,11 +78,21 @@
 .pa-app .pa-detalle-producto dt { color: var(--pa-muted); font-size: .8rem; font-weight: 700; margin-bottom: .2rem; }
 .pa-app .pa-detalle-producto dd { margin: 0; overflow-wrap: anywhere; }
 .pa-app .pa-venta-total { font-size: 1.25rem; }
-.pa-app .pa-venta-flotante { position: fixed; right: clamp(1rem, 2.5vw, 2rem); bottom: max(1rem, env(safe-area-inset-bottom)); z-index: 1030; border-radius: 999px; background: var(--pa-red); box-shadow: 0 .5rem 1.5rem rgb(27 45 72 / 25%); color: #fff; font-weight: 750; padding: .85rem 1.35rem; text-decoration: none; }
-.pa-app .pa-venta-flotante:hover, .pa-app .pa-venta-flotante:focus-visible { background: #a92631; color: #fff; }
+.pa-app .pa-venta-flotante { position: fixed; right: clamp(1rem, 2.5vw, 2rem); bottom: max(1rem, env(safe-area-inset-bottom)); z-index: 1030; border-radius: .8rem; background: var(--pa-navy); box-shadow: 0 .5rem 1.5rem rgb(27 45 72 / 25%); color: #fff; font-size: 1.05rem; font-weight: 750; padding: 1rem 1.55rem; text-decoration: none; }
+.pa-app .pa-venta-flotante:hover, .pa-app .pa-venta-flotante:focus-visible { background: #294e70; color: #fff; }
+.pa-app .pa-encabezado-acciones { margin-left: auto; }
+.pa-app .pa-producto-predictivo { position: relative; }
+.pa-app .pa-sugerencias-producto { position: absolute; z-index: 1020; top: calc(100% - 1.7rem); left: 0; right: 0; max-height: 20rem; overflow-y: auto; border: 1px solid var(--pa-border); border-radius: .65rem; background: #fff; box-shadow: 0 .8rem 2rem rgb(27 45 72 / 16%); }
+.pa-app .pa-sugerencia-producto { display: flex; width: 100%; justify-content: space-between; gap: 1rem; border: 0; border-bottom: 1px solid var(--pa-border); background: #fff; color: var(--pa-ink); padding: .75rem 1rem; text-align: left; }
+.pa-app .pa-sugerencia-producto:last-child { border-bottom: 0; }
+.pa-app .pa-sugerencia-producto:hover, .pa-app .pa-sugerencia-producto:focus-visible { background: #edf2f7; }
+.pa-app .pa-sugerencia-producto span { display: block; color: var(--pa-muted); font-size: .82rem; }
+.pa-app .pa-sugerencia-stock { flex: 0 0 auto; font-weight: 700; white-space: nowrap; }
+.pa-app .pa-producto-seleccionado { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border: 1px solid var(--pa-border); border-radius: .65rem; background: #f7f9fb; padding: .8rem 1rem; }
+.pa-app .pa-producto-seleccionado span { display: block; color: var(--pa-muted); font-size: .875rem; }
 .pa-app :is(a, button):focus-visible { outline: 3px solid #6f91b5; outline-offset: 3px; }
 @media (max-width: 991.98px) { .pa-app .pa-estructura { display: block; min-height: calc(100vh - 4.5rem); min-height: calc(100dvh - 4.5rem); } }
-@media (max-width: 575.98px) { .pa-app .pa-marca span { display: none; } .pa-app .pa-barra-superior { flex-wrap: wrap; gap: .6rem; } .pa-app .pa-sesion { width: 100%; justify-content: space-between; } .pa-app .pa-sesion-identidad { font-size: .8rem; } .pa-app .table td, .pa-app .table th { padding: .75rem; } .pa-app .pa-form-acciones { margin-top: 1.5rem; } .pa-app .pa-venta-flotante { right: .75rem; bottom: max(.75rem, env(safe-area-inset-bottom)); padding: .7rem 1rem; font-size: .9rem; } }
+@media (max-width: 575.98px) { .pa-app .pa-marca span { display: none; } .pa-app .pa-barra-superior { flex-wrap: wrap; gap: .6rem; } .pa-app .pa-sesion { width: 100%; justify-content: space-between; } .pa-app .pa-sesion-identidad { font-size: .8rem; } .pa-app .table td, .pa-app .table th { padding: .75rem; } .pa-app .pa-form-acciones { margin-top: 1.5rem; } .pa-app .pa-venta-flotante { right: .65rem; bottom: max(.65rem, env(safe-area-inset-bottom)); padding: .75rem .9rem; font-size: .9rem; } .pa-app .pa-encabezado-acciones { width: 100%; justify-content: flex-start !important; } .pa-app .pa-producto-seleccionado { align-items: flex-start; flex-direction: column; } }
 /* Los menús trasladados al body quedan por encima de tablas y tarjetas. */
 body > .dropdown-menu { z-index: 1080; border-color: var(--pa-border); border-radius: .75rem; padding: .5rem; }
 .pa-app div.dt-container .dt-layout-row { align-items: center; gap: .75rem; margin: 0 0 1rem; }

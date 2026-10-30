@@ -28,7 +28,7 @@ Relaciones relevantes:
 
 ## Flujo de una venta implementado
 
-1. La vista de Venta mantiene una selección temporal en la sesión. La búsqueda consulta el catálogo activo en el servidor y pagina los resultados; un código de barras exacto puede agregar una unidad. La pantalla del cliente consulta ese mismo carrito mediante un endpoint protegido por la sesión y un token aleatorio.
+1. La vista de Venta mantiene una selección temporal en la sesión. La búsqueda consulta el catálogo activo en el servidor y pagina los resultados; un código de barras exacto puede agregar una unidad. La pantalla del cliente consulta ese mismo carrito mediante un endpoint protegido por la sesión y un token aleatorio. Puede abrirse desde la navegación con el carrito vacío; al confirmar una venta agradece durante cinco segundos y vuelve al estado de espera.
 2. El cajero selecciona efectivo, tarjeta o transferencia. Tarjeta y transferencia requieren confirmación manual; después, la confirmación delega en `ventas/services.py`.
 3. El servicio valida el medio de pago, productos activos, cantidades y stock.
 4. Dentro de una transacción, bloquea las filas de producto, crea la venta y detalles, descuenta stock y registra movimientos de salida.
@@ -56,7 +56,7 @@ Las plantillas extienden `templates/base.html`, que carga Bootstrap local y el s
 Las vistas actuales incluyen:
 
 - Venta con catálogo paginado, carrito de sesión, selección de medio de pago y pantalla del cliente de solo lectura.
-- Productos con exportación CSV y categorías con administración de estado; Inventario usa un único formulario para seleccionar producto y registrar ingresos o ajustes, manteniendo ambos tipos internos separados.
+- Productos con exportación CSV y categorías con administración de estado. «Movimientos de stock» abre directamente el historial y ofrece un único acceso al formulario separado. El formulario busca productos de forma predictiva y mantiene los ingresos y ajustes como operaciones internas distintas. El historial se exporta según la búsqueda visible a CSV, XLSX o PDF sin dependencias externas.
 - Consulta de ventas: el Cajero ve las propias y el Jefe ve todas, con filtros de fecha y cajero según permiso.
 - Usuarios para Jefe.
 

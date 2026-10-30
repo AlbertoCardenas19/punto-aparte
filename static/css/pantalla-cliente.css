@@ -13,4 +13,8 @@
 .pa-cliente .table th, .pa-cliente .table td { padding: 1rem; text-align: left; }
 .pa-cliente-total { display: flex; justify-content: space-between; gap: 1rem; margin-top: 1.5rem; padding: 1.25rem; border-radius: 1rem; background: var(--pa-navy); color: #fff; font-size: clamp(1.35rem, 4vw, 2rem); }
 .pa-cliente-estado { min-height: 1.5rem; margin: 1rem 0 0; font-size: .9rem; }
+.pa-cliente-modal { position: fixed; inset: 0; z-index: 1050; display: grid; place-items: center; padding: 1rem; background: rgb(23 50 77 / 58%); }
+.pa-cliente-modal[hidden] { display: none; }
+.pa-cliente-modal-contenido { width: min(34rem, 100%); padding: clamp(2rem, 6vw, 4rem); border-radius: 1.25rem; background: #fff; box-shadow: 0 1.5rem 4rem rgb(23 50 77 / 30%); text-align: center; }
+.pa-cliente-modal-contenido h2 { margin: 0; color: var(--pa-navy); font-size: clamp(1.8rem, 5vw, 3rem); }
 @media (max-width: 575.98px) { .pa-cliente-encabezado img { width: 52px; height: 52px; } .pa-cliente .table th, .pa-cliente .table td { padding: .75rem .6rem; font-size: .85rem; } }

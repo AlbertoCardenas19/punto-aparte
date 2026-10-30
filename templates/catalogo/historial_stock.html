@@ -7,12 +7,30 @@
 {% block title %}Movimientos de stock | Punto Aparte{% endblock %}
 
 {% block content %}
-<div class="mb-4">
-    <h1 class="h2 fw-bold mb-1">Movimientos de stock</h1>
-    <p class="text-secondary">Registro de ingresos, ajustes y salidas.</p>
-    <a class="btn btn-outline-secondary" href="{% url 'catalogo:lista_productos' %}">
-        Volver al catálogo
-    </a>
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+        <h1 class="h2 fw-bold mb-1">Movimientos de stock</h1>
+        <p class="text-secondary mb-0">Registro de ingresos, ajustes y salidas.</p>
+    </div>
+    <div class="d-flex flex-wrap justify-content-end gap-2 pa-encabezado-acciones">
+        <a class="btn btn-pa" href="{% url 'catalogo:registrar_movimiento_stock' %}">
+            Registrar movimiento
+        </a>
+        <div class="dropdown">
+            <button class="btn btn-outline-primary dropdown-toggle" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false">
+                Exportar
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" data-exportar-movimientos
+                    href="{% url 'catalogo:exportar_movimientos_stock' 'csv' %}">CSV</a></li>
+                <li><a class="dropdown-item" data-exportar-movimientos
+                    href="{% url 'catalogo:exportar_movimientos_stock' 'xlsx' %}">Excel (XLSX)</a></li>
+                <li><a class="dropdown-item" data-exportar-movimientos
+                    href="{% url 'catalogo:exportar_movimientos_stock' 'pdf' %}">PDF</a></li>
+            </ul>
+        </div>
+    </div>
 </div>
 
 <div class="card">

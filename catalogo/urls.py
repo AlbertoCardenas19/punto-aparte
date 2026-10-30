@@ -11,6 +11,16 @@ urlpatterns = [
     path("categorias/", views.lista_categorias, name="lista_categorias"),
     path("inventario/", views.inventario, name="inventario"),
     path(
+        "inventario/productos/sugerencias/",
+        views.sugerencias_productos_stock,
+        name="sugerencias_productos_stock",
+    ),
+    path(
+        "inventario/exportar/<str:formato>/",
+        views.exportar_movimientos_stock,
+        name="exportar_movimientos_stock",
+    ),
+    path(
         "inventario/movimiento/nuevo/",
         views.registrar_movimiento_stock,
         name="registrar_movimiento_stock",

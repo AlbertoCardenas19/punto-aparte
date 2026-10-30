@@ -11,13 +11,9 @@
 
     {% if request.user.rol == "JEFE" %}
     <p class="pa-menu-grupo">Inventario</p>
-    <a class="pa-menu-enlace {% if request.resolver_match.url_name == 'inventario' or request.resolver_match.url_name == 'registrar_movimiento_stock' or request.resolver_match.url_name == 'ingresar_stock' or request.resolver_match.url_name == 'ajustar_stock' %}active{% endif %}"
-        href="{% url 'catalogo:inventario' %}" {% if request.resolver_match.url_name == 'inventario' or request.resolver_match.url_name == 'registrar_movimiento_stock' or request.resolver_match.url_name == 'ingresar_stock' or request.resolver_match.url_name == 'ajustar_stock' %}aria-current="page"{% endif %}>
+    <a class="pa-menu-enlace {% if request.resolver_match.url_name == 'inventario' or request.resolver_match.url_name == 'registrar_movimiento_stock' or request.resolver_match.url_name == 'ingresar_stock' or request.resolver_match.url_name == 'ajustar_stock' or request.resolver_match.url_name == 'historial_stock' %}active{% endif %}"
+        href="{% url 'catalogo:inventario' %}" {% if request.resolver_match.url_name == 'inventario' or request.resolver_match.url_name == 'registrar_movimiento_stock' or request.resolver_match.url_name == 'ingresar_stock' or request.resolver_match.url_name == 'ajustar_stock' or request.resolver_match.url_name == 'historial_stock' %}aria-current="page"{% endif %}>
         Movimientos de stock
-    </a>
-    <a class="pa-menu-enlace {% if request.resolver_match.url_name == 'historial_stock' %}active{% endif %}"
-        href="{% url 'catalogo:historial_stock' %}" {% if request.resolver_match.url_name == 'historial_stock' %}aria-current="page"{% endif %}>
-        Historial de stock
     </a>
     {% endif %}
 
@@ -26,6 +22,11 @@
         href="{% url 'ventas:lista' %}" {% if request.resolver_match.namespace == 'ventas' and request.resolver_match.url_name != 'caja' %}aria-current="page"{% endif %}>
         Consultar ventas
     </a>
+    {% if request.user.rol == "JEFE" or request.user.rol == "CAJERO" %}
+    <a class="pa-menu-enlace" href="{% url 'ventas:pantalla_cliente' %}" target="_blank" rel="noopener">
+        Pantalla del cliente
+    </a>
+    {% endif %}
 
     {% if request.user.rol == "JEFE" %}
     <p class="pa-menu-grupo">Administración</p>

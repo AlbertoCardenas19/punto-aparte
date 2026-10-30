@@ -8,7 +8,9 @@
     <link rel="stylesheet" href="{% static 'vendor/bootstrap/css/bootstrap.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/pantalla-cliente.css' %}">
 </head>
-<body class="pa-cliente" data-estado-cliente-url="{{ estado_url }}">
+<body class="pa-cliente" data-estado-cliente-url="{{ estado_url }}"
+    data-pantalla-cliente-token="{{ pantalla_cliente_token }}"
+    data-ultima-venta="{{ ultima_venta_id|default:'' }}">
     <header class="pa-cliente-encabezado">
         <img src="{% static 'img/logo_punto_aparte.jpg' %}" alt="Punto Aparte, librería">
         <div>
@@ -55,6 +57,13 @@
 
         <p class="pa-cliente-estado" role="status" data-cliente-estado></p>
     </main>
+
+    <div class="pa-cliente-modal" role="dialog" aria-modal="true"
+        aria-labelledby="gracias-compra-titulo" data-cliente-gracias hidden>
+        <div class="pa-cliente-modal-contenido">
+            <h2 id="gracias-compra-titulo">Gracias por su compra</h2>
+        </div>
+    </div>
 
     <script src="{% static 'js/pantalla-cliente.js' %}" defer></script>
 </body>

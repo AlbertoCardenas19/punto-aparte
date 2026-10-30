@@ -10,22 +10,36 @@
                 <h1 class="h3 fw-bold mb-1">Registrar movimiento de stock</h1>
                 <p class="text-secondary mb-4">El ingreso suma unidades; el ajuste establece el conteo final.</p>
 
-                <form method="post" data-movimiento-stock-form>
+                <form method="post" data-movimiento-stock-form
+                    data-sugerencias-url="{% url 'catalogo:sugerencias_productos_stock' %}">
                     {% csrf_token %}
                     {% if form.non_field_errors %}
                     <div class="pa-error-campo mb-3" role="alert">{{ form.non_field_errors }}</div>
                     {% endif %}
 
-                    <div class="mb-3">
-                        <label class="form-label" for="buscar-producto-stock">Buscar producto</label>
-                        <input class="form-control" id="buscar-producto-stock" type="search"
-                            placeholder="Nombre del producto" autocomplete="off" data-buscar-producto-stock>
-                        <p class="pa-estado-breve" role="status" data-producto-stock-estado></p>
-                    </div>
-
-                    <div class="mb-3" data-producto-stock-selector>
-                        {{ form.producto.label_tag }}
+                    <div class="mb-3 pa-producto-predictivo" data-producto-predictivo>
+                        <label class="form-label" for="buscar-producto-stock">Producto</label>
                         {{ form.producto }}
+                        <div data-producto-seleccionado {% if not producto_seleccionado %}hidden{% endif %}
+                            class="pa-producto-seleccionado">
+                            <div>
+                                <strong data-producto-seleccionado-nombre>{{ producto_seleccionado.nombre }}</strong>
+                                <span data-producto-seleccionado-detalle>
+                                    {% if producto_seleccionado %}{% if producto_seleccionado.marca %}{{ producto_seleccionado.marca }} · {% endif %}{{ producto_seleccionado.codigo_barras|default:"Sin código" }} · Stock actual: {{ producto_seleccionado.stock }}{% endif %}
+                                </span>
+                            </div>
+                            <button class="btn btn-sm btn-outline-secondary" type="button"
+                                data-cambiar-producto>Cambiar</button>
+                        </div>
+                        <div data-producto-buscador {% if producto_seleccionado %}hidden{% endif %}>
+                            <input class="form-control" id="buscar-producto-stock" type="search"
+                                placeholder="Busca por nombre, marca o código" autocomplete="off"
+                                role="combobox" aria-autocomplete="list" aria-expanded="false"
+                                aria-controls="sugerencias-producto-stock" data-buscar-producto-stock>
+                            <div class="pa-sugerencias-producto" id="sugerencias-producto-stock"
+                                role="listbox" data-sugerencias-producto hidden></div>
+                            <p class="pa-estado-breve" role="status" data-producto-stock-estado></p>
+                        </div>
                         {% for error in form.producto.errors %}<p class="pa-error-campo">{{ error }}</p>{% endfor %}
                     </div>
 
