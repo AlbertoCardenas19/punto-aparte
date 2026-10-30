@@ -3,6 +3,12 @@ from django.core.validators import MinValueValidator
 from django.db import models
 
 
+def normalizar_mayuscula_inicial(valor):
+    """Limpia espacios exteriores y pone en mayúscula el primer carácter."""
+    valor = (valor or "").strip()
+    return f"{valor[:1].upper()}{valor[1:]}" if valor else valor
+
+
 class Categoria(models.Model):
     nombre = models.CharField(max_length=100, unique=True)
 
@@ -13,6 +19,10 @@ class Categoria(models.Model):
 
     def __str__(self):
         return self.nombre
+
+    def save(self, *args, **kwargs):
+        self.nombre = normalizar_mayuscula_inicial(self.nombre)
+        return super().save(*args, **kwargs)
 
 
 class Producto(models.Model):
@@ -41,6 +51,11 @@ class Producto(models.Model):
 
     def __str__(self):
         return self.nombre
+
+    def save(self, *args, **kwargs):
+        self.nombre = normalizar_mayuscula_inicial(self.nombre)
+        self.marca = normalizar_mayuscula_inicial(self.marca)
+        return super().save(*args, **kwargs)
 
 
 class MovimientoStock(models.Model):

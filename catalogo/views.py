@@ -1,4 +1,6 @@
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
+from django.db.models import Count
 from django.shortcuts import redirect, render, get_object_or_404
 
 from usuarios.decorators import jefe_required
@@ -11,8 +13,8 @@ from .forms import (
     ProductoForm,
 )
 
-from .models import MovimientoStock, Producto
-from django.db import transaction
+from .models import Categoria, MovimientoStock, Producto
+
 
 @login_required
 def lista_productos(request):
@@ -28,6 +30,18 @@ def lista_productos(request):
     )
 
 
+@login_required
+def lista_categorias(request):
+    categorias = Categoria.objects.annotate(
+        cantidad_productos=Count("productos"),
+    ).order_by("nombre")
+    return render(
+        request,
+        "catalogo/lista_categorias.html",
+        {"categorias": categorias},
+    )
+
+
 @jefe_required
 def crear_producto(request):
     form = ProductoForm(request.POST or None)
@@ -39,7 +53,11 @@ def crear_producto(request):
     return render(
         request,
         "catalogo/formulario.html",
-        {"form": form, "titulo": "Agregar producto"},
+        {
+            "form": form,
+            "titulo": "Agregar producto",
+            "url_cancelar": "catalogo:lista_productos",
+        },
     )
 
 
@@ -49,12 +67,16 @@ def crear_categoria(request):
 
     if request.method == "POST" and form.is_valid():
         form.save()
-        return redirect("catalogo:lista_productos")
+        return redirect("catalogo:lista_categorias")
 
     return render(
         request,
         "catalogo/formulario.html",
-        {"form": form, "titulo": "Agregar categoría"},
+        {
+            "form": form,
+            "titulo": "Agregar categoría",
+            "url_cancelar": "catalogo:lista_categorias",
+        },
     )
 
 
@@ -70,7 +92,11 @@ def editar_producto(request, producto_id):
     return render(
         request,
         "catalogo/formulario.html",
-        {"form": form, "titulo": "Editar producto"},
+        {
+            "form": form,
+            "titulo": "Editar producto",
+            "url_cancelar": "catalogo:lista_productos",
+        },
     )
 
 

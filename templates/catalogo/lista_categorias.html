@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block extra_css %}{% include "includes/datatables_css.html" %}{% endblock %}
+{% block extra_js %}{% include "includes/datatables_js.html" %}{% endblock %}
+
+{% block title %}Categorías | Punto Aparte{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="h2 fw-bold mb-1">Categorías</h1>
+        <p class="text-secondary mb-0">Consulta las categorías disponibles para organizar el catálogo.</p>
+    </div>
+
+    {% if request.user.rol == "JEFE" %}
+    <a class="btn btn-pa" href="{% url 'catalogo:crear_categoria' %}">Agregar categoría</a>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <table class="table table-hover align-middle mb-0" data-tabla-listado
+            data-orden-columna="0" data-busqueda-ayuda="Nombre de categoría">
+            <thead class="table-light">
+                <tr>
+                    <th>Categoría</th>
+                    <th data-no-buscar>Productos</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for categoria in categorias %}
+                <tr>
+                    <td class="fw-semibold">{{ categoria.nombre }}</td>
+                    <td data-order="{{ categoria.cantidad_productos }}">{{ categoria.cantidad_productos }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

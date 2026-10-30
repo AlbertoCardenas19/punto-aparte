@@ -2,13 +2,16 @@ from django import forms
 
 from config.forms import BootstrapFormMixin
 
-from .models import Categoria, Producto
+from .models import Categoria, Producto, normalizar_mayuscula_inicial
 
 
 class CategoriaForm(BootstrapFormMixin, forms.ModelForm):
     class Meta:
         model = Categoria
         fields = ("nombre",)
+
+    def clean_nombre(self):
+        return normalizar_mayuscula_inicial(self.cleaned_data["nombre"])
 
 
 class ProductoForm(BootstrapFormMixin, forms.ModelForm):
@@ -26,6 +29,12 @@ class ProductoForm(BootstrapFormMixin, forms.ModelForm):
         widgets = {
             "categorias": forms.SelectMultiple(attrs={"size": "6"}),
         }
+
+    def clean_nombre(self):
+        return normalizar_mayuscula_inicial(self.cleaned_data["nombre"])
+
+    def clean_marca(self):
+        return normalizar_mayuscula_inicial(self.cleaned_data["marca"])
 
     def clean_codigo_barras(self):
         codigo = self.cleaned_data.get("codigo_barras")

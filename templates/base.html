@@ -19,8 +19,12 @@
 
             {% if request.user.is_authenticated %}
             <div class="d-flex flex-wrap align-items-center gap-3">
-                <a class="nav-link {% if request.resolver_match.namespace == 'catalogo' %}active{% endif %}" {% if request.resolver_match.namespace == 'catalogo' %}aria-current="page"{% endif %} href="{% url 'catalogo:lista_productos' %}">
+                <a class="nav-link {% if request.resolver_match.namespace == 'catalogo' and request.resolver_match.url_name != 'lista_categorias' and request.resolver_match.url_name != 'crear_categoria' %}active{% endif %}" {% if request.resolver_match.namespace == 'catalogo' and request.resolver_match.url_name != 'lista_categorias' and request.resolver_match.url_name != 'crear_categoria' %}aria-current="page"{% endif %} href="{% url 'catalogo:lista_productos' %}">
                     Catálogo
+                </a>
+
+                <a class="nav-link {% if request.resolver_match.url_name == 'lista_categorias' or request.resolver_match.url_name == 'crear_categoria' %}active{% endif %}" {% if request.resolver_match.url_name == 'lista_categorias' or request.resolver_match.url_name == 'crear_categoria' %}aria-current="page"{% endif %} href="{% url 'catalogo:lista_categorias' %}">
+                    Categorías
                 </a>
 
                 {% if request.user.rol == "JEFE" %}

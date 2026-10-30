@@ -13,6 +13,7 @@
     <nav aria-label="Navegación de caja" class="d-flex flex-wrap gap-2">
         <a class="pa-caja-activa" href="{% url 'ventas:caja' %}" aria-current="page">Venta</a>
         <a href="{% url 'catalogo:lista_productos' %}">Productos</a>
+        <a href="{% url 'catalogo:lista_categorias' %}">Categorías</a>
         {% if request.user.rol == 'JEFE' %}<a href="{% url 'usuarios:lista' %}">Usuarios</a>{% endif %}
     </nav>
     <div class="d-flex flex-wrap align-items-center gap-3">
@@ -34,7 +35,7 @@
             <label for="q" class="form-label">Buscar producto</label>
             <div class="input-group">
                 <input class="form-control" id="q" name="q" value="{{ busqueda }}"
-                    placeholder="Nombre, marca, código o categoría">
+                    placeholder="Nombre, marca, categoría, código o descripción">
                 <button class="btn btn-outline-primary" type="submit">Buscar</button>
             </div>
         </form>
@@ -50,16 +51,24 @@
                 </div>
                 {% if producto.marca %}<p class="small text-secondary">{{ producto.marca }}</p>{% endif %}
                 <p class="pa-caja-precio">${{ producto.precio|localize }}</p>
-                <form method="post" class="d-flex flex-wrap gap-2 align-items-end">
+                <form method="post" data-producto-carrito-form data-producto-id="{{ producto.pk }}">
                     {% csrf_token %}
-                    <input type="hidden" name="accion" value="agregar">
+                    <input type="hidden" name="accion" value="establecer">
                     <input type="hidden" name="producto_id" value="{{ producto.id }}">
-                    <div>
-                        <label class="small form-label" for="cantidad-{{ producto.pk }}">Cantidad</label>
-                        <input class="form-control pa-caja-cantidad" id="cantidad-{{ producto.pk }}" type="number" name="cantidad" value="1"
-                            min="1" max="{{ producto.stock }}" {% if producto.stock == 0 %}disabled{% endif %}>
+                    <label class="small form-label" for="cantidad-{{ producto.pk }}">Cantidad en la compra</label>
+                    <div class="pa-cantidad-control">
+                        <button class="pa-cantidad-boton" type="button" data-cantidad-restar
+                            aria-label="Restar una unidad de {{ producto.nombre }}"
+                            {% if producto.cantidad_carrito == 0 %}disabled{% endif %}>−</button>
+                        <input class="pa-cantidad-valor" id="cantidad-{{ producto.pk }}" type="number"
+                            aria-label="Cantidad de {{ producto.nombre }}" name="cantidad"
+                            value="{{ producto.cantidad_carrito }}" min="0" max="{{ producto.stock }}"
+                            step="1" inputmode="numeric">
+                        <button class="pa-cantidad-boton" type="button" data-cantidad-sumar
+                            aria-label="Sumar una unidad de {{ producto.nombre }}"
+                            {% if producto.cantidad_carrito >= producto.stock %}disabled{% endif %}>+</button>
                     </div>
-                    <button class="btn btn-outline-primary" type="submit" {% if producto.stock == 0 %}disabled{% endif %}>Agregar</button>
+                    <p class="pa-estado-breve" role="status" data-producto-carrito-estado></p>
                 </form>
             </article>
             {% empty %}

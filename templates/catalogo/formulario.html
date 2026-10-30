@@ -13,9 +13,9 @@
                     {% csrf_token %}
                     {{ form.as_p }}
 
-                    <div class="d-flex flex-wrap gap-2 mt-4">
+                    <div class="d-flex flex-wrap gap-2 pa-form-acciones">
                         <button class="btn btn-pa" type="submit">Guardar</button>
-                        <a class="btn btn-outline-secondary" href="{% url 'catalogo:lista_productos' %}">
+                        <a class="btn btn-outline-secondary" href="{% url url_cancelar %}">
                             Cancelar
                         </a>
                     </div>

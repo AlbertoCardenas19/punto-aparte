@@ -17,8 +17,8 @@
         <a class="btn btn-outline-primary" href="{% url 'catalogo:historial_stock' %}">
             Historial de stock
         </a>
-        <a class="btn btn-outline-primary" href="{% url 'catalogo:crear_categoria' %}">
-            Agregar categoría
+        <a class="btn btn-outline-primary" href="{% url 'catalogo:lista_categorias' %}">
+            Categorías
         </a>
         <a class="btn btn-pa" href="{% url 'catalogo:crear_producto' %}">
             Agregar producto
@@ -29,25 +29,26 @@
 
 <div class="card">
     <div class="card-body">
-        <table class="table table-hover align-middle mb-0" data-tabla-listado data-orden-columna="0">
+        <table class="table table-hover align-middle mb-0" data-tabla-listado data-orden-columna="0"
+            data-busqueda-ayuda="Producto, marca, categoría, código o descripción">
             <thead class="table-light">
                 <tr>
-                    <th>Producto</th>
+                    <th class="all">Producto</th>
                     <th>Marca</th>
                     <th>Categorías</th>
-                    <th>Precio</th>
-                    <th>Stock</th>
+                    <th data-no-buscar>Precio</th>
+                    <th data-no-buscar>Stock</th>
                     <th>Código de barras</th>
                     {% if request.user.rol == "JEFE" %}
-                    <th>Estado</th>
-                    <th data-no-orden>Acciones</th>
+                    <th data-no-buscar>Estado</th>
+                    <th class="all" data-no-orden data-no-buscar>Acciones</th>
                     {% endif %}
                 </tr>
             </thead>
             <tbody>
                 {% for producto in productos %}
                 <tr>
-                    <td class="fw-semibold" data-search="{{ producto.nombre }} {{ producto.descripcion }}">{{ producto.nombre }}</td>
+                    <td class="all fw-semibold" data-search="{{ producto.nombre }} {{ producto.descripcion }}">{{ producto.nombre }}</td>
                     <td>{{ producto.marca|default:"—" }}</td>
                     <td>
                         {% for categoria in producto.categorias.all %}
@@ -74,7 +75,7 @@
                         <span class="badge text-bg-secondary">Inactivo</span>
                         {% endif %}
                     </td>
-                    <td>
+                    <td class="all">
                         <div class="dropdown">
                             <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button"
                                 data-bs-toggle="dropdown" aria-expanded="false"

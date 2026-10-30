@@ -23,6 +23,7 @@
 .pa-app .form-control:focus, .pa-app .form-select:focus, .pa-app .form-check-input:focus { border-color: #60738e; box-shadow: 0 0 0 .25rem rgb(23 50 77 / 18%); }
 .pa-app label { font-weight: 500; margin-bottom: .4rem; }
 .pa-app form p { margin-bottom: 1.25rem; }
+.pa-app .pa-form-acciones { margin-top: 2rem; }
 .pa-app .helptext { display: block; font-size: .875rem; color: var(--pa-muted); margin-top: .4rem; }
 .pa-app .errorlist { color: #a92732; padding-left: 1.25rem; }
 .pa-app .pa-error-campo { color: var(--pa-red); font-size: .875rem; margin: .35rem 0 0; }
@@ -55,7 +56,7 @@
 .pa-app .dropdown-item:active { background: var(--pa-navy); }
 .pa-app .pa-venta-total { font-size: 1.25rem; }
 .pa-app :is(a, button):focus-visible { outline: 3px solid #6f91b5; outline-offset: 3px; }
-@media (max-width: 575.98px) { .pa-app .navbar .pa-nav-contenido { align-items: flex-start; } .pa-app .table td, .pa-app .table th { padding: .75rem; } }
+@media (max-width: 575.98px) { .pa-app .navbar .pa-nav-contenido { align-items: flex-start; } .pa-app .table td, .pa-app .table th { padding: .75rem; } .pa-app .pa-form-acciones { margin-top: 1.5rem; } }
 /* Los menús trasladados al body quedan por encima de tablas y tarjetas. */
 body > .dropdown-menu { z-index: 1080; border-color: var(--pa-border); border-radius: .75rem; padding: .5rem; }
 .pa-app div.dt-container .dt-layout-row { align-items: center; gap: .75rem; margin: 0 0 1rem; }

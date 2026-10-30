@@ -16,15 +16,16 @@
 
 <div class="card">
     <div class="card-body">
-        <table class="table table-hover align-middle mb-0" data-tabla-listado data-orden-columna="0">
+        <table class="table table-hover align-middle mb-0" data-tabla-listado data-orden-columna="0"
+            data-busqueda-ayuda="Nombre, apellido o correo">
             <thead class="table-light">
                 <tr>
                     <th>Nombre</th>
-                    <th>Nombre de usuario</th>
+                    <th data-no-buscar>Nombre de usuario</th>
                     <th>Correo</th>
-                    <th>Rol</th>
-                    <th>Estado</th>
-                    <th data-no-orden>Acciones</th>
+                    <th data-no-buscar>Rol</th>
+                    <th data-no-buscar>Estado</th>
+                    <th class="all" data-no-orden data-no-buscar>Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -41,7 +42,7 @@
                         <span class="badge text-bg-secondary">Desactivada</span>
                         {% endif %}
                     </td>
-                    <td>
+                    <td class="all">
                         <div class="dropdown">
                             <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button"
                                 data-bs-toggle="dropdown" aria-expanded="false"
