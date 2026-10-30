@@ -1,0 +1,21 @@
+/* Estilos exclusivos de caja. La autenticación y las otras páginas conservan su diseño. */
+.pa-caja { background: #f1f4f8; color: #1b2d48; }
+.pa-caja .pa-caja-cabecera { background: white; border-bottom: 1px solid #d9e1eb; padding: 1.5rem clamp(1rem, 3vw, 3rem); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1.5rem; }
+.pa-caja .pa-caja-marca { font-size: 1.5rem; font-weight: 700; color: #1b2d48; text-decoration: none; }
+.pa-caja .pa-caja-marca small { display: block; font-size: .9rem; font-weight: 400; color: #60738e; margin-top: .25rem; }
+.pa-caja nav a { color: #60738e; text-decoration: none; padding: .75rem 1rem; border-radius: .85rem; }
+.pa-caja nav a:hover, .pa-caja nav a:focus-visible { background: #e8eef6; }
+.pa-caja .pa-caja-activa { background: #e8eef6; color: #1b2d48; font-weight: 700; }
+.pa-caja .pa-caja-contenido { max-width: 1760px; margin: auto; padding: 1.5rem clamp(1rem, 3vw, 3rem) 3rem; }
+.pa-caja .pa-caja-panel { background: #fff; border: 1px solid #d9e1eb; border-radius: 1.25rem; padding: clamp(1rem, 2vw, 2rem); height: 100%; }
+.pa-caja .pa-caja-productos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; }
+.pa-caja .pa-caja-producto { border: 1px solid #d9e1eb; border-radius: 1rem; padding: 1.5rem; display: flex; flex-direction: column; overflow-wrap: anywhere; }
+.pa-caja .pa-caja-precio { font-size: 1.3rem; font-weight: 700; margin-top: auto; padding-top: 1.5rem; }
+.pa-caja .pa-caja-cantidad { width: 5.5rem; }
+.pa-caja .form-control { border-color: #d9e1eb; border-radius: .65rem; min-height: 2.75rem; }
+.pa-caja .pa-caja-resumen { padding-bottom: 1.5rem; border-bottom: 1px solid #d9e1eb; margin-bottom: 1rem; }
+.pa-caja .table { --bs-table-color: #1b2d48; --bs-table-border-color: #d9e1eb; }
+.pa-caja .table td { padding-top: 1.25rem; padding-bottom: 1.25rem; }
+.pa-caja .pa-caja-total { font-size: clamp(1.4rem, 2vw, 1.8rem); gap: .75rem; flex-wrap: wrap; }
+.pa-caja .pa-caja-cobrar { --bs-btn-color: white; --bs-btn-bg: #13294c; --bs-btn-border-color: #13294c; --bs-btn-hover-color: white; --bs-btn-hover-bg: #203e65; --bs-btn-hover-border-color: #203e65; --bs-btn-active-color: white; --bs-btn-active-bg: #0c1c35; --bs-btn-active-border-color: #0c1c35; --bs-btn-focus-shadow-rgb: 19, 41, 76; min-height: 4.5rem; font-weight: 700; border-radius: .85rem; }
+@media (max-width: 575.98px) { .pa-caja .pa-caja-productos { grid-template-columns: 1fr; } }
