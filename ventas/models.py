@@ -16,6 +16,12 @@ class Venta(models.Model):
         ANULADA = "ANULADA", "Anulada"
 
     fecha = models.DateTimeField(auto_now_add=True)
+    clave_idempotencia = models.UUIDField(
+        unique=True,
+        null=True,
+        blank=True,
+        editable=False,
+    )
     cajero = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,

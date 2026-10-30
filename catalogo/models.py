@@ -81,6 +81,12 @@ class MovimientoStock(models.Model):
         related_name="movimientos_stock",
     )
     fecha = models.DateTimeField(auto_now_add=True)
+    clave_operacion = models.UUIDField(
+        unique=True,
+        null=True,
+        blank=True,
+        editable=False,
+    )
 
     class Meta:
         ordering = ("-fecha",)

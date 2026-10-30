@@ -1,4 +1,5 @@
 import secrets
+from uuid import UUID, uuid4
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -15,15 +16,18 @@ from catalogo.models import Producto
 from usuarios.models import Usuario
 
 from .models import Venta
-from .services import VentaNoValida, confirmar_venta
+from .services import PreciosCambiaron, VentaNoValida, confirmar_venta
 
 
 CLAVE_CARRITO = "carrito_venta"
+CLAVE_PRECIOS_CARRITO = "precios_carrito_venta"
+CLAVE_IDEMPOTENCIA_VENTA = "clave_idempotencia_venta"
 CLAVE_PANTALLA_CLIENTE = "token_pantalla_cliente"
 CLAVE_ULTIMA_VENTA_CLIENTE = "ultima_venta_pantalla_cliente"
 
 
-def _lineas_del_carrito(carrito):
+def _lineas_del_carrito(carrito, precios_vistos=None):
+    precios_vistos = precios_vistos or {}
     productos = {
         str(producto.pk): producto
         for producto in Producto.objects.filter(pk__in=carrito.keys())
@@ -36,15 +40,51 @@ def _lineas_del_carrito(carrito):
         if not producto:
             continue
         cantidad = int(cantidad_guardada)
-        subtotal = producto.precio * cantidad
+        precio_unitario = int(
+            precios_vistos.get(producto_id, producto.precio)
+        )
+        subtotal = precio_unitario * cantidad
         total += subtotal
         lineas.append({
             "producto": producto,
             "cantidad": cantidad,
+            "precio_unitario": precio_unitario,
             "subtotal": subtotal,
         })
 
     return lineas, total
+
+
+def _asegurar_precios_carrito(request, carrito):
+    precios = request.session.get(CLAVE_PRECIOS_CARRITO, {})
+    precios = dict(precios) if isinstance(precios, dict) else {}
+    cambio = False
+
+    for producto in Producto.objects.filter(pk__in=carrito.keys()):
+        producto_id = str(producto.pk)
+        try:
+            int(precios[producto_id])
+        except (KeyError, TypeError, ValueError):
+            precios[producto_id] = producto.precio
+            cambio = True
+
+    for producto_id in set(precios) - set(carrito):
+        precios.pop(producto_id)
+        cambio = True
+
+    if cambio:
+        request.session[CLAVE_PRECIOS_CARRITO] = precios
+    return precios
+
+
+def _clave_idempotencia_venta(request):
+    clave = request.session.get(CLAVE_IDEMPOTENCIA_VENTA)
+    try:
+        UUID(str(clave))
+    except (TypeError, ValueError, AttributeError):
+        clave = str(uuid4())
+        request.session[CLAVE_IDEMPOTENCIA_VENTA] = clave
+    return clave
 
 
 def _token_pantalla_cliente(request):
@@ -105,6 +145,8 @@ def lista_ventas(request):
 @login_required
 def caja(request):
     carrito = request.session.get(CLAVE_CARRITO, {})
+    precios_vistos = _asegurar_precios_carrito(request, carrito)
+    clave_idempotencia = _clave_idempotencia_venta(request)
     codigo_encontrado = None
     error_cobro = None
     medio_pago_seleccionado = Venta.MedioPago.EFECTIVO
@@ -117,6 +159,8 @@ def caja(request):
 
         if accion == "vaciar":
             request.session.pop(CLAVE_CARRITO, None)
+            request.session.pop(CLAVE_PRECIOS_CARRITO, None)
+            request.session[CLAVE_IDEMPOTENCIA_VENTA] = str(uuid4())
             return redirect(f"{request.path}?carrito=abierto")
 
         if accion == "agregar":
@@ -148,6 +192,11 @@ def caja(request):
                             f"Disponible: {producto.stock}.",
                         )
                     else:
+                        if id_texto not in carrito:
+                            precios_vistos[id_texto] = producto.precio
+                            request.session[
+                                CLAVE_PRECIOS_CARRITO
+                            ] = precios_vistos
                         carrito[id_texto] = nueva_cantidad
                         request.session[CLAVE_CARRITO] = carrito
 
@@ -166,6 +215,11 @@ def caja(request):
                 id_texto = str(producto.pk)
                 nueva_cantidad = int(carrito.get(id_texto, 0)) + 1
                 if nueva_cantidad <= producto.stock:
+                    if id_texto not in carrito:
+                        precios_vistos[id_texto] = producto.precio
+                        request.session[
+                            CLAVE_PRECIOS_CARRITO
+                        ] = precios_vistos
                     carrito[id_texto] = nueva_cantidad
                     request.session[CLAVE_CARRITO] = carrito
 
@@ -188,6 +242,7 @@ def caja(request):
 
                 if cantidad == 0:
                     carrito.pop(id_texto)
+                    precios_vistos.pop(id_texto, None)
                     continue
 
                 producto = Producto.objects.filter(
@@ -199,6 +254,7 @@ def caja(request):
                     messages.error(
                         request, "Se quitó un producto no disponible.")
                     carrito.pop(id_texto)
+                    precios_vistos.pop(id_texto, None)
                 elif cantidad > producto.stock:
                     messages.error(
                         request,
@@ -209,17 +265,40 @@ def caja(request):
                     carrito[id_texto] = cantidad
 
             request.session[CLAVE_CARRITO] = carrito
+            request.session[CLAVE_PRECIOS_CARRITO] = precios_vistos
             if not solicitud_dinamica:
                 return redirect("ventas:caja")
 
         if accion == "confirmar":
             medio_pago_seleccionado = request.POST.get("medio_pago", "")
+            clave_recibida = request.POST.get("clave_idempotencia", "")
+            try:
+                clave_recibida_uuid = UUID(clave_recibida)
+            except (TypeError, ValueError, AttributeError):
+                clave_recibida_uuid = None
             lineas = [
-                {"producto_id": producto_id, "cantidad": cantidad}
+                {
+                    "producto_id": producto_id,
+                    "cantidad": cantidad,
+                    "precio_unitario": precios_vistos.get(producto_id),
+                }
                 for producto_id, cantidad in carrito.items()
             ]
 
-            if (
+            venta_repetida = None
+            if clave_recibida_uuid and clave_recibida != clave_idempotencia:
+                venta_repetida = Venta.objects.filter(
+                    clave_idempotencia=clave_recibida_uuid,
+                    cajero=request.user,
+                ).first()
+
+            if venta_repetida:
+                return redirect("ventas:detalle", venta_id=venta_repetida.pk)
+            if not clave_recibida_uuid or clave_recibida != clave_idempotencia:
+                error_cobro = (
+                    "La confirmación venció. Revisa la compra e intenta nuevamente."
+                )
+            elif (
                 medio_pago_seleccionado in {
                     Venta.MedioPago.TARJETA,
                     Venta.MedioPago.TRANSFERENCIA,
@@ -229,16 +308,31 @@ def caja(request):
                 error_cobro = "Confirma que el pago fue aprobado o verificado."
             else:
                 try:
-                    venta = confirmar_venta(
+                    venta, creada = confirmar_venta(
                         lineas=lineas,
                         cajero=request.user,
                         medio_pago=medio_pago_seleccionado,
+                        clave_idempotencia=clave_recibida_uuid,
                     )
+                except PreciosCambiaron as error:
+                    for producto_id, precio in error.precios_vigentes.items():
+                        precios_vistos[str(producto_id)] = precio
+                    request.session[
+                        CLAVE_PRECIOS_CARRITO
+                    ] = precios_vistos
+                    error_cobro = str(error)
                 except VentaNoValida as error:
                     error_cobro = str(error)
                 else:
-                    request.session.pop(CLAVE_CARRITO, None)
-                    request.session[CLAVE_ULTIMA_VENTA_CLIENTE] = venta.pk
+                    if creada:
+                        request.session.pop(CLAVE_CARRITO, None)
+                        request.session.pop(CLAVE_PRECIOS_CARRITO, None)
+                        request.session[
+                            CLAVE_IDEMPOTENCIA_VENTA
+                        ] = str(uuid4())
+                        request.session[
+                            CLAVE_ULTIMA_VENTA_CLIENTE
+                        ] = venta.pk
                     return redirect("ventas:detalle", venta_id=venta.pk)
 
     busqueda = request.GET.get("q", "").strip()
@@ -267,7 +361,10 @@ def caja(request):
             carrito.get(str(producto.pk), 0)
         )
 
-    lineas_carrito, total_carrito = _lineas_del_carrito(carrito)
+    lineas_carrito, total_carrito = _lineas_del_carrito(
+        carrito,
+        precios_vistos,
+    )
 
     respuesta = render(
         request,
@@ -281,6 +378,7 @@ def caja(request):
             "medios_pago": Venta.MedioPago,
             "medio_pago_seleccionado": medio_pago_seleccionado,
             "error_cobro": error_cobro,
+            "clave_idempotencia": clave_idempotencia,
         },
     )
     if codigo_encontrado is not None:
@@ -314,15 +412,17 @@ def pantalla_cliente(request):
 @login_required
 def estado_pantalla_cliente(request):
     _validar_token_pantalla_cliente(request)
+    carrito = request.session.get(CLAVE_CARRITO, {})
     lineas, total = _lineas_del_carrito(
-        request.session.get(CLAVE_CARRITO, {})
+        carrito,
+        _asegurar_precios_carrito(request, carrito),
     )
     return JsonResponse({
         "productos": [
             {
                 "nombre": linea["producto"].nombre,
                 "cantidad": linea["cantidad"],
-                "precio_unitario": linea["producto"].precio,
+                "precio_unitario": linea["precio_unitario"],
                 "subtotal": linea["subtotal"],
             }
             for linea in lineas

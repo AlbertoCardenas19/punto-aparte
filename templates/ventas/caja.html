@@ -136,7 +136,7 @@
                                     <td data-label="Producto">
                                         {{ linea.producto.nombre }}
                                     </td>
-                                    <td data-label="Precio unitario">${{ linea.producto.precio|localize }}</td>
+                                    <td data-label="Precio unitario">${{ linea.precio_unitario|localize }}</td>
                                     <td data-label="Unid.">
                                         <div class="pa-cantidad-control">
                                             <button class="pa-cantidad-boton" type="button" data-cantidad-restar
@@ -215,6 +215,7 @@
                 <form id="form-cobro" method="post" data-form-cobro>
                     {% csrf_token %}
                     <input type="hidden" name="accion" value="confirmar">
+                    <input type="hidden" name="clave_idempotencia" value="{{ clave_idempotencia }}">
 
                     <fieldset>
                         <legend class="h6 fw-bold">Medio de pago</legend>

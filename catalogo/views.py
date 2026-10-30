@@ -1,7 +1,7 @@
 import unicodedata
+from uuid import UUID, uuid4
 
 from django.contrib.auth.decorators import login_required
-from django.db import transaction
 from django.db.models import Count, Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render, get_object_or_404
@@ -18,10 +18,27 @@ from .forms import (
 )
 
 from .models import Categoria, MovimientoStock, Producto
+from .services import (
+    MovimientoNoValido,
+    registrar_movimiento_stock as registrar_stock,
+)
 from .exportaciones import (
     exportar_movimientos,
     exportar_productos as crear_exportacion_productos,
 )
+
+
+CLAVE_OPERACION_STOCK = "clave_operacion_stock"
+
+
+def _clave_operacion_stock(request):
+    clave = request.session.get(CLAVE_OPERACION_STOCK)
+    try:
+        UUID(str(clave))
+    except (TypeError, ValueError, AttributeError):
+        clave = str(uuid4())
+        request.session[CLAVE_OPERACION_STOCK] = clave
+    return clave
 
 
 @login_required
@@ -278,52 +295,44 @@ def registrar_movimiento_stock(request):
     }:
         inicial["tipo"] = request.GET["tipo"]
 
+    clave_operacion = _clave_operacion_stock(request)
+    clave_recibida = request.POST.get("clave_operacion", "")
+    try:
+        clave_recibida_uuid = UUID(clave_recibida)
+    except (TypeError, ValueError, AttributeError):
+        clave_recibida_uuid = None
+
+    if request.method == "POST" and clave_recibida_uuid:
+        movimiento_existente = MovimientoStock.objects.filter(
+            clave_operacion=clave_recibida_uuid,
+            usuario=request.user,
+        ).first()
+        if movimiento_existente:
+            return redirect("catalogo:inventario")
+
     form = MovimientoStockForm(
         request.POST if request.method == "POST" else None,
         initial=inicial,
     )
 
     if request.method == "POST" and form.is_valid():
-        with transaction.atomic():
-            producto = Producto.objects.select_for_update().get(
-                pk=form.cleaned_data["producto"].pk
+        if not clave_recibida_uuid or clave_recibida != clave_operacion:
+            form.add_error(
+                None,
+                "La operación venció. Revisa los datos e intenta nuevamente.",
             )
-            anterior = producto.stock
-            tipo = form.cleaned_data["tipo"]
-
-            if tipo == MovimientoStock.Tipo.INGRESO:
-                cantidad = form.cleaned_data["cantidad"]
-                nuevo = anterior + cantidad
+        else:
+            try:
+                registrar_stock(
+                    datos=form.cleaned_data,
+                    usuario=request.user,
+                    clave_operacion=clave_recibida_uuid,
+                )
+            except MovimientoNoValido as error:
+                form.add_error(error.campo, str(error))
             else:
-                nuevo = form.cleaned_data["stock_nuevo"]
-                if nuevo == anterior:
-                    form.add_error(
-                        "stock_nuevo",
-                        "El stock contado coincide con el registrado; no hay cambios que guardar.",
-                    )
-                    return render(
-                        request,
-                        "catalogo/movimiento_stock_formulario.html",
-                        {
-                            "form": form,
-                            "producto_seleccionado": producto,
-                        },
-                    )
-                cantidad = abs(nuevo - anterior)
-
-            producto.stock = nuevo
-            producto.save(update_fields=["stock"])
-            MovimientoStock.objects.create(
-                producto=producto,
-                tipo=tipo,
-                cantidad=cantidad,
-                stock_anterior=anterior,
-                stock_nuevo=nuevo,
-                motivo=form.cleaned_data["motivo"],
-                usuario=request.user,
-            )
-
-        return redirect("catalogo:inventario")
+                request.session[CLAVE_OPERACION_STOCK] = str(uuid4())
+                return redirect("catalogo:inventario")
 
     producto_seleccionado_id = (
         request.POST.get("producto")
@@ -342,6 +351,7 @@ def registrar_movimiento_stock(request):
         {
             "form": form,
             "producto_seleccionado": producto_seleccionado,
+            "clave_operacion": clave_operacion,
         },
     )
 

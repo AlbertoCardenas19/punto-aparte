@@ -502,6 +502,11 @@ function prepararFormularioCobro(contenedor = document) {
     form.querySelectorAll('[name="medio_pago"]').forEach(radio => {
         radio.addEventListener('change', actualizar);
     });
+    form.addEventListener('submit', () => {
+        const boton = document.querySelector(`[type="submit"][form="${form.id}"]`);
+        if (boton) boton.disabled = true;
+        form.setAttribute('aria-busy', 'true');
+    });
     actualizar();
 }
 
