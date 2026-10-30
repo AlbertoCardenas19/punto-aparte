@@ -12,6 +12,7 @@ Estas necesidades están mencionadas para el producto, pero no deben implementar
 | Uso sin internet | Alcance de la operación offline, sincronización posterior y comportamiento de pagos distintos de efectivo. |
 | Recepción de compras | Cómo se registra una recepción completa y cómo se resuelven discrepancias, daños o diferencias con la orden/documento del proveedor. |
 | Datos de cliente | Cuándo solicitar identificación y qué campos guardar para emitir factura o aplicar restricciones de descuento. |
+| Despliegue y correo | Proveedor de hosting, dominios, terminación HTTPS/proxy y servicio de correo de producción. Hasta definirlos, no configurar encabezados de proxy ni credenciales SMTP por suposición. |
 
 ## Requisitos definidos pendientes de implementación
 

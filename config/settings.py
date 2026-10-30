@@ -12,22 +12,78 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 
 from pathlib import Path
 import os
+
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
+def env_bool(nombre, predeterminado=False):
+    valor = os.getenv(nombre)
+    if valor is None:
+        return predeterminado
+    normalizado = valor.strip().lower()
+    if normalizado in {"1", "true", "yes", "on"}:
+        return True
+    if normalizado in {"0", "false", "no", "off"}:
+        return False
+    raise ImproperlyConfigured(
+        f"{nombre} debe usar true/false, 1/0, yes/no u on/off."
+    )
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-mq=z0qt^plwtogn0+15_^xrf_)jk%9zc5soe=2(ud80!9vnain'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+def env_lista(nombre):
+    return [
+        elemento.strip()
+        for elemento in os.getenv(nombre, "").split(",")
+        if elemento.strip()
+    ]
 
-ALLOWED_HOSTS = []
+
+def env_entero(nombre, predeterminado=0):
+    try:
+        valor = int(os.getenv(nombre, str(predeterminado)))
+    except ValueError as error:
+        raise ImproperlyConfigured(
+            f"{nombre} debe ser un número entero."
+        ) from error
+    if valor < 0:
+        raise ImproperlyConfigured(f"{nombre} no puede ser negativo.")
+    return valor
+
+
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
+if not SECRET_KEY:
+    raise ImproperlyConfigured(
+        "Falta DJANGO_SECRET_KEY. Configúrala en el entorno o en .env."
+    )
+
+DEBUG = env_bool("DJANGO_DEBUG", False)
+ALLOWED_HOSTS = env_lista("DJANGO_ALLOWED_HOSTS")
+CSRF_TRUSTED_ORIGINS = env_lista("DJANGO_CSRF_TRUSTED_ORIGINS")
+
+HTTPS_ENABLED = env_bool("DJANGO_HTTPS_ENABLED", False)
+SECURE_SSL_REDIRECT = HTTPS_ENABLED
+SESSION_COOKIE_SECURE = HTTPS_ENABLED
+CSRF_COOKIE_SECURE = HTTPS_ENABLED
+SECURE_HSTS_SECONDS = (
+    env_entero("DJANGO_HSTS_SECONDS", 0) if HTTPS_ENABLED else 0
+)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = (
+    env_bool("DJANGO_HSTS_INCLUDE_SUBDOMAINS", False)
+    if HTTPS_ENABLED
+    else False
+)
+SECURE_HSTS_PRELOAD = (
+    env_bool("DJANGO_HSTS_PRELOAD", False)
+    if HTTPS_ENABLED
+    else False
+)
+
+if env_bool("DJANGO_TRUST_PROXY_SSL_HEADER", False):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 
 # Application definition
