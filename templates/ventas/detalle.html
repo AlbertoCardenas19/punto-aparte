@@ -23,6 +23,19 @@
                 <p><strong>Cajero:</strong> {{ venta.cajero.get_full_name }}</p>
                 <p><strong>Medio de pago:</strong> {{ venta.get_medio_pago_display }}</p>
 
+                {% if venta.estado == "ANULADA" %}
+                <section class="alert alert-danger" aria-labelledby="datos-anulacion">
+                    <h2 class="h5" id="datos-anulacion">Datos de la anulación</h2>
+                    <p class="mb-1"><strong>Anulada por:</strong> {% if venta.anulado_por %}{{ venta.anulado_por.get_full_name|default:venta.anulado_por.username }}{% else %}No registrado en esta venta histórica{% endif %}</p>
+                    <p class="mb-1"><strong>Fecha:</strong> {% if venta.anulada_en %}{{ venta.anulada_en|date:"d/m/Y H:i" }}{% else %}No registrada{% endif %}</p>
+                    <p class="mb-1"><strong>Motivo:</strong> {{ venta.motivo_anulacion|default:"No registrado en esta venta histórica" }}</p>
+                    <p class="mb-0"><strong>Inventario:</strong> {% if not venta.clave_anulacion %}No registrado en esta venta histórica{% elif venta.stock_repuesto_al_anular %}Las unidades regresaron al stock.{% else %}El stock no fue modificado.{% endif %}</p>
+                </section>
+                <p class="text-secondary">
+                    La anulación no revierte el pago. Cualquier devolución de dinero se procesa por separado.
+                </p>
+                {% endif %}
+
                 <div class="table-responsive">
                     <table class="table">
                         <thead class="table-light">
@@ -63,6 +76,11 @@
                     <a class="btn btn-outline-primary" href="{% url 'ventas:lista' %}">
                         Volver
                     </a>
+                    {% if request.user.is_active and request.user.rol == "JEFE" and venta.estado == "COMPLETADA" %}
+                    <a class="btn btn-outline-danger" href="{% url 'ventas:anular' venta.pk %}">
+                        Anular venta
+                    </a>
+                    {% endif %}
                 </div>
             </div>
         </div>

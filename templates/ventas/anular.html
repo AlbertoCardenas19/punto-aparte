@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% load punto_aparte %}
+
+{% block title %}Anular venta #{{ venta.pk }} | Punto Aparte{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+        <div class="card">
+            <div class="card-body p-4">
+                <h1 class="h3 fw-bold mb-2">Anular venta #{{ venta.pk }}</h1>
+                <p class="text-secondary mb-4">
+                    Esta acción anula la venta completa. No elimina su historial ni modifica sus importes originales.
+                </p>
+
+                <dl class="pa-detalle-producto mb-4">
+                    <div>
+                        <dt>Fecha de venta</dt>
+                        <dd>{{ venta.fecha|date:"d/m/Y H:i" }}</dd>
+                    </div>
+                    <div>
+                        <dt>Cajero</dt>
+                        <dd>{{ venta.cajero.get_full_name|default:venta.cajero.username }}</dd>
+                    </div>
+                    <div>
+                        <dt>Medio de pago original</dt>
+                        <dd>{{ venta.get_medio_pago_display }}</dd>
+                    </div>
+                    <div>
+                        <dt>Total original</dt>
+                        <dd>{{ venta.total|clp }}</dd>
+                    </div>
+                </dl>
+
+                <div class="alert alert-warning" role="note">
+                    Anular la venta no revierte ni devuelve el pago. Cualquier devolución de dinero debe procesarse por separado.
+                </div>
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    {{ form.clave_idempotencia }}
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        {{ form.motivo.label_tag }}
+                        {{ form.motivo }}
+                        {% for error in form.motivo.errors %}<p class="pa-error-campo">{{ error }}</p>{% endfor %}
+                    </div>
+
+                    <fieldset class="mb-3">
+                        <legend class="h6">{{ form.productos_reintegrados.label }}</legend>
+                        {% for opcion in form.productos_reintegrados %}
+                        <div class="form-check mb-2">
+                            {{ opcion.tag }}
+                            <label class="form-check-label" for="{{ opcion.id_for_label }}">{{ opcion.choice_label }}</label>
+                        </div>
+                        {% endfor %}
+                        {% for error in form.productos_reintegrados.errors %}<p class="pa-error-campo">{{ error }}</p>{% endfor %}
+                    </fieldset>
+
+                    <div class="form-check mb-3">
+                        {{ form.confirmar }}
+                        {{ form.confirmar.label_tag }}
+                        {% for error in form.confirmar.errors %}<p class="pa-error-campo">{{ error }}</p>{% endfor %}
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2 pa-form-acciones">
+                        <button class="btn btn-outline-danger" type="submit">Anular venta completa</button>
+                        <a class="btn btn-outline-secondary" href="{% url 'ventas:detalle' venta.pk %}">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

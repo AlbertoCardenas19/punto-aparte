@@ -21,7 +21,7 @@ Relaciones relevantes:
 
 - `Producto` ↔ `Categoria`: muchos a muchos. El producto puede guardar una oferta manual por porcentaje o precio final; el precio efectivo en CLP se calcula en el modelo con redondeo al peso.
 - `Categoria.activo`: controla si puede asignarse en altas y ediciones nuevas. Desactivarla conserva su nombre y todas sus asociaciones existentes.
-- `Venta` → `Usuario` cajero: muchas ventas por usuario.
+- `Venta` → `Usuario` cajero: muchas ventas por usuario. Una venta anulada conserva además el Jefe responsable, fecha, motivo, decisión de reposición y clave idempotente de la operación.
 - `DetalleVenta` → `Venta`: varios detalles por venta.
 - `DetalleVenta` → `Producto`: referencia al producto y, además, conserva nombre, precio normal, descuento unitario, precio unitario final y subtotal de la operación.
 - `MovimientoStock` → `Producto` y `Usuario`: registra producto afectado y responsable. Las salidas creadas al confirmar una venta también se relacionan con `Venta`; el campo es nullable para conservar movimientos manuales e históricos sin asociación inequívoca.
@@ -36,6 +36,13 @@ Relaciones relevantes:
 5. La vista limpia el carrito incluso si el servicio devuelve una venta ya creada con la clave vigente, rota la clave y la versión del carrito, y redirige al detalle interno.
 
 La transacción y el bloqueo de productos protegen el stock ante confirmaciones concurrentes. El frontend serializa las mutaciones AJAX y bloquea el cobro mientras guarda; el backend además exige la versión vigente del carrito. No mover esas reglas críticas solamente al frontend.
+
+## Anulación de una venta
+
+1. Solo un Jefe activo puede abrir la confirmación desde el detalle de una venta completada. Debe indicar un motivo, confirmar la anulación completa y decidir si los productos regresaron físicamente.
+2. El servicio bloquea la venta. Si otra petición ya la anuló, devuelve el estado existente sin repetir la operación.
+3. Si corresponde reponer, bloquea los productos en orden, suma todas las unidades vendidas y crea movimientos de ingreso vinculados a la venta y al Jefe. Las claves deterministas de esos movimientos impiden una reposición duplicada.
+4. La venta permanece en el historial como anulada y conserva cajero, fecha, medio de pago, total, precios y descuentos originales. La aplicación no registra una reversa de pago ni una devolución parcial.
 
 ## Organización observada
 

@@ -36,6 +36,22 @@ class Venta(models.Model):
         choices=Estado.choices,
         default=Estado.COMPLETADA,
     )
+    anulada_en = models.DateTimeField(null=True, blank=True)
+    anulado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="ventas_anuladas",
+        null=True,
+        blank=True,
+    )
+    motivo_anulacion = models.TextField(blank=True)
+    stock_repuesto_al_anular = models.BooleanField(default=False)
+    clave_anulacion = models.UUIDField(
+        unique=True,
+        null=True,
+        blank=True,
+        editable=False,
+    )
 
     class Meta:
         ordering = ("-fecha",)

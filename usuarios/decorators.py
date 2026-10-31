@@ -10,7 +10,10 @@ def jefe_required(view_func):
     @login_required
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
-        if request.user.rol != Usuario.Rol.JEFE:
+        if (
+            not request.user.is_active
+            or request.user.rol != Usuario.Rol.JEFE
+        ):
             raise PermissionDenied
 
         return view_func(request, *args, **kwargs)

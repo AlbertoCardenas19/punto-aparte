@@ -4,7 +4,7 @@ from unittest import skipUnless
 from unittest.mock import patch
 from uuid import uuid4
 
-from django.db import close_old_connections, connection
+from django.db import IntegrityError, close_old_connections, connection
 from django.test import Client, TestCase, TransactionTestCase
 from django.urls import reverse
 
@@ -12,7 +12,12 @@ from catalogo.models import MovimientoStock, Producto
 from usuarios.models import Usuario
 
 from .models import DetalleVenta, EstadoPantallaCliente, Venta
-from .services import PreciosCambiaron, confirmar_venta
+from .services import (
+    AnulacionNoValida,
+    PreciosCambiaron,
+    anular_venta,
+    confirmar_venta,
+)
 from .views import (
     CLAVE_CARRITO,
     CLAVE_IDEMPOTENCIA_VENTA,
@@ -505,6 +510,418 @@ class ConfirmarVentaTests(TestCase):
         self.assertEqual(respuesta.status_code, 200)
         self.assertContains(respuesta, "La compra cambió mientras se guardaba")
         self.assertFalse(Venta.objects.exists())
+
+
+class AnularVentaTests(TestCase):
+    def setUp(self):
+        self.jefe = Usuario.objects.create_user(
+            username="ignorado",
+            first_name="Julia",
+            last_name="Jefa",
+            email="jefa-anulacion@example.com",
+            password="clave-segura",
+            rol=Usuario.Rol.JEFE,
+            is_staff=True,
+            is_superuser=True,
+        )
+        self.cajero = Usuario.objects.create_user(
+            username="ignorado",
+            first_name="Carlos",
+            last_name="Caja",
+            email="cajero-anulacion@example.com",
+            password="clave-segura",
+            rol=Usuario.Rol.CAJERO,
+        )
+        self.producto = Producto.objects.create(
+            nombre="Cuaderno anulado",
+            precio=1000,
+            stock=10,
+            oferta_modalidad=Producto.ModalidadOferta.PRECIO_FINAL,
+            oferta_valor=800,
+            oferta_activa=True,
+        )
+        self.venta, _ = confirmar_venta(
+            lineas=[{
+                "producto_id": self.producto.pk,
+                "cantidad": 2,
+                "precio_unitario": 800,
+                "precio_normal": 1000,
+            }],
+            cajero=self.cajero,
+            medio_pago=Venta.MedioPago.TARJETA,
+            clave_idempotencia=uuid4(),
+        )
+
+    def test_anula_y_repone_stock_con_movimiento_auditable(self):
+        detalle_antes = tuple(
+            self.venta.detalles.values_list(
+                "nombre_producto",
+                "cantidad",
+                "precio_normal",
+                "descuento_unitario",
+                "precio_unitario",
+                "subtotal",
+            ).get()
+        )
+
+        venta, creada = anular_venta(
+            venta_id=self.venta.pk,
+            usuario=self.jefe,
+            motivo="Cliente canceló la compra",
+            reponer_stock=True,
+            clave_idempotencia=uuid4(),
+        )
+
+        self.producto.refresh_from_db()
+        venta.refresh_from_db()
+        movimiento = MovimientoStock.objects.get(
+            venta=venta,
+            tipo=MovimientoStock.Tipo.INGRESO,
+        )
+        self.assertTrue(creada)
+        self.assertEqual(venta.estado, Venta.Estado.ANULADA)
+        self.assertEqual(venta.anulado_por, self.jefe)
+        self.assertIsNotNone(venta.anulada_en)
+        self.assertEqual(venta.motivo_anulacion, "Cliente canceló la compra")
+        self.assertTrue(venta.stock_repuesto_al_anular)
+        self.assertEqual(venta.medio_pago, Venta.MedioPago.TARJETA)
+        self.assertEqual(venta.total, 1600)
+        self.assertEqual(self.producto.stock, 10)
+        self.assertEqual(movimiento.cantidad, 2)
+        self.assertEqual(movimiento.stock_anterior, 8)
+        self.assertEqual(movimiento.stock_nuevo, 10)
+        self.assertEqual(movimiento.usuario, self.jefe)
+        self.assertEqual(
+            movimiento.motivo,
+            f"Reposición por anulación de venta #{venta.pk}",
+        )
+        self.assertEqual(
+            tuple(
+                venta.detalles.values_list(
+                    "nombre_producto",
+                    "cantidad",
+                    "precio_normal",
+                    "descuento_unitario",
+                    "precio_unitario",
+                    "subtotal",
+                ).get()
+            ),
+            detalle_antes,
+        )
+
+    def test_anula_sin_reponer_stock(self):
+        venta, creada = anular_venta(
+            venta_id=self.venta.pk,
+            usuario=self.jefe,
+            motivo="Productos no regresaron",
+            reponer_stock=False,
+            clave_idempotencia=uuid4(),
+        )
+
+        self.producto.refresh_from_db()
+        venta.refresh_from_db()
+        self.assertTrue(creada)
+        self.assertFalse(venta.stock_repuesto_al_anular)
+        self.assertEqual(self.producto.stock, 8)
+        self.assertFalse(
+            MovimientoStock.objects.filter(
+                venta=venta,
+                tipo=MovimientoStock.Tipo.INGRESO,
+            ).exists()
+        )
+
+    def test_fallo_de_reposicion_revierte_toda_la_anulacion(self):
+        with patch(
+            "ventas.services.MovimientoStock.objects.create",
+            side_effect=IntegrityError,
+        ), self.assertRaisesMessage(
+            AnulacionNoValida,
+            "La reposición de inventario",
+        ):
+            anular_venta(
+                venta_id=self.venta.pk,
+                usuario=self.jefe,
+                motivo="Debe revertirse por completo",
+                reponer_stock=True,
+                clave_idempotencia=uuid4(),
+            )
+
+        self.producto.refresh_from_db()
+        self.venta.refresh_from_db()
+        self.assertEqual(self.producto.stock, 8)
+        self.assertEqual(self.venta.estado, Venta.Estado.COMPLETADA)
+        self.assertIsNone(self.venta.anulada_en)
+        self.assertIsNone(self.venta.anulado_por)
+        self.assertFalse(self.venta.clave_anulacion)
+
+    def test_reenvio_y_segunda_anulacion_no_duplican_reposicion(self):
+        clave = uuid4()
+        primera, creada = anular_venta(
+            venta_id=self.venta.pk,
+            usuario=self.jefe,
+            motivo="Primera anulación",
+            reponer_stock=True,
+            clave_idempotencia=clave,
+        )
+        repetida, creada_repetida = anular_venta(
+            venta_id=self.venta.pk,
+            usuario=self.jefe,
+            motivo="Primera anulación",
+            reponer_stock=True,
+            clave_idempotencia=clave,
+        )
+        segunda, creada_segunda = anular_venta(
+            venta_id=self.venta.pk,
+            usuario=self.jefe,
+            motivo="Intento posterior",
+            reponer_stock=False,
+            clave_idempotencia=uuid4(),
+        )
+
+        self.producto.refresh_from_db()
+        segunda.refresh_from_db()
+        self.assertTrue(creada)
+        self.assertFalse(creada_repetida)
+        self.assertFalse(creada_segunda)
+        self.assertEqual({primera.pk, repetida.pk, segunda.pk}, {self.venta.pk})
+        self.assertEqual(self.producto.stock, 10)
+        self.assertEqual(segunda.motivo_anulacion, "Primera anulación")
+        self.assertTrue(segunda.stock_repuesto_al_anular)
+        self.assertEqual(
+            MovimientoStock.objects.filter(
+                venta=self.venta,
+                tipo=MovimientoStock.Tipo.INGRESO,
+            ).count(),
+            1,
+        )
+
+    def test_rechaza_motivo_vacio_y_usuarios_no_autorizados(self):
+        with self.assertRaisesMessage(
+            AnulacionNoValida,
+            "Indica el motivo",
+        ):
+            anular_venta(
+                venta_id=self.venta.pk,
+                usuario=self.jefe,
+                motivo="   ",
+                reponer_stock=False,
+                clave_idempotencia=uuid4(),
+            )
+
+        with self.assertRaisesMessage(
+            AnulacionNoValida,
+            "Solo un Jefe activo",
+        ):
+            anular_venta(
+                venta_id=self.venta.pk,
+                usuario=self.cajero,
+                motivo="Sin autorización",
+                reponer_stock=False,
+                clave_idempotencia=uuid4(),
+            )
+
+        self.jefe.is_active = False
+        self.jefe.save(update_fields=["is_active"])
+        with self.assertRaisesMessage(
+            AnulacionNoValida,
+            "Solo un Jefe activo",
+        ):
+            anular_venta(
+                venta_id=self.venta.pk,
+                usuario=self.jefe,
+                motivo="Cuenta inactiva",
+                reponer_stock=False,
+                clave_idempotencia=uuid4(),
+            )
+        self.assertEqual(
+            Venta.objects.get(pk=self.venta.pk).estado,
+            Venta.Estado.COMPLETADA,
+        )
+
+    def test_interfaz_exige_jefe_motivo_stock_y_confirmacion(self):
+        detalle_url = reverse("ventas:detalle", args=[self.venta.pk])
+        anulacion_url = reverse("ventas:anular", args=[self.venta.pk])
+
+        self.client.force_login(self.cajero)
+        detalle_cajero = self.client.get(detalle_url)
+        prohibida = self.client.post(anulacion_url, {})
+        self.assertNotContains(detalle_cajero, "Anular venta")
+        self.assertEqual(prohibida.status_code, 403)
+
+        self.jefe.is_active = False
+        self.jefe.save(update_fields=["is_active"])
+        self.client.force_login(self.jefe)
+        inactiva = self.client.get(anulacion_url)
+        self.assertRedirects(
+            inactiva,
+            f'{reverse("login")}?next={anulacion_url}',
+            fetch_redirect_response=False,
+        )
+
+        self.jefe.is_active = True
+        self.jefe.save(update_fields=["is_active"])
+        self.client.force_login(self.jefe)
+        detalle_jefe = self.client.get(detalle_url)
+        formulario = self.client.get(anulacion_url)
+        clave = formulario.context["form"].initial["clave_idempotencia"]
+        invalida = self.client.post(anulacion_url, {
+            "motivo": "",
+            "productos_reintegrados": "",
+            "clave_idempotencia": clave,
+        })
+
+        self.assertContains(detalle_jefe, "Anular venta")
+        self.assertContains(formulario, "regresaron físicamente al inventario")
+        self.assertContains(formulario, "no revierte ni devuelve el pago")
+        self.assertEqual(invalida.status_code, 400)
+        self.assertContains(
+            invalida,
+            "Indica el motivo de la anulación",
+            status_code=400,
+        )
+        self.assertContains(
+            invalida,
+            "Indica si los productos regresaron",
+            status_code=400,
+        )
+        self.assertContains(
+            invalida,
+            "Confirma explícitamente",
+            status_code=400,
+        )
+        self.assertEqual(
+            Venta.objects.get(pk=self.venta.pk).estado,
+            Venta.Estado.COMPLETADA,
+        )
+
+    def test_interfaz_anula_y_muestra_auditoria_sin_afirmar_reversa_pago(self):
+        self.client.force_login(self.jefe)
+        anulacion_url = reverse("ventas:anular", args=[self.venta.pk])
+        formulario = self.client.get(anulacion_url)
+        clave = formulario.context["form"].initial["clave_idempotencia"]
+
+        respuesta = self.client.post(anulacion_url, {
+            "motivo": "Error de registro",
+            "productos_reintegrados": "no",
+            "confirmar": "on",
+            "clave_idempotencia": clave,
+        })
+        detalle = self.client.get(
+            reverse("ventas:detalle", args=[self.venta.pk])
+        )
+
+        self.assertRedirects(
+            respuesta,
+            reverse("ventas:detalle", args=[self.venta.pk]),
+            fetch_redirect_response=False,
+        )
+        self.assertContains(detalle, "Anulada")
+        self.assertContains(detalle, "Julia Jefa")
+        self.assertContains(detalle, "Error de registro")
+        self.assertContains(detalle, "El stock no fue modificado")
+        self.assertContains(detalle, "La anulación no revierte el pago")
+        self.assertNotContains(detalle, "Anular venta")
+
+    def test_venta_anulada_historica_sigue_visible_sin_inventar_auditoria(self):
+        Venta.objects.filter(pk=self.venta.pk).update(
+            estado=Venta.Estado.ANULADA,
+        )
+        self.client.force_login(self.jefe)
+
+        detalle = self.client.get(
+            reverse("ventas:detalle", args=[self.venta.pk])
+        )
+
+        self.assertContains(detalle, "Anulada")
+        self.assertContains(detalle, "No registrado en esta venta histórica")
+        self.assertContains(detalle, "Tarjeta")
+        self.assertNotContains(detalle, "Anular venta")
+
+
+@skipUnless(
+    connection.vendor == "postgresql",
+    "Requiere PostgreSQL para comprobar bloqueos de filas reales.",
+)
+class AnularVentaConcurrenciaTests(TransactionTestCase):
+    reset_sequences = True
+
+    def setUp(self):
+        self.jefe = Usuario.objects.create_user(
+            username="ignorado",
+            first_name="Julia",
+            last_name="Concurrente",
+            email="jefa-anulacion-concurrente@example.com",
+            password="clave-segura",
+            rol=Usuario.Rol.JEFE,
+        )
+        self.cajero = Usuario.objects.create_user(
+            username="ignorado",
+            first_name="Carlos",
+            last_name="Concurrente",
+            email="cajero-anulacion-concurrente@example.com",
+            password="clave-segura",
+        )
+        self.producto = Producto.objects.create(
+            nombre="Producto anulación concurrente",
+            precio=1000,
+            stock=5,
+        )
+        self.venta, _ = confirmar_venta(
+            lineas=[{
+                "producto_id": self.producto.pk,
+                "cantidad": 2,
+                "precio_unitario": 1000,
+            }],
+            cajero=self.cajero,
+            medio_pago=Venta.MedioPago.EFECTIVO,
+            clave_idempotencia=uuid4(),
+        )
+
+    def test_dos_anulaciones_simultaneas_reponen_una_sola_vez(self):
+        clave = uuid4()
+        barrera = threading.Barrier(2)
+
+        from . import services
+
+        obtener_original = services._obtener_venta_bloqueada
+
+        def obtener_sincronizado(venta_id):
+            barrera.wait(timeout=10)
+            return obtener_original(venta_id)
+
+        def anular():
+            close_old_connections()
+            try:
+                jefe = Usuario.objects.get(pk=self.jefe.pk)
+                return anular_venta(
+                    venta_id=self.venta.pk,
+                    usuario=jefe,
+                    motivo="Anulación simultánea",
+                    reponer_stock=True,
+                    clave_idempotencia=clave,
+                )
+            finally:
+                connection.close()
+
+        with patch(
+            "ventas.services._obtener_venta_bloqueada",
+            side_effect=obtener_sincronizado,
+        ), ThreadPoolExecutor(max_workers=2) as ejecutor:
+            resultados = list(ejecutor.map(lambda _: anular(), range(2)))
+
+        self.producto.refresh_from_db()
+        self.assertEqual(
+            sorted(creada for _, creada in resultados),
+            [False, True],
+        )
+        self.assertEqual(self.producto.stock, 5)
+        self.assertEqual(
+            MovimientoStock.objects.filter(
+                venta=self.venta,
+                tipo=MovimientoStock.Tipo.INGRESO,
+            ).count(),
+            1,
+        )
 
 
 class EstadoCarritoTests(TestCase):

@@ -7,7 +7,7 @@ Estas necesidades están mencionadas para el producto, pero no deben implementar
 | Terminal Mercado Pago | Modelo exacto, API o SDK disponible, comportamiento cuando se pierde conexión, confirmación de pago y ambiente de pruebas. |
 | Emisión tributaria chilena | Proveedor/integración, requisitos de boleta y factura, datos de empresa y emisión de nota de crédito; validar el flujo aplicable antes de programarlo. |
 | Caja diaria | Confirmar primero si la librería cuenta el dinero al abrir y cerrar el día. Si la respuesta es afirmativa, definir responsables, efectivo inicial, ingresos/retiros, arqueo, diferencias y cierre. Mientras tanto, vender no requiere abrir caja. |
-| Anulación y devolución | Estados y transiciones, autorización del Jefe, tratamiento de stock y pago, y documento asociado. |
+| Devoluciones y documentos | Flujo de devoluciones parciales, autorización, tratamiento de stock y pago, y documento asociado. La anulación completa ya está definida e implementada por separado. |
 | Cupones y descuentos generales | Cómo autoriza el dueño, catálogo, topes, cálculo, qué significa “una vez por cliente” si no se exige identificar clientes en toda venta, e interacción con devoluciones. No confundirlos con las ofertas automáticas por producto, ya definidas. |
 | Uso sin internet | Alcance de la operación offline, sincronización posterior y comportamiento de pagos distintos de efectivo. |
 | Recepción de compras | Cómo se registra una recepción completa y cómo se resuelven discrepancias, daños o diferencias con la orden/documento del proveedor. |

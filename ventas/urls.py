@@ -23,5 +23,10 @@ urlpatterns = [
         name="estado_pantalla_cliente",
     ),
     path("historial/", views.lista_ventas, name="lista"),
+    path(
+        "<int:venta_id>/anular/",
+        views.anular_venta_view,
+        name="anular",
+    ),
     path("<int:venta_id>/", views.detalle_venta, name="detalle"),
 ]

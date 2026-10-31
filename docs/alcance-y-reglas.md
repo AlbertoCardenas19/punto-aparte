@@ -70,7 +70,11 @@ Estas son reglas aprobadas; consulta `estado-actual.md` para saber cuáles está
 ## Anulaciones, devoluciones y documentos
 
 - Anulación y devolución son procesos distintos. Una venta puede anularse sin que exista devolución física de productos.
-- Se registra motivo y la autorización del Jefe requerida por la regla acordada.
+- Solo un Jefe activo puede anular una venta completa. Se exige motivo y confirmación explícita, y se conserva quién la anuló y cuándo.
+- La venta anulada no se elimina ni cambia sus importes históricos o medio de pago. La anulación no representa una reversa del pago; cualquier devolución de dinero se procesa por separado.
+- Al anular se indica si todos los productos regresaron físicamente. Si regresaron, todas las unidades se reponen en una transacción y se registran movimientos de inventario vinculados a la venta y al Jefe; si no, el stock no cambia.
+- Una venta no puede anularse ni reponerse dos veces. En esta versión no existen devoluciones parciales.
+- La anulación no depende de apertura, cierre o fecha de caja mientras ese flujo continúe sin definición.
 - La nota de crédito se contempla para cambios o devoluciones.
 - El software debe emitir boleta, factura y nota de crédito. La normativa, proveedor o integración tributaria, datos requeridos y formato deben precisarse antes de implementar esa emisión.
 - No llamar “boleta emitida” a una pantalla de detalle o comprobante interno.

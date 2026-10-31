@@ -13,6 +13,7 @@ Esta sección actualiza la fotografía del ZIP con la implementación vigente en
 - Productos muestra estado, exporta según la búsqueda visible a CSV, XLSX o PDF, abre sus detalles en una ventana modal y permite editar, activar o desactivar. Inventario entra directamente a «Movimientos de stock», exporta el historial en los mismos formatos y ofrece un único botón hacia el formulario separado. El formulario usa búsqueda predictiva de productos y conserva separados los ingresos y ajustes.
 - Categorías permite editar, desactivar y reactivar desde su tabla. Las categorías inactivas permanecen visibles y vinculadas a sus productos existentes, pero no se ofrecen al asignar categorías a productos nuevos.
 - Existe consulta de ventas con DataTables y filtros por fechas; el Cajero ve solo las propias y el Jefe puede ver todas y filtrar por cajero.
+- Un Jefe activo puede anular una venta completa desde su detalle, indicando motivo, confirmación y si los productos regresaron. La venta conserva importes y medio de pago, muestra auditoría, y la reposición opcional crea movimientos de stock transaccionales e idempotentes. No se implementaron devoluciones parciales ni reversas de pago.
 - Productos, categorías, inventario, movimientos, usuarios y ventas usan DataTables local con textos en español.
 - El alta desde la aplicación del Jefe genera y entrega una contraseña temporal una sola vez. Los reenvíos del mismo formulario no duplican la cuenta ni vuelven a mostrar la contraseña. `usuarios/0002_usuario_debe_cambiar_password.py` añade el indicador de cambio inicial con valor predeterminado `False`, compatible con cuentas existentes. El primer Jefe se crea mediante `inicializar_jefe`; `createsuperuser` está deshabilitado. Django Admin permite consultar cuentas, pero no crearlas, editarlas ni eliminarlas.
 - El acceso acepta nombre de usuario o correo; los correos se normalizan y cuentan con restricción sin distinguir mayúsculas. Nombres de personas, productos, marcas y categorías aplican las normalizaciones acordadas.
@@ -38,7 +39,7 @@ Esta sección actualiza la fotografía del ZIP con la implementación vigente en
 - Emisión de boleta, factura y nota de crédito.
 - Apertura, cierre y arqueo diario.
 - Cupones y descuentos generales con autorización, vigencia y restricciones de uso. Las ofertas automáticas por producto ya están implementadas por separado.
-- Flujo de anulación/devolución con motivo y autorización.
+- Devoluciones parciales y su documentación asociada. La anulación completa ya está implementada por separado.
 - Falta repetir las pruebas contra una copia representativa de la base de producción antes de desplegar. La segunda revisión sí ejecutó la suite y las carreras automatizadas de venta y correo sobre un PostgreSQL 16 efímero.
 
 ## Problemas históricos de la copia revisada (no asumir que siguen vigentes)

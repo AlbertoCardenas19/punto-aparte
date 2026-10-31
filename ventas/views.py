@@ -11,12 +11,21 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.dateparse import parse_date
 from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_http_methods
 
 from catalogo.models import Producto
+from usuarios.decorators import jefe_required
 from usuarios.models import Usuario
 
+from .forms import AnulacionVentaForm
 from .models import EstadoPantallaCliente, Venta
-from .services import PreciosCambiaron, VentaNoValida, confirmar_venta
+from .services import (
+    AnulacionNoValida,
+    PreciosCambiaron,
+    VentaNoValida,
+    anular_venta,
+    confirmar_venta,
+)
 
 
 CLAVE_CARRITO = "carrito_venta"
@@ -24,8 +33,21 @@ CLAVE_PRECIOS_CARRITO = "precios_carrito_venta"
 CLAVE_PRECIOS_NORMALES_CARRITO = "precios_normales_carrito_venta"
 CLAVE_VERSION_CARRITO = "version_carrito_venta"
 CLAVE_IDEMPOTENCIA_VENTA = "clave_idempotencia_venta"
+CLAVES_IDEMPOTENCIA_ANULACION = "claves_idempotencia_anulacion"
 COOKIE_PANTALLA_CLIENTE = "punto_aparte_pantalla_cliente"
 EDAD_COOKIE_PANTALLA = 60 * 60 * 24 * 365
+
+
+def _clave_idempotencia_anulacion(request, venta_id):
+    claves = dict(request.session.get(CLAVES_IDEMPOTENCIA_ANULACION, {}))
+    clave = claves.get(str(venta_id))
+    try:
+        clave = UUID(clave)
+    except (TypeError, ValueError, AttributeError):
+        clave = uuid4()
+        claves[str(venta_id)] = str(clave)
+        request.session[CLAVES_IDEMPOTENCIA_ANULACION] = claves
+    return clave
 
 
 def _lineas_del_carrito(
@@ -667,7 +689,10 @@ def estado_pantalla_cliente(request):
 @login_required
 def detalle_venta(request, venta_id):
     venta = get_object_or_404(
-        Venta.objects.select_related("cajero").prefetch_related("detalles"),
+        Venta.objects.select_related(
+            "cajero",
+            "anulado_por",
+        ).prefetch_related("detalles"),
         pk=venta_id,
     )
 
@@ -678,3 +703,53 @@ def detalle_venta(request, venta_id):
         raise PermissionDenied
 
     return render(request, "ventas/detalle.html", {"venta": venta})
+
+
+@jefe_required
+@require_http_methods(["GET", "POST"])
+def anular_venta_view(request, venta_id):
+    venta = get_object_or_404(
+        Venta.objects.select_related("cajero", "anulado_por"),
+        pk=venta_id,
+    )
+    clave_esperada = _clave_idempotencia_anulacion(request, venta.pk)
+
+    if request.method == "GET":
+        if venta.estado == Venta.Estado.ANULADA:
+            return redirect("ventas:detalle", venta_id=venta.pk)
+        form = AnulacionVentaForm(initial={
+            "clave_idempotencia": clave_esperada,
+        })
+        return render(
+            request,
+            "ventas/anular.html",
+            {"venta": venta, "form": form},
+        )
+
+    form = AnulacionVentaForm(request.POST)
+    if form.is_valid():
+        if form.cleaned_data["clave_idempotencia"] != clave_esperada:
+            form.add_error(
+                None,
+                "La confirmación venció. Vuelve al detalle e intenta nuevamente.",
+            )
+        else:
+            try:
+                anular_venta(
+                    venta_id=venta.pk,
+                    usuario=request.user,
+                    motivo=form.cleaned_data["motivo"],
+                    reponer_stock=form.cleaned_data["productos_reintegrados"],
+                    clave_idempotencia=form.cleaned_data["clave_idempotencia"],
+                )
+            except AnulacionNoValida as error:
+                form.add_error(None, str(error))
+            else:
+                return redirect("ventas:detalle", venta_id=venta.pk)
+
+    return render(
+        request,
+        "ventas/anular.html",
+        {"venta": venta, "form": form},
+        status=400,
+    )
