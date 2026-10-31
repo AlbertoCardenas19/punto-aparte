@@ -1,5 +1,4 @@
 import unicodedata
-from urllib.parse import urlencode
 from uuid import UUID, uuid4
 
 from django.contrib.auth.decorators import login_required
@@ -52,43 +51,6 @@ def lista_productos(request):
         "catalogo/lista_productos.html",
         {"productos": productos.order_by("nombre")},
     )
-
-
-@login_required
-def consultar_codigo_producto(request):
-    codigo = request.GET.get("codigo", "").strip()
-    if not codigo:
-        return JsonResponse(
-            {"estado": "no_encontrado", "mensaje": "Producto no encontrado"},
-            status=400,
-        )
-
-    producto = Producto.objects.filter(codigo_barras=codigo).first()
-    if producto is not None:
-        if not producto.activo:
-            return JsonResponse({
-                "estado": "inactivo",
-                "mensaje": "El producto está inactivo.",
-            })
-        return JsonResponse({
-            "estado": "encontrado",
-            "mensaje": "Producto encontrado.",
-        })
-
-    respuesta = {
-        "estado": "no_encontrado",
-        "mensaje": "Producto no encontrado",
-    }
-    if request.user.rol == Usuario.Rol.JEFE:
-        respuesta["url_alta"] = (
-            f"{reverse('catalogo:crear_producto')}?"
-            f"{urlencode({'codigo_barras': codigo})}"
-        )
-    else:
-        respuesta["mensaje"] = (
-            "Producto no encontrado. Solicita a un Jefe que lo registre"
-        )
-    return JsonResponse(respuesta)
 
 
 def _productos_visibles(usuario):
@@ -235,16 +197,7 @@ def exportar_movimientos_stock(request, formato):
 
 @jefe_required
 def crear_producto(request):
-    inicial = {}
-    if request.method == "GET":
-        codigo_inicial = request.GET.get("codigo_barras", "").strip()
-        if codigo_inicial:
-            inicial["codigo_barras"] = codigo_inicial
-
-    form = ProductoForm(
-        request.POST if request.method == "POST" else None,
-        initial=inicial,
-    )
+    form = ProductoForm(request.POST or None)
 
     if request.method == "POST" and form.is_valid():
         form.save()

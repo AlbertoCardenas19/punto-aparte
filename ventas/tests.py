@@ -1008,56 +1008,8 @@ class EstadoCarritoTests(TestCase):
         )
 
         self.assertEqual(no_encontrado.headers["X-Codigo-Estado"], "no_encontrado")
-        self.assertEqual(
-            no_encontrado.headers["X-Codigo-Mensaje"],
-            "Producto no encontrado",
-        )
-        self.assertNotIn("X-Codigo-Creacion-Url", no_encontrado.headers)
         self.assertEqual(sin_stock.headers["X-Codigo-Estado"], "sin_stock")
         self.assertEqual(agregado.headers["X-Codigo-Estado"], "agregado")
-        self.assertEqual(
-            self.client.session[CLAVE_CARRITO][str(self.producto.pk)],
-            1,
-        )
-
-    def test_codigo_desconocido_no_abre_alta_para_jefe(self):
-        jefe = Usuario.objects.create_user(
-            username="ignorado",
-            first_name="Julia",
-            last_name="Jefa",
-            email="jefa-venta-codigo@example.com",
-            password="clave-segura",
-            rol=Usuario.Rol.JEFE,
-        )
-        self.client.force_login(jefe)
-        self.client.get(reverse("ventas:caja"))
-        self._guardar_carrito()
-
-        respuesta = self.client.post(
-            reverse("ventas:caja"),
-            {
-                "accion": "escanear",
-                "codigo": "780000000099",
-                "version_carrito": self.client.session[
-                    CLAVE_VERSION_CARRITO
-                ],
-            },
-            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
-        )
-
-        self.assertEqual(
-            respuesta.headers["X-Codigo-Estado"],
-            "no_encontrado",
-        )
-        self.assertEqual(
-            respuesta.headers["X-Codigo-Mensaje"],
-            "Producto no encontrado",
-        )
-        self.assertNotIn("X-Codigo-Creacion-Url", respuesta.headers)
-        self.assertEqual(
-            self.client.session[CLAVE_CARRITO],
-            {str(self.producto.pk): 1},
-        )
 
     def test_pantalla_cliente_carga_el_carrito_en_la_primera_respuesta(self):
         self._guardar_carrito()

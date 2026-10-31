@@ -160,77 +160,6 @@ document.addEventListener('show.bs.modal', event => {
     modal.querySelector('[data-detalle-descripcion]').textContent = trigger.dataset.productoDescripcion;
 });
 
-function prepararEscaneoRapido(input, alEscanear) {
-    let inicio = 0;
-    let ultimo = 0;
-    let caracteres = 0;
-    let longitudBase = input.value.length;
-    let timer = null;
-    let procesando = false;
-
-    const reiniciar = () => {
-        inicio = 0;
-        ultimo = 0;
-        caracteres = 0;
-        longitudBase = input.value.length;
-        clearTimeout(timer);
-        timer = null;
-    };
-    const candidato = (minimo, esperaMaxima) => {
-        const codigo = input.value.trim();
-        if (
-            procesando
-            || !ultimo
-            || longitudBase !== 0
-            || codigo.length < minimo
-            || caracteres < codigo.length
-            || /\s/.test(codigo)
-            || performance.now() - ultimo > esperaMaxima
-        ) return null;
-        const intervalos = Math.max(1, caracteres - 1);
-        return (ultimo - inicio) / intervalos <= 35 ? codigo : null;
-    };
-    const ejecutar = async (minimo, esperaMaxima) => {
-        const codigo = candidato(minimo, esperaMaxima);
-        if (!codigo) return false;
-        procesando = true;
-        reiniciar();
-        try {
-            await alEscanear(codigo);
-        } finally {
-            procesando = false;
-        }
-        return true;
-    };
-
-    input.addEventListener('input', event => {
-        clearTimeout(timer);
-        if (event.isComposing || event.inputType !== 'insertText') {
-            reiniciar();
-            return;
-        }
-
-        const ahora = performance.now();
-        const insertados = event.data?.length || 1;
-        if (!ultimo || ahora - ultimo > 80) {
-            inicio = ahora;
-            caracteres = 0;
-            longitudBase = Math.max(0, input.value.length - insertados);
-        }
-        ultimo = ahora;
-        caracteres += insertados;
-        timer = setTimeout(() => ejecutar(6, 250), 160);
-    });
-
-    input.addEventListener('keydown', async event => {
-        if (event.key !== 'Enter') return;
-        if (!candidato(3, 160)) return;
-        event.preventDefault();
-        clearTimeout(timer);
-        await ejecutar(3, 160);
-    });
-}
-
 for (const table of document.querySelectorAll('[data-tabla-listado]')) {
     const noOrdenables = [...table.querySelectorAll('thead th')]
         .map((th, index) => th.hasAttribute('data-no-orden') ? index : null)
@@ -294,42 +223,6 @@ for (const table of document.querySelectorAll('[data-tabla-listado]')) {
         };
         dataTable.on('search', actualizarExportacion);
         actualizarExportacion();
-    }
-
-    if (table.dataset.escaneoCodigoUrl) {
-        const contenedor = table.closest('.dt-container');
-        const busqueda = contenedor?.querySelector('.dt-search');
-        const input = busqueda?.querySelector('input[type="search"]');
-        if (busqueda && input) {
-            const estado = document.createElement('p');
-            estado.className = 'pa-estado-breve mb-0';
-            estado.setAttribute('role', 'status');
-            estado.dataset.estadoEscaneoCatalogo = '';
-            busqueda.append(estado);
-            prepararEscaneoRapido(input, async codigo => {
-                const url = new URL(
-                    table.dataset.escaneoCodigoUrl,
-                    location.origin,
-                );
-                url.searchParams.set('codigo', codigo);
-                estado.textContent = 'Buscando código…';
-                try {
-                    const response = await fetch(url, {
-                        headers: {'X-Requested-With': 'XMLHttpRequest'},
-                    });
-                    if (!response.ok) throw new Error('HTTP');
-                    const resultado = await response.json();
-                    estado.textContent = resultado.mensaje || '';
-                    if (resultado.url_alta) {
-                        location.assign(resultado.url_alta);
-                    }
-                } catch (error) {
-                    estado.textContent = (
-                        'No se pudo consultar el código. Intenta nuevamente.'
-                    );
-                }
-            });
-        }
     }
 }
 
@@ -529,12 +422,14 @@ for (const form of document.querySelectorAll('[data-busqueda-viva]')) {
         }, 300);
     });
 
-    prepararEscaneoRapido(input, async codigo => {
+    input.addEventListener('keydown', async event => {
+        if (event.key !== 'Enter' || !input.value.trim()) return;
+        event.preventDefault();
         clearTimeout(timer);
         controller?.abort();
         ++version;
         const url = new URL(form.action || location.href);
-        url.search = new URLSearchParams({q: codigo}).toString();
+        url.search = new URLSearchParams({q: input.value.trim()}).toString();
         const token = document.querySelector('[name="csrfmiddlewaretoken"]')?.value;
         if (!token) {
             location.assign(url);
@@ -543,27 +438,24 @@ for (const form of document.querySelectorAll('[data-busqueda-viva]')) {
         const datos = new FormData();
         datos.append('csrfmiddlewaretoken', token);
         datos.append('accion', 'escanear');
-        datos.append('codigo', codigo);
+        datos.append('codigo', input.value.trim());
         status.textContent = 'Buscando…';
         registrarOperacionCarrito();
         try {
             const {doc, response} = await solicitarActualizacionCarrito(
                 form, datos, url
             );
-            const codigoEstado = response.headers.get('X-Codigo-Estado');
             reemplazarResultadosBusqueda(doc, url);
+            const codigoEstado = response.headers.get('X-Codigo-Estado');
             if (codigoEstado === 'agregado') {
                 aplicarActualizacionCarrito(doc);
             }
             const mensajesCodigo = {
-                no_encontrado: 'Producto no encontrado',
-                inactivo: 'El producto está inactivo.',
+                no_encontrado: 'No se encontró un producto activo con ese código.',
                 sin_stock: 'Producto encontrado, pero está sin stock.',
                 limite_stock: 'Ya agregaste todo el stock disponible.',
             };
-            status.textContent = response.headers.get('X-Codigo-Mensaje')
-                || mensajesCodigo[codigoEstado]
-                || '';
+            status.textContent = mensajesCodigo[codigoEstado] || '';
         } catch (error) {
             status.textContent = 'No se pudo buscar. Usa el botón Buscar para intentarlo nuevamente.';
         } finally {
