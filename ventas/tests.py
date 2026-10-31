@@ -418,6 +418,8 @@ class EstadoCarritoTests(TestCase):
         self.assertContains(con_producto, "data-precio-unitario=\"1234\"")
         self.assertContains(con_producto, "data-subtotal-linea")
         self.assertContains(con_producto, "data-total-carrito")
+        self.assertContains(con_producto, "data-carrito-cuerpo")
+        self.assertContains(con_producto, "data-cobro-accion")
 
     def test_detalle_conserva_una_sola_nueva_venta_flotante(self):
         venta = Venta.objects.create(
@@ -433,13 +435,28 @@ class EstadoCarritoTests(TestCase):
         self.assertContains(response, "Nueva venta", count=1)
         self.assertContains(response, "pa-venta-flotante")
 
-    def test_menu_tiene_control_independiente_del_logo(self):
+    def test_logo_controla_el_menu_e_inicio_conserva_su_enlace(self):
         response = self.client.get(reverse("ventas:caja"))
 
         self.assertContains(response, "data-menu-principal")
-        self.assertContains(response, 'aria-controls="menu-escritorio menu-movil"')
+        self.assertContains(response, 'class="pa-logo"', count=2)
+        self.assertContains(response, 'aria-controls="menu-escritorio"')
+        self.assertContains(response, 'aria-controls="menu-movil"')
         self.assertContains(response, 'id="menu-escritorio"')
-        self.assertContains(response, f'href="{reverse("inicio")}"')
+        self.assertContains(response, f'href="{reverse("inicio")}"', count=2)
+
+    def test_encabezado_compra_usa_separador_y_contador_actualizable(self):
+        self._guardar_carrito()
+
+        response = self.client.get(reverse("ventas:caja"))
+
+        self.assertContains(response, "Compra actual</h2>")
+        self.assertContains(response, '<span aria-hidden="true">·</span>', html=True)
+        self.assertContains(
+            response,
+            '<span class="small text-secondary" data-contador-carrito>1 producto</span>',
+            html=True,
+        )
 
 
 class PantallaClienteTests(TestCase):

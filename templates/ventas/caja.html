@@ -106,8 +106,9 @@
         <div class="pa-caja-panel" data-carrito-panel data-version-carrito="{{ version_carrito }}">
             <div class="pa-caja-compra">
                 <div class="d-flex justify-content-between align-items-center gap-3 pa-caja-resumen">
-                    <div class="d-flex flex-wrap align-items-baseline gap-2">
+                    <div class="pa-carrito-titulo">
                         <h2 class="h4 fw-bold mb-0">Compra actual</h2>
+                        <span aria-hidden="true">·</span>
                         <span class="small text-secondary" data-contador-carrito>{{ lineas_carrito|length }} producto{{ lineas_carrito|length|pluralize:"s" }}</span>
                     </div>
                     <form method="post" data-limpiar-carrito>
@@ -119,79 +120,83 @@
                     </form>
                 </div>
 
-                {% if problemas_carrito %}
-                <div class="alert alert-danger py-2 small" role="alert">
-                    {% for problema in problemas_carrito %}
-                    <p class="mb-0{% if not forloop.last %} mb-1{% endif %}">{{ problema }}</p>
-                    {% endfor %}
-                </div>
-                {% endif %}
-
-                {% if lineas_carrito %}
-                <form method="post" data-carrito-form>
-                    {% csrf_token %}
-                    <input type="hidden" name="accion" value="actualizar">
-                    <input type="hidden" name="version_carrito" value="{{ version_carrito }}">
-
-                    <div class="table-responsive">
-                        <table class="table align-middle">
-                            <thead>
-                                <tr>
-                                    <th>Producto</th>
-                                    <th>Precio unitario</th>
-                                    <th>Unid.</th>
-                                    <th>Subtotal</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for linea in lineas_carrito %}
-                                <tr>
-                                    <td data-label="Producto">
-                                        {{ linea.producto.nombre }}
-                                    </td>
-                                    <td data-label="Precio unitario">{{ linea.precio_unitario|clp }}</td>
-                                    <td data-label="Unid.">
-                                        <div class="pa-cantidad-control">
-                                            <button class="pa-cantidad-boton" type="button" data-cantidad-restar
-                                                aria-label="Restar una unidad de {{ linea.producto.nombre }}">−</button>
-                                            <input class="pa-cantidad-valor" type="number"
-                                                aria-label="Cantidad de {{ linea.producto.nombre }}"
-                                                name="cantidad_{{ linea.producto.pk }}" value="{{ linea.cantidad }}"
-                                                data-precio-unitario="{{ linea.precio_unitario }}"
-                                                min="0" max="{{ linea.producto.stock }}" step="1" inputmode="numeric">
-                                            <button class="pa-cantidad-boton" type="button" data-cantidad-sumar
-                                                aria-label="Sumar una unidad de {{ linea.producto.nombre }}"
-                                                {% if not linea.disponible or linea.cantidad >= linea.producto.stock %}disabled{% endif %}>+</button>
-                                        </div>
-                                        {% if not linea.disponible %}
-                                        <span class="small text-danger">Producto inactivo</span>
-                                        {% endif %}
-                                    </td>
-                                    <td data-label="Subtotal" data-subtotal-linea>{{ linea.subtotal|clp }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                <div data-carrito-cuerpo>
+                    {% if problemas_carrito %}
+                    <div class="alert alert-danger py-2 small" role="alert">
+                        {% for problema in problemas_carrito %}
+                        <p class="mb-0{% if not forloop.last %} mb-1{% endif %}">{{ problema }}</p>
+                        {% endfor %}
                     </div>
-                    <p class="pa-estado-breve" role="status" data-carrito-estado></p>
-                </form>
+                    {% endif %}
 
-                <hr>
+                    {% if lineas_carrito %}
+                    <form method="post" data-carrito-form>
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="actualizar">
+                        <input type="hidden" name="version_carrito" value="{{ version_carrito }}">
 
-                <div class="pa-caja-total d-flex justify-content-between fw-bold mb-3">
-                    <span>Total</span>
-                    <span data-total-carrito>{{ total_carrito|clp }}</span>
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th>Precio unitario</th>
+                                        <th>Unid.</th>
+                                        <th>Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for linea in lineas_carrito %}
+                                    <tr>
+                                        <td data-label="Producto">
+                                            {{ linea.producto.nombre }}
+                                        </td>
+                                        <td data-label="Precio unitario">{{ linea.precio_unitario|clp }}</td>
+                                        <td data-label="Unid.">
+                                            <div class="pa-cantidad-control">
+                                                <button class="pa-cantidad-boton" type="button" data-cantidad-restar
+                                                    aria-label="Restar una unidad de {{ linea.producto.nombre }}">−</button>
+                                                <input class="pa-cantidad-valor" type="number"
+                                                    aria-label="Cantidad de {{ linea.producto.nombre }}"
+                                                    name="cantidad_{{ linea.producto.pk }}" value="{{ linea.cantidad }}"
+                                                    data-precio-unitario="{{ linea.precio_unitario }}"
+                                                    min="0" max="{{ linea.producto.stock }}" step="1" inputmode="numeric">
+                                                <button class="pa-cantidad-boton" type="button" data-cantidad-sumar
+                                                    aria-label="Sumar una unidad de {{ linea.producto.nombre }}"
+                                                    {% if not linea.disponible or linea.cantidad >= linea.producto.stock %}disabled{% endif %}>+</button>
+                                            </div>
+                                            {% if not linea.disponible %}
+                                            <span class="small text-danger">Producto inactivo</span>
+                                            {% endif %}
+                                        </td>
+                                        <td data-label="Subtotal" data-subtotal-linea>{{ linea.subtotal|clp }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="pa-estado-breve" role="status" data-carrito-estado></p>
+                    </form>
+
+                    <hr>
+
+                    <div class="pa-caja-total d-flex justify-content-between fw-bold mb-3">
+                        <span>Total</span>
+                        <span data-total-carrito>{{ total_carrito|clp }}</span>
+                    </div>
+                    {% else %}
+                    <p class="text-secondary mb-0">
+                        Aún no hay productos en el carrito.
+                    </p>
+                    {% endif %}
                 </div>
 
-                {% if not problemas_carrito %}
-                <button class="btn pa-caja-cobrar btn-lg w-100" type="button" data-bs-toggle="modal"
-                    data-bs-target="#modal-cobro" data-cobrar>Cobrar <span data-total-cobro-boton>{{ total_carrito|clp }}</span></button>
-                {% endif %}
-                {% else %}
-                <p class="text-secondary mb-0">
-                    Aún no hay productos en el carrito.
-                </p>
-                {% endif %}
+                <div data-cobro-accion>
+                    {% if lineas_carrito and not problemas_carrito %}
+                    <button class="btn pa-caja-cobrar btn-lg w-100" type="button" data-bs-toggle="modal"
+                        data-bs-target="#modal-cobro" data-cobrar>Cobrar <span data-total-cobro-boton>{{ total_carrito|clp }}</span></button>
+                    {% endif %}
+                </div>
             </div>
         </div>
         </div>

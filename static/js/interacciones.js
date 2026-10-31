@@ -1,6 +1,7 @@
 /* Menús fuera del contenedor desplazable, sin alterar acciones ni permisos. */
-const controlMenu = document.querySelector('[data-menu-principal]');
+const controlesMenu = [...document.querySelectorAll('[data-menu-principal]')];
 const menuMovil = document.querySelector('#menu-movil');
+const menuEscritorio = document.querySelector('#menu-escritorio');
 const escritorio = window.matchMedia('(min-width: 992px)');
 
 function preferenciaMenuContraido() {
@@ -20,34 +21,46 @@ function guardarPreferenciaMenu(contraido) {
 }
 
 function actualizarControlMenu() {
-    if (!controlMenu) return;
+    if (!controlesMenu.length) return;
     const expandido = escritorio.matches
         ? !document.body.classList.contains('pa-menu-contraido')
         : menuMovil?.classList.contains('show') || false;
-    controlMenu.setAttribute('aria-expanded', String(expandido));
-    controlMenu.setAttribute(
-        'aria-label',
-        expandido ? 'Ocultar menú principal' : 'Abrir menú principal'
+    controlesMenu.forEach(control => {
+        control.setAttribute('aria-expanded', String(expandido));
+        control.setAttribute(
+            'aria-label',
+            expandido ? 'Ocultar menú principal' : 'Abrir menú principal'
+        );
+        control.setAttribute(
+            'aria-controls',
+            escritorio.matches ? 'menu-escritorio' : 'menu-movil'
+        );
+    });
+    menuEscritorio?.setAttribute(
+        'aria-hidden',
+        String(!escritorio.matches || !expandido)
     );
 }
 
-if (controlMenu && menuMovil) {
+if (controlesMenu.length && menuMovil && menuEscritorio) {
     document.body.classList.toggle(
         'pa-menu-contraido',
         escritorio.matches && preferenciaMenuContraido()
     );
-    controlMenu.addEventListener('click', () => {
-        if (escritorio.matches) {
-            const contraido = document.body.classList.toggle('pa-menu-contraido');
-            guardarPreferenciaMenu(contraido);
-            actualizarControlMenu();
-            return;
-        }
-        bootstrap.Offcanvas.getOrCreateInstance(menuMovil).show();
+    controlesMenu.forEach(control => {
+        control.addEventListener('click', () => {
+            if (escritorio.matches) {
+                const contraido = document.body.classList.toggle('pa-menu-contraido');
+                guardarPreferenciaMenu(contraido);
+                actualizarControlMenu();
+                return;
+            }
+            bootstrap.Offcanvas.getOrCreateInstance(menuMovil).toggle(control);
+        });
     });
     menuMovil.addEventListener('shown.bs.offcanvas', actualizarControlMenu);
     menuMovil.addEventListener('hidden.bs.offcanvas', actualizarControlMenu);
-    escritorio.addEventListener('change', () => {
+    const alCambiarAncho = () => {
         document.body.classList.toggle(
             'pa-menu-contraido',
             escritorio.matches && preferenciaMenuContraido()
@@ -56,7 +69,12 @@ if (controlMenu && menuMovil) {
             bootstrap.Offcanvas.getInstance(menuMovil)?.hide();
         }
         actualizarControlMenu();
-    });
+    };
+    if (escritorio.addEventListener) {
+        escritorio.addEventListener('change', alCambiarAncho);
+    } else {
+        escritorio.addListener(alCambiarAncho);
+    }
     actualizarControlMenu();
 }
 
@@ -587,10 +605,30 @@ function aplicarActualizacionCarrito(doc) {
     });
 
     const currentPanel = document.querySelector('[data-carrito-panel]');
-    currentPanel.replaceWith(nextPanel);
-    prepararCarrito(nextPanel);
+    const currentCobrar = currentPanel.querySelector('[data-cobrar]');
+    const nextCobrar = nextPanel.querySelector('[data-cobrar]');
+    const currentBody = currentPanel.querySelector('[data-carrito-cuerpo]');
+    const nextBody = nextPanel.querySelector('[data-carrito-cuerpo]');
+    const currentHeader = currentPanel.querySelector('.pa-caja-resumen');
+    const nextHeader = nextPanel.querySelector('.pa-caja-resumen');
+    let updatedPanel = nextPanel;
+    if (
+        currentCobrar && nextCobrar && currentBody && nextBody
+        && currentHeader && nextHeader
+    ) {
+        const currentTotal = currentCobrar.querySelector('[data-total-cobro-boton]');
+        const nextTotal = nextCobrar.querySelector('[data-total-cobro-boton]');
+        if (currentTotal && nextTotal) currentTotal.textContent = nextTotal.textContent;
+        currentPanel.dataset.versionCarrito = nextPanel.dataset.versionCarrito;
+        currentHeader.replaceWith(nextHeader);
+        currentBody.replaceWith(nextBody);
+        updatedPanel = currentPanel;
+    } else {
+        currentPanel.replaceWith(nextPanel);
+    }
+    prepararCarrito(updatedPanel);
     if (nombreControlActivo) {
-        const siguienteControl = nextPanel.querySelector(
+        const siguienteControl = updatedPanel.querySelector(
             `[name="${CSS.escape(nombreControlActivo)}"]`
         );
         if (siguienteControl) {

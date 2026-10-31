@@ -15,15 +15,14 @@
     {% block navigation %}
     {% if request.user.is_authenticated %}
     <header class="pa-barra-superior">
-        <button class="pa-menu-control" type="button" data-menu-principal
-            aria-controls="menu-escritorio menu-movil" aria-expanded="true"
-            aria-label="Ocultar menú principal">
-            <span aria-hidden="true">☰</span>
-        </button>
-        <a class="pa-marca" href="{% url 'inicio' %}">
-            <img class="pa-logo" src="{% static 'img/logo_punto_aparte.jpg' %}" alt="Punto Aparte, librería">
+        <div class="pa-marca">
+            <button class="pa-menu-control" type="button" data-menu-principal
+                aria-controls="menu-escritorio" aria-expanded="true"
+                aria-label="Ocultar menú principal">
+                <img class="pa-logo" src="{% static 'img/logo_punto_aparte.jpg' %}" alt="">
+            </button>
             <span>Punto Aparte</span>
-        </a>
+        </div>
         <div class="pa-sesion">
             <span class="pa-sesion-identidad">{{ request.user.get_full_name|default:request.user.username }} · {{ request.user.get_rol_display }}</span>
             <form method="post" action="{% url 'logout' %}">
@@ -36,7 +35,14 @@
     <div class="offcanvas offcanvas-start pa-menu-lateral-movil" tabindex="-1" id="menu-movil"
         aria-labelledby="menu-movil-titulo">
         <div class="offcanvas-header">
-            <h2 class="offcanvas-title h5" id="menu-movil-titulo">Menú</h2>
+            <div class="d-flex align-items-center gap-2">
+                <button class="pa-menu-control pa-menu-control-interno" type="button" data-menu-principal
+                    aria-controls="menu-movil" aria-expanded="true"
+                    aria-label="Ocultar menú principal">
+                    <img class="pa-logo" src="{% static 'img/logo_punto_aparte.jpg' %}" alt="">
+                </button>
+                <h2 class="offcanvas-title h5 mb-0" id="menu-movil-titulo">Menú</h2>
+            </div>
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar menú"></button>
         </div>
         <div class="offcanvas-body">
