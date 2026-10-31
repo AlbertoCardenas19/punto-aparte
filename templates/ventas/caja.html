@@ -159,12 +159,7 @@
                                             {{ linea.producto.nombre }}
                                         </td>
                                         <td data-label="Precio unitario">
-                                            {% if linea.descuento_unitario %}
-                                            <span class="pa-precio-normal">Normal: <del>{{ linea.precio_normal|clp }}</del></span>
-                                            <span class="pa-precio-oferta">Oferta: <strong>{{ linea.precio_unitario|clp }}</strong></span>
-                                            {% else %}
                                             {{ linea.precio_unitario|clp }}
-                                            {% endif %}
                                         </td>
                                         <td data-label="Unid.">
                                             <div class="pa-cantidad-control">

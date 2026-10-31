@@ -618,7 +618,8 @@ class EstadoCarritoTests(TestCase):
             {"q": "Zeta especial"},
         )
 
-        self.assertEqual(len(pagina.context["pagina"].object_list), 12)
+        self.assertEqual(len(pagina.context["pagina"].object_list), 6)
+        self.assertEqual(pagina.context["pagina"].paginator.per_page, 6)
         self.assertNotContains(pagina, "Zeta especial")
         self.assertContains(busqueda, "Zeta especial")
 
@@ -655,8 +656,11 @@ class EstadoCarritoTests(TestCase):
         self.assertContains(catalogo, "$1.234")
         self.assertContains(catalogo, "Oferta:")
         self.assertContains(catalogo, "$999")
-        self.assertContains(carrito, "Normal:")
-        self.assertContains(carrito, "Oferta:")
+        self.assertContains(
+            carrito,
+            '<td data-label="Precio unitario">$999</td>',
+            html=True,
+        )
         self.assertContains(carrito, "data-precio-unitario=\"999\"")
 
     def test_detalle_conserva_una_sola_nueva_venta_flotante(self):
@@ -672,6 +676,26 @@ class EstadoCarritoTests(TestCase):
 
         self.assertContains(response, "Nueva venta", count=1)
         self.assertContains(response, "pa-venta-flotante")
+
+    def test_detalle_muestra_volver_a_la_derecha_de_imprimir(self):
+        venta = Venta.objects.create(
+            cajero=self.cajero,
+            medio_pago=Venta.MedioPago.EFECTIVO,
+            total=0,
+        )
+
+        response = self.client.get(
+            reverse("ventas:detalle", args=[venta.pk])
+        )
+        contenido = response.content.decode()
+        inicio_acciones = contenido.index("pa-form-acciones")
+        fin_acciones = contenido.index("</div>", inicio_acciones)
+        acciones = contenido[inicio_acciones:fin_acciones]
+
+        self.assertNotIn("Consultar ventas", acciones)
+        self.assertIn("Imprimir", acciones)
+        self.assertIn("Volver", acciones)
+        self.assertLess(acciones.index("Imprimir"), acciones.index("Volver"))
 
     def test_logo_controla_el_menu_e_inicio_conserva_su_enlace(self):
         response = self.client.get(reverse("ventas:caja"))

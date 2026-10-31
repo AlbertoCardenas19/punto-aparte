@@ -563,7 +563,7 @@ def caja(request):
             output_field=IntegerField(),
         )
     ).order_by("sin_stock", "nombre")
-    pagina = Paginator(productos, 12).get_page(request.GET.get("page"))
+    pagina = Paginator(productos, 6).get_page(request.GET.get("page"))
 
     for producto in pagina.object_list:
         producto.cantidad_carrito = int(
