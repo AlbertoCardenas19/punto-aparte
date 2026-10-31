@@ -37,6 +37,7 @@
     <div class="card-body">
         <table class="table table-hover align-middle mb-0" data-tabla-listado
             data-orden-columna="0" data-orden-direccion="desc"
+            data-busqueda-inicial="{{ request.GET.q|default:'' }}"
             data-busqueda-ayuda="Fecha, producto, tipo, motivo o usuario">
             <thead class="table-light">
                 <tr>

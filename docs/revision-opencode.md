@@ -1,16 +1,21 @@
 # Seguimiento de hallazgos de OpenCode
 
 Esta tabla registra el estado comprobado en la rama `work`. «Corregido» indica
-que esta revisión añadió el cambio; «ya resuelto antes» identifica protecciones
-presentes en commits anteriores. Las verificaciones con SQLite sirven para
-probar el comportamiento general, pero no sustituyen pruebas de concurrencia ni
-de restricciones sobre PostgreSQL.
+que una revisión añadió el cambio; «ya resuelto antes» identifica protecciones
+presentes en commits anteriores. En la segunda revisión la suite completa y las
+pruebas de concurrencia se ejecutaron sobre PostgreSQL 16 efímero.
 
 | Hallazgo original | Estado | Evidencia o decisión |
 | --- | --- | --- |
 | Primer Jefe, último Jefe activo y altas coherentes | Ya resuelto antes | `inicializar_jefe`, las protecciones del modelo/servicio y el Admin de usuarios de solo lectura están en `b776de9`; sus pruebas siguen pasando. |
 | Reenvío del alta de cuenta | Ya resuelto antes | La clave persistente de creación evita duplicados y la contraseña temporal solo vuelve en la primera respuesta. |
-| Idempotencia de ventas y movimientos de stock | Ya resuelto antes | Las claves persistentes y únicas están en `525734a`; los reintentos devuelven el registro existente. |
+| Idempotencia de ventas y movimientos de stock | Completado en segunda revisión | Las claves persistentes y únicas ya estaban en `525734a`. La segunda revisión vuelve a consultar la venta después de bloquear productos, antes de validar stock, para que dos confirmaciones concurrentes con la misma clave devuelvan la misma venta. |
+| Estado del carrito al reenviar una venta | Completado en segunda revisión | Encontrar una venta ya creada con la clave vigente también limpia el carrito y precios, rota la clave y la versión, y conserva la señal para la pantalla del cliente. Un reenvío antiguo no borra una compra nueva. |
+| Cobro y sincronización AJAX | Completado en segunda revisión | Las mutaciones del carrito, incluido el escáner, comparten una cola; el cobro se bloquea desde que se programa un cambio hasta que termina. El servidor valida una versión rotatoria del carrito antes de cobrar. |
+| Degradación de Jefe | Completado en segunda revisión | Sigue prohibido dejar el sistema sin Jefes activos. Si permanece otro, se permite el cambio a Cajero y se retiran `is_staff` e `is_superuser` a quien deja el rol Jefe. |
+| Búsqueda y exportación de movimientos | Completado en segunda revisión | `q` usa las mismas columnas buscables y el formato visible `dd/mm/aaaa HH:MM`, normaliza acentos y se carga como búsqueda inicial de DataTables; cantidades y fecha ISO ya no producen coincidencias que la tabla no mostraría. |
+| Orden de instalación y `.env.example` | Completado en segunda revisión | El README exige completar clave y PostgreSQL antes de migrar. El ejemplo distingue valores requeridos y opcionales sin incluir secretos reales. |
+| Colisión concurrente de correo | Completado en segunda revisión | La unicidad sigue siendo la protección final; `crear_cuenta` y `actualizar_cuenta` traducen la colisión a `CorreoDuplicado`, y las vistas la muestran sobre el campo correo en lugar de responder 500. |
 | Precio cambiado entre carrito y cobro | Ya resuelto antes | El servicio bloquea los productos, compara precios vigentes y exige otra confirmación. |
 | Secretos y perfil de despliegue | Ya resuelto antes | `b618207` lee la configuración desde el entorno. `.env.example` define desarrollo local con `DEBUG=True`, hosts locales y HTTPS desactivado; la clave local se genera según el README. |
 | Código de barras vacío desde aplicación y Admin | Corregido | El modelo normaliza espacios o vacío a `NULL`; el Admin usa el mismo `ProductoForm`. |
@@ -34,7 +39,7 @@ de restricciones sobre PostgreSQL.
 | Alertas globales de éxito | No reproducido | Los flujos revisados conservan errores contextuales y no restauran avisos genéricos de éxito. |
 | Correo de producción (`mail.E001`) | Pendiente por decisión | Debe elegirse proveedor y backend de correo. El backend de consola permanece intencionalmente para desarrollo. |
 | HSTS, subdominios, preload, dominio y proxy | Pendiente por decisión | Se activarán solo después de definir dominio, HTTPS completo y proxy de confianza. No se fijaron valores de infraestructura por suposición. |
-| PostgreSQL y concurrencia real | No verificado en este entorno | El socket PostgreSQL no es accesible. Las migraciones y pruebas se ejecutaron con SQLite; falta validarlas en PostgreSQL y realizar pruebas concurrentes reales. |
+| PostgreSQL y concurrencia real | Verificado en segunda revisión | La suite completa se ejecutó sobre PostgreSQL 16 efímero. Incluye dos confirmaciones simultáneas con la misma clave y dos altas simultáneas con el mismo correo; ambas carreras comprobaron bloqueo, unicidad y respuesta idempotente/controlada. |
 | Caja diaria, emisión tributaria, Mercado Pago y operación offline | Pendiente por decisión / fuera de alcance | Siguen en `decisiones-pendientes.md`; esta revisión no simula esas integraciones. |
 
 ## Migración de catálogo

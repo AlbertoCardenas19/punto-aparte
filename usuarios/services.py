@@ -9,6 +9,10 @@ class GestionUsuariosNoValida(Exception):
     pass
 
 
+class CorreoDuplicado(GestionUsuariosNoValida):
+    pass
+
+
 def _bloquear_gestion_usuarios():
     """Serializa las operaciones que pueden cambiar los Jefes activos."""
     if connection.vendor == "postgresql":
@@ -58,12 +62,16 @@ def crear_cuenta(*, datos, clave_creacion):
     try:
         with transaction.atomic():
             usuario.save()
-    except IntegrityError:
+    except IntegrityError as error:
         existente = Usuario.objects.filter(
             clave_creacion=clave_creacion,
         ).first()
         if existente:
             return existente, None, False
+        if Usuario.objects.filter(email__iexact=datos["email"]).exists():
+            raise CorreoDuplicado(
+                "Ya existe una cuenta con este correo electrónico."
+            ) from error
         raise
     return usuario, temporal, True
 
@@ -100,6 +108,7 @@ def crear_primer_jefe(*, datos):
 def actualizar_cuenta(*, usuario_id, datos):
     _bloquear_gestion_usuarios()
     usuario = Usuario.objects.select_for_update().get(pk=usuario_id)
+    era_jefe = usuario.rol == Usuario.Rol.JEFE
     nuevo_rol = datos["rol"]
     if nuevo_rol != Usuario.Rol.JEFE and _es_ultimo_jefe_activo(usuario):
         raise GestionUsuariosNoValida(
@@ -109,13 +118,28 @@ def actualizar_cuenta(*, usuario_id, datos):
     usuario.first_name = datos["first_name"]
     usuario.last_name = datos["last_name"]
     usuario.email = datos["email"]
-    usuario.rol = nuevo_rol
-    usuario.save(update_fields=[
+    campos_actualizados = [
         "first_name",
         "last_name",
         "email",
         "rol",
-    ])
+    ]
+    if era_jefe and nuevo_rol != Usuario.Rol.JEFE:
+        usuario.is_staff = False
+        usuario.is_superuser = False
+        campos_actualizados.extend(["is_staff", "is_superuser"])
+    usuario.rol = nuevo_rol
+    try:
+        with transaction.atomic():
+            usuario.save(update_fields=campos_actualizados)
+    except IntegrityError as error:
+        if Usuario.objects.filter(
+            email__iexact=datos["email"],
+        ).exclude(pk=usuario.pk).exists():
+            raise CorreoDuplicado(
+                "Ya existe una cuenta con este correo electrónico."
+            ) from error
+        raise
     return usuario
 
 

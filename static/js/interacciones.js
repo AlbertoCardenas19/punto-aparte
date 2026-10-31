@@ -70,6 +70,7 @@ for (const table of document.querySelectorAll('[data-tabla-listado]')) {
         pageLength: 10,
         lengthMenu: [10, 25, 50],
         order: [[ordenColumna, ordenDireccion]],
+        search: {search: table.dataset.busquedaInicial || ''},
         columnDefs: [
             ...(noOrdenables.length ? [{
                 targets: noOrdenables,
@@ -334,15 +335,10 @@ for (const form of document.querySelectorAll('[data-busqueda-viva]')) {
         datos.append('accion', 'escanear');
         datos.append('codigo', input.value.trim());
         status.textContent = 'Buscando…';
+        registrarOperacionCarrito();
         try {
-            const response = await fetch(url, {
-                method: 'POST',
-                body: datos,
-                headers: {'X-Requested-With': 'XMLHttpRequest'},
-            });
-            if (!response.ok) throw new Error('HTTP');
-            const doc = new DOMParser().parseFromString(
-                await response.text(), 'text/html'
+            const {doc, response} = await solicitarActualizacionCarrito(
+                form, datos, url
             );
             reemplazarResultadosBusqueda(doc, url);
             const codigoEstado = response.headers.get('X-Codigo-Estado');
@@ -357,6 +353,8 @@ for (const form of document.querySelectorAll('[data-busqueda-viva]')) {
             status.textContent = mensajesCodigo[codigoEstado] || '';
         } catch (error) {
             status.textContent = 'No se pudo buscar. Usa el botón Buscar para intentarlo nuevamente.';
+        } finally {
+            finalizarOperacionCarrito();
         }
     });
 }
@@ -409,18 +407,44 @@ function prepararControlCantidad(input, alCambiar) {
 }
 
 let colaActualizacionesCarrito = Promise.resolve();
+let operacionesCarritoPendientes = 0;
 
-function solicitarActualizacionCarrito(form, datos) {
+function actualizarBloqueoCobro() {
+    const bloqueado = operacionesCarritoPendientes > 0;
+    for (const control of document.querySelectorAll(
+        '[data-cobrar], [data-confirmar-cobro]'
+    )) {
+        control.disabled = bloqueado;
+    }
+}
+
+function registrarOperacionCarrito() {
+    operacionesCarritoPendientes += 1;
+    actualizarBloqueoCobro();
+}
+
+function finalizarOperacionCarrito() {
+    operacionesCarritoPendientes = Math.max(
+        0, operacionesCarritoPendientes - 1
+    );
+    actualizarBloqueoCobro();
+}
+
+function solicitarActualizacionCarrito(form, datos, urlSolicitada = null) {
     const ejecutar = async () => {
-        const response = await fetch(form.action || location.href, {
+        const version = document.querySelector('[data-carrito-panel]')
+            ?.dataset.versionCarrito;
+        if (version) datos.set('version_carrito', version);
+        const response = await fetch(urlSolicitada || form.action || location.href, {
             method: 'POST',
             body: datos,
             headers: {'X-Requested-With': 'XMLHttpRequest'},
         });
         if (!response.ok) throw new Error('HTTP');
-        return new DOMParser().parseFromString(
+        const doc = new DOMParser().parseFromString(
             await response.text(), 'text/html'
         );
+        return {doc, response};
     };
     const solicitud = colaActualizacionesCarrito.then(ejecutar, ejecutar);
     colaActualizacionesCarrito = solicitud.catch(() => {});
@@ -464,6 +488,7 @@ function aplicarActualizacionCarrito(doc) {
             prepararFormularioCobro(modal);
         }
     });
+    actualizarBloqueoCobro();
 
     const currentMobileTotal = document.querySelector('[data-total-carrito-movil]');
     const nextMobileTotal = doc.querySelector('[data-total-carrito-movil]');
@@ -510,7 +535,13 @@ function prepararFormularioCobro(contenedor = document) {
     form.querySelectorAll('[name="medio_pago"]').forEach(radio => {
         radio.addEventListener('change', actualizar);
     });
-    form.addEventListener('submit', () => {
+    form.addEventListener('submit', event => {
+        if (operacionesCarritoPendientes > 0) {
+            event.preventDefault();
+            const estado = form.querySelector('[role="alert"]');
+            if (estado) estado.textContent = 'Espera a que termine de guardarse la compra.';
+            return;
+        }
         const boton = document.querySelector(`[type="submit"][form="${form.id}"]`);
         if (boton) boton.disabled = true;
         form.setAttribute('aria-busy', 'true');
@@ -523,9 +554,14 @@ function prepararCarrito(panel = document) {
     if (!form) return;
     const status = form.querySelector('[data-carrito-estado]');
     let timer;
+    let cambioPendiente = false;
 
     const sincronizar = async () => {
         clearTimeout(timer);
+        if (!cambioPendiente) {
+            cambioPendiente = true;
+            registrarOperacionCarrito();
+        }
         const datos = new FormData(form);
         const controles = [...form.querySelectorAll('button, input[type="number"]')];
         controles.forEach(control => control.disabled = true);
@@ -533,7 +569,7 @@ function prepararCarrito(panel = document) {
         status.textContent = '';
         status.classList.remove('pa-estado-error');
         try {
-            const doc = await solicitarActualizacionCarrito(form, datos);
+            const {doc} = await solicitarActualizacionCarrito(form, datos);
             trasladarErroresAlEstado(doc, '[data-carrito-estado]');
             aplicarActualizacionCarrito(doc);
         } catch (error) {
@@ -544,11 +580,18 @@ function prepararCarrito(panel = document) {
             });
             status.textContent = 'No se pudo actualizar la compra. Intenta nuevamente.';
             status.classList.add('pa-estado-error');
+        } finally {
+            cambioPendiente = false;
+            finalizarOperacionCarrito();
         }
     };
 
     const programar = demora => {
         clearTimeout(timer);
+        if (!cambioPendiente) {
+            cambioPendiente = true;
+            registrarOperacionCarrito();
+        }
         timer = setTimeout(sincronizar, demora);
     };
     form.querySelectorAll('.pa-cantidad-valor').forEach(input => {
@@ -567,6 +610,7 @@ function prepararBotonesAgregar(contenedor = document) {
         const status = form.querySelector('[data-agregar-estado]');
         form.addEventListener('submit', async event => {
             event.preventDefault();
+            registrarOperacionCarrito();
             const datos = new FormData(form);
             const button = form.querySelector('button[type="submit"]');
             form.setAttribute('aria-busy', 'true');
@@ -575,7 +619,7 @@ function prepararBotonesAgregar(contenedor = document) {
             button.disabled = true;
             try {
                 const productoId = datos.get('producto_id');
-                const doc = await solicitarActualizacionCarrito(form, datos);
+                const {doc} = await solicitarActualizacionCarrito(form, datos);
                 trasladarErroresAlEstado(
                     doc,
                     `[data-producto-tarjeta][data-producto-id="${productoId}"] [data-agregar-estado]`
@@ -586,6 +630,8 @@ function prepararBotonesAgregar(contenedor = document) {
                 button.disabled = false;
                 status.textContent = 'No se pudo agregar. Intenta nuevamente.';
                 status.classList.add('pa-estado-error');
+            } finally {
+                finalizarOperacionCarrito();
             }
         });
     }

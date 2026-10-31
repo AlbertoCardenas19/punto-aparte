@@ -1,15 +1,25 @@
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
+from unittest import skipUnless
+from unittest.mock import patch
 from uuid import uuid4
 
 from django.contrib.admin.sites import AdminSite
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.test import RequestFactory, TestCase
+from django.db import close_old_connections, connection
+from django.test import RequestFactory, TestCase, TransactionTestCase
 from django.urls import reverse
 
 from .admin import UsuarioAdmin
 from .models import Usuario
-from .services import GestionUsuariosNoValida, cambiar_estado_cuenta
+from .services import (
+    CorreoDuplicado,
+    GestionUsuariosNoValida,
+    cambiar_estado_cuenta,
+    crear_cuenta,
+)
 from .views import CLAVE_CREACION_CUENTA
 
 
@@ -115,6 +125,8 @@ class GestionUsuariosTests(TestCase):
             email="segundo@example.com",
             password="clave-segura",
             rol=Usuario.Rol.JEFE,
+            is_staff=True,
+            is_superuser=True,
         )
         self.client.force_login(self.jefe)
 
@@ -135,6 +147,8 @@ class GestionUsuariosTests(TestCase):
         )
         segundo.refresh_from_db()
         self.assertEqual(segundo.rol, Usuario.Rol.CAJERO)
+        self.assertFalse(segundo.is_staff)
+        self.assertFalse(segundo.is_superuser)
 
     def test_admin_no_permite_altas_cambios_ni_eliminaciones(self):
         admin_usuarios = UsuarioAdmin(Usuario, AdminSite())
@@ -189,3 +203,91 @@ class CreacionCuentaTests(TestCase):
         self.assertTrue(cuenta.debe_cambiar_password)
         self.assertIsNotNone(cuenta.clave_creacion)
         self.assertNotIn(b"Contrase\xc3\xb1a temporal", repetida.content)
+
+    def test_colision_concurrente_de_correo_se_muestra_en_el_formulario(self):
+        clave = str(uuid4())
+        sesion = self.client.session
+        sesion[CLAVE_CREACION_CUENTA] = clave
+        sesion.save()
+        datos = {
+            "first_name": "Ana",
+            "last_name": "Pérez",
+            "email": "ana@example.com",
+            "rol": Usuario.Rol.CAJERO,
+            "clave_creacion": clave,
+        }
+
+        with patch(
+            "usuarios.views.crear_cuenta",
+            side_effect=CorreoDuplicado(
+                "Ya existe una cuenta con este correo electrónico."
+            ),
+        ):
+            respuesta = self.client.post(reverse("usuarios:crear"), datos)
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertContains(
+            respuesta,
+            "Ya existe una cuenta con este correo electrónico.",
+        )
+        self.assertFalse(Usuario.objects.filter(email="ana@example.com").exists())
+
+    def test_servicio_traduce_la_colision_de_unicidad_del_correo(self):
+        Usuario.objects.create_user(
+            username="ignorado",
+            first_name="Ana",
+            last_name="Existente",
+            email="ocupado@example.com",
+            password="clave-segura",
+        )
+
+        with self.assertRaises(CorreoDuplicado):
+            crear_cuenta(
+                datos={
+                    "first_name": "Otra",
+                    "last_name": "Persona",
+                    "email": "OCUPADO@example.com",
+                    "rol": Usuario.Rol.CAJERO,
+                },
+                clave_creacion=uuid4(),
+            )
+
+
+@skipUnless(
+    connection.vendor == "postgresql",
+    "Requiere PostgreSQL para comprobar la colisión concurrente real.",
+)
+class CreacionCuentaConcurrenciaTests(TransactionTestCase):
+    reset_sequences = True
+
+    def test_dos_altas_con_el_mismo_correo_devuelven_error_controlado(self):
+        barrera = threading.Barrier(2)
+
+        def crear(indice):
+            close_old_connections()
+            try:
+                barrera.wait(timeout=10)
+                try:
+                    _, _, creada = crear_cuenta(
+                        datos={
+                            "first_name": f"Persona {indice}",
+                            "last_name": "Concurrente",
+                            "email": "concurrente@example.com",
+                            "rol": Usuario.Rol.CAJERO,
+                        },
+                        clave_creacion=uuid4(),
+                    )
+                except CorreoDuplicado:
+                    return "correo_duplicado"
+                return "creada" if creada else "repetida"
+            finally:
+                connection.close()
+
+        with ThreadPoolExecutor(max_workers=2) as ejecutor:
+            resultados = list(ejecutor.map(crear, range(2)))
+
+        self.assertEqual(sorted(resultados), ["correo_duplicado", "creada"])
+        self.assertEqual(
+            Usuario.objects.filter(email="concurrente@example.com").count(),
+            1,
+        )

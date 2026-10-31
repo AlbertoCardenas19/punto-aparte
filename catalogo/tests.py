@@ -1,4 +1,6 @@
+from datetime import datetime
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 
 from django.contrib.admin.sites import AdminSite
 from django.db import IntegrityError, transaction
@@ -222,6 +224,51 @@ class ExportacionesCatalogoTests(TestCase):
         self.assertIn("Recepción lápices", contenido)
         self.assertIn("María Jefa", contenido)
         self.assertNotIn("Conteo goma", contenido)
+
+    def test_movimientos_busca_como_la_tabla_y_conserva_q(self):
+        producto = Producto.objects.create(nombre="Lápiz", precio=500)
+        movimiento = MovimientoStock.objects.create(
+            producto=producto,
+            tipo=MovimientoStock.Tipo.INGRESO,
+            cantidad=999,
+            stock_anterior=0,
+            stock_nuevo=999,
+            motivo="Recepción útil",
+            usuario=self.jefe,
+        )
+        fecha_visible = datetime(
+            2025, 4, 15, 9, 30,
+            tzinfo=ZoneInfo("America/Santiago"),
+        )
+        MovimientoStock.objects.filter(pk=movimiento.pk).update(
+            fecha=fecha_visible,
+        )
+
+        response = self.client.get(
+            reverse("catalogo:exportar_movimientos_stock", args=["csv"]),
+            {"q": "recepcion 15/04/2025"},
+        )
+        contenido = response.content.decode("utf-8-sig")
+        por_cantidad = self.client.get(
+            reverse("catalogo:exportar_movimientos_stock", args=["csv"]),
+            {"q": "999"},
+        ).content.decode("utf-8-sig")
+        por_fecha_iso = self.client.get(
+            reverse("catalogo:exportar_movimientos_stock", args=["csv"]),
+            {"q": "2025-04-15"},
+        ).content.decode("utf-8-sig")
+        pagina = self.client.get(
+            reverse("catalogo:inventario"),
+            {"q": "recepcion"},
+        )
+
+        self.assertIn("Recepción útil", contenido)
+        self.assertNotIn("Recepción útil", por_cantidad)
+        self.assertNotIn("Recepción útil", por_fecha_iso)
+        self.assertContains(
+            pagina,
+            'data-busqueda-inicial="recepcion"',
+        )
 
     def test_pdf_vacio_de_productos_tiene_mensaje_especifico(self):
         response = self.client.get(

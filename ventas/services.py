@@ -18,14 +18,22 @@ class PreciosCambiaron(VentaNoValida):
         )
 
 
-@transaction.atomic
-def confirmar_venta(*, lineas, cajero, medio_pago, clave_idempotencia):
-    venta_existente = Venta.objects.filter(
+def _buscar_venta_existente(*, clave_idempotencia, cajero):
+    venta = Venta.objects.filter(
         clave_idempotencia=clave_idempotencia,
     ).first()
+    if venta and venta.cajero_id != cajero.pk:
+        raise VentaNoValida("La confirmación de venta no es válida.")
+    return venta
+
+
+@transaction.atomic
+def confirmar_venta(*, lineas, cajero, medio_pago, clave_idempotencia):
+    venta_existente = _buscar_venta_existente(
+        clave_idempotencia=clave_idempotencia,
+        cajero=cajero,
+    )
     if venta_existente:
-        if venta_existente.cajero_id != cajero.pk:
-            raise VentaNoValida("La confirmación de venta no es válida.")
         return venta_existente, False
 
     if medio_pago not in Venta.MedioPago.values:
@@ -67,6 +75,15 @@ def confirmar_venta(*, lineas, cajero, medio_pago, clave_idempotencia):
         .order_by("pk")
     )
 
+    # Otra solicitud con la misma clave pudo confirmar mientras esta esperaba
+    # el bloqueo de los productos. Se vuelve a consultar antes de validar stock.
+    venta_existente = _buscar_venta_existente(
+        clave_idempotencia=clave_idempotencia,
+        cajero=cajero,
+    )
+    if venta_existente:
+        return venta_existente, False
+
     if len(productos) != len(cantidades):
         raise VentaNoValida(
             "Uno o más productos no existen o están inactivos."
@@ -103,10 +120,11 @@ def confirmar_venta(*, lineas, cajero, medio_pago, clave_idempotencia):
                 clave_idempotencia=clave_idempotencia,
             )
     except IntegrityError:
-        venta_existente = Venta.objects.filter(
+        venta_existente = _buscar_venta_existente(
             clave_idempotencia=clave_idempotencia,
-        ).first()
-        if venta_existente and venta_existente.cajero_id == cajero.pk:
+            cajero=cajero,
+        )
+        if venta_existente:
             return venta_existente, False
         raise
 

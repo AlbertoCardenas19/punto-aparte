@@ -31,10 +31,10 @@ Relaciones relevantes:
 1. La vista de Venta mantiene una selección temporal en la sesión. La búsqueda consulta el catálogo activo en el servidor y pagina los resultados; un código de barras exacto puede agregar una unidad. La pantalla del cliente consulta ese mismo carrito mediante un endpoint protegido por la sesión y un token aleatorio. Puede abrirse desde la navegación con el carrito vacío; al confirmar una venta agradece durante cinco segundos y vuelve al estado de espera.
 2. El cajero selecciona efectivo, tarjeta o transferencia. Tarjeta y transferencia requieren confirmación manual; después, la confirmación delega en `ventas/services.py`.
 3. El servicio valida el medio de pago, productos activos, cantidades y stock.
-4. Dentro de una transacción, bloquea las filas de producto, crea la venta y detalles, descuenta stock y registra movimientos de salida.
-5. La vista limpia el carrito y redirige al detalle interno de la venta.
+4. Dentro de una transacción, bloquea las filas de producto y vuelve a comprobar la clave idempotente antes de validar stock. Si no existe, crea la venta y detalles, descuenta stock y registra movimientos de salida.
+5. La vista limpia el carrito incluso si el servicio devuelve una venta ya creada con la clave vigente, rota la clave y la versión del carrito, y redirige al detalle interno.
 
-La transacción y el bloqueo de productos protegen el stock ante confirmaciones concurrentes. No mover esas reglas críticas solamente al frontend.
+La transacción y el bloqueo de productos protegen el stock ante confirmaciones concurrentes. El frontend serializa las mutaciones AJAX y bloquea el cobro mientras guarda; el backend además exige la versión vigente del carrito. No mover esas reglas críticas solamente al frontend.
 
 ## Organización observada
 

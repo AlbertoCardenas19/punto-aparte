@@ -21,6 +21,7 @@ from .services import PreciosCambiaron, VentaNoValida, confirmar_venta
 
 CLAVE_CARRITO = "carrito_venta"
 CLAVE_PRECIOS_CARRITO = "precios_carrito_venta"
+CLAVE_VERSION_CARRITO = "version_carrito_venta"
 CLAVE_IDEMPOTENCIA_VENTA = "clave_idempotencia_venta"
 CLAVE_PANTALLA_CLIENTE = "token_pantalla_cliente"
 CLAVE_ULTIMA_VENTA_CLIENTE = "ultima_venta_pantalla_cliente"
@@ -98,6 +99,30 @@ def _clave_idempotencia_venta(request):
     return clave
 
 
+def _version_carrito(request):
+    version = request.session.get(CLAVE_VERSION_CARRITO)
+    try:
+        UUID(str(version))
+    except (TypeError, ValueError, AttributeError):
+        version = str(uuid4())
+        request.session[CLAVE_VERSION_CARRITO] = version
+    return version
+
+
+def _rotar_version_carrito(request):
+    version = str(uuid4())
+    request.session[CLAVE_VERSION_CARRITO] = version
+    return version
+
+
+def _finalizar_carrito_cobrado(request, venta):
+    request.session.pop(CLAVE_CARRITO, None)
+    request.session.pop(CLAVE_PRECIOS_CARRITO, None)
+    request.session[CLAVE_IDEMPOTENCIA_VENTA] = str(uuid4())
+    request.session[CLAVE_ULTIMA_VENTA_CLIENTE] = venta.pk
+    return _rotar_version_carrito(request)
+
+
 def _token_pantalla_cliente(request):
     token = request.session.get(CLAVE_PANTALLA_CLIENTE)
     if not token:
@@ -158,6 +183,7 @@ def caja(request):
     carrito = request.session.get(CLAVE_CARRITO, {})
     precios_vistos = _asegurar_precios_carrito(request, carrito)
     clave_idempotencia = _clave_idempotencia_venta(request)
+    version_carrito = _version_carrito(request)
     codigo_estado = None
     error_cobro = None
     medio_pago_seleccionado = Venta.MedioPago.EFECTIVO
@@ -168,10 +194,22 @@ def caja(request):
     if request.method == "POST":
         accion = request.POST.get("accion")
 
+        if (
+            accion in {"vaciar", "agregar", "escanear", "actualizar"}
+            and request.POST.get("version_carrito") != version_carrito
+        ):
+            messages.error(
+                request,
+                "La compra cambió mientras se procesaba la solicitud. "
+                "Se muestra su estado más reciente.",
+            )
+            accion = None
+
         if accion == "vaciar":
             request.session.pop(CLAVE_CARRITO, None)
             request.session.pop(CLAVE_PRECIOS_CARRITO, None)
             request.session[CLAVE_IDEMPOTENCIA_VENTA] = str(uuid4())
+            _rotar_version_carrito(request)
             return redirect(f"{request.path}?carrito=abierto")
 
         if accion == "agregar":
@@ -210,6 +248,7 @@ def caja(request):
                             ] = precios_vistos
                         carrito[id_texto] = nueva_cantidad
                         request.session[CLAVE_CARRITO] = carrito
+                        version_carrito = _rotar_version_carrito(request)
 
             if not solicitud_dinamica:
                 return redirect("ventas:caja")
@@ -235,6 +274,7 @@ def caja(request):
                         ] = precios_vistos
                     carrito[id_texto] = nueva_cantidad
                     request.session[CLAVE_CARRITO] = carrito
+                    version_carrito = _rotar_version_carrito(request)
                     codigo_estado = "agregado"
                 else:
                     codigo_estado = "limite_stock"
@@ -243,6 +283,8 @@ def caja(request):
                 return redirect("ventas:caja")
 
         if accion == "actualizar":
+            carrito_anterior = dict(carrito)
+            precios_anteriores = dict(precios_vistos)
             for id_texto in list(carrito):
                 try:
                     cantidad = int(request.POST.get(
@@ -284,14 +326,17 @@ def caja(request):
                 else:
                     carrito[id_texto] = cantidad
 
-            request.session[CLAVE_CARRITO] = carrito
-            request.session[CLAVE_PRECIOS_CARRITO] = precios_vistos
+            if carrito != carrito_anterior or precios_vistos != precios_anteriores:
+                request.session[CLAVE_CARRITO] = carrito
+                request.session[CLAVE_PRECIOS_CARRITO] = precios_vistos
+                version_carrito = _rotar_version_carrito(request)
             if not solicitud_dinamica:
                 return redirect("ventas:caja")
 
         if accion == "confirmar":
             medio_pago_seleccionado = request.POST.get("medio_pago", "")
             clave_recibida = request.POST.get("clave_idempotencia", "")
+            version_recibida = request.POST.get("version_carrito", "")
             try:
                 clave_recibida_uuid = UUID(clave_recibida)
             except (TypeError, ValueError, AttributeError):
@@ -318,6 +363,11 @@ def caja(request):
                 error_cobro = (
                     "La confirmación venció. Revisa la compra e intenta nuevamente."
                 )
+            elif version_recibida != version_carrito:
+                error_cobro = (
+                    "La compra cambió mientras se guardaba. "
+                    "Revisa el estado más reciente y confirma nuevamente."
+                )
             elif (
                 medio_pago_seleccionado in {
                     Venta.MedioPago.TARJETA,
@@ -328,7 +378,7 @@ def caja(request):
                 error_cobro = "Confirma que el pago fue aprobado o verificado."
             else:
                 try:
-                    venta, creada = confirmar_venta(
+                    venta, _ = confirmar_venta(
                         lineas=lineas,
                         cajero=request.user,
                         medio_pago=medio_pago_seleccionado,
@@ -340,19 +390,12 @@ def caja(request):
                     request.session[
                         CLAVE_PRECIOS_CARRITO
                     ] = precios_vistos
+                    version_carrito = _rotar_version_carrito(request)
                     error_cobro = str(error)
                 except VentaNoValida as error:
                     error_cobro = str(error)
                 else:
-                    if creada:
-                        request.session.pop(CLAVE_CARRITO, None)
-                        request.session.pop(CLAVE_PRECIOS_CARRITO, None)
-                        request.session[
-                            CLAVE_IDEMPOTENCIA_VENTA
-                        ] = str(uuid4())
-                        request.session[
-                            CLAVE_ULTIMA_VENTA_CLIENTE
-                        ] = venta.pk
+                    _finalizar_carrito_cobrado(request, venta)
                     return redirect("ventas:detalle", venta_id=venta.pk)
 
     busqueda = request.GET.get("q", "").strip()
@@ -401,6 +444,7 @@ def caja(request):
             "medio_pago_seleccionado": medio_pago_seleccionado,
             "error_cobro": error_cobro,
             "clave_idempotencia": clave_idempotencia,
+            "version_carrito": version_carrito,
         },
     )
     if codigo_estado is not None:

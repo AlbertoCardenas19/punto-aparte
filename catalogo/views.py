@@ -144,13 +144,10 @@ def _movimientos_stock_filtrados(request):
         for movimiento in movimientos:
             contenido = normalizar(" ".join((
                 timezone.localtime(movimiento.fecha).strftime(
-                    "%d/%m/%Y %H:%M %Y-%m-%d"
+                    "%d/%m/%Y %H:%M"
                 ),
                 movimiento.producto.nombre,
                 movimiento.get_tipo_display(),
-                str(movimiento.cantidad),
-                str(movimiento.stock_anterior),
-                str(movimiento.stock_nuevo),
                 movimiento.motivo,
                 movimiento.usuario.get_full_name().strip()
                 or movimiento.usuario.username,

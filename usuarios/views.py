@@ -12,6 +12,7 @@ from .decorators import jefe_required
 from .forms import UsuarioCreationForm, UsuarioEdicionForm, PasswordInicialForm
 from .models import Usuario
 from .services import (
+    CorreoDuplicado,
     GestionUsuariosNoValida,
     actualizar_cuenta,
     cambiar_estado_cuenta,
@@ -69,17 +70,21 @@ def crear_usuario(request):
                 "La solicitud venció. Revisa los datos e intenta nuevamente.",
             )
         else:
-            usuario, temporal, creada = crear_cuenta(
-                datos=form.cleaned_data,
-                clave_creacion=clave_recibida_uuid,
-            )
-            if not creada:
-                return redirect("usuarios:lista")
-            request.session[CLAVE_CREACION_CUENTA] = str(uuid4())
-            return render(request, "usuarios/cuenta_creada.html", {
-                "cuenta": usuario,
-                "temporal": temporal,
-            })
+            try:
+                usuario, temporal, creada = crear_cuenta(
+                    datos=form.cleaned_data,
+                    clave_creacion=clave_recibida_uuid,
+                )
+            except CorreoDuplicado as error:
+                form.add_error("email", str(error))
+            else:
+                if not creada:
+                    return redirect("usuarios:lista")
+                request.session[CLAVE_CREACION_CUENTA] = str(uuid4())
+                return render(request, "usuarios/cuenta_creada.html", {
+                    "cuenta": usuario,
+                    "temporal": temporal,
+                })
 
     return render(
         request,
@@ -103,6 +108,8 @@ def editar_usuario(request, usuario_id):
                 usuario_id=usuario.pk,
                 datos=form.cleaned_data,
             )
+        except CorreoDuplicado as error:
+            form.add_error("email", str(error))
         except GestionUsuariosNoValida as error:
             form.add_error("rol", str(error))
         else:
