@@ -67,7 +67,7 @@ Estas son reglas aprobadas; consulta `estado-actual.md` para saber cuáles está
 
 - La librería todavía debe confirmar si cuenta el dinero al abrir y cerrar el día. Hasta definirlo, no se exige apertura de caja para vender ni se implementan apertura, cierre o arqueo.
 - La operación prevista es una caja en el local.
-- La pantalla del cliente muestra productos, cantidades, precios y total del carrito asociado a la misma sesión de caja.
+- La pantalla del cliente muestra productos, cantidades, precios y total del canal local de esa caja. El canal persiste al cerrar sesión o cambiar de cajero y no expone el carrito de otra caja.
 - El diseño de referencia incluye búsqueda y filtros de categorías, compra actual, subtotal, descuentos, total y una acción destacada para cobrar.
 
 ## Fuera del alcance actual

@@ -16,6 +16,7 @@ pruebas de concurrencia se ejecutaron sobre PostgreSQL 16 efímero.
 | Búsqueda y exportación de movimientos | Completado en segunda revisión | `q` usa las mismas columnas buscables y el formato visible `dd/mm/aaaa HH:MM`, normaliza acentos y se carga como búsqueda inicial de DataTables; cantidades y fecha ISO ya no producen coincidencias que la tabla no mostraría. |
 | Orden de instalación y `.env.example` | Completado en segunda revisión | El README exige completar clave y PostgreSQL antes de migrar. El ejemplo distingue valores requeridos y opcionales sin incluir secretos reales. |
 | Colisión concurrente de correo | Completado en segunda revisión | La unicidad sigue siendo la protección final; `crear_cuenta` y `actualizar_cuenta` traducen la colisión a `CorreoDuplicado`, y las vistas la muestran sobre el campo correo en lugar de responder 500. |
+| `403` de la pantalla del cliente | Corregido | El endpoint exigía una cuenta autenticada y un token guardado en esa misma sesión; al cambiar de cuenta faltaba el token y la validación lanzaba `PermissionDenied`. Ahora la apertura exige login una vez y entrega un canal UUID aislado por caja; la página y el polling autorizados continúan sin depender de la sesión personal. |
 | Precio cambiado entre carrito y cobro | Ya resuelto antes | El servicio bloquea los productos, compara precios vigentes y exige otra confirmación. |
 | Secretos y perfil de despliegue | Ya resuelto antes | `b618207` lee la configuración desde el entorno. `.env.example` define desarrollo local con `DEBUG=True`, hosts locales y HTTPS desactivado; la clave local se genera según el README. |
 | Código de barras vacío desde aplicación y Admin | Corregido | El modelo normaliza espacios o vacío a `NULL`; el Admin usa el mismo `ProductoForm`. |
@@ -32,7 +33,7 @@ pruebas de concurrencia se ejecutaron sobre PostgreSQL 16 efímero.
 | Inicio limitado a “venta en efectivo” | Corregido | El acceso rápido describe una venta con medio de pago confirmado. |
 | Estilo del estado de venta | Corregido | Completada y anulada tienen variantes propias; cualquier estado nuevo recibe una variante neutra. |
 | Navegación durante el cambio inicial de contraseña | Corregido | La plantilla oculta barra superior, menú lateral y acceso flotante a venta. |
-| Primera carga de la pantalla del cliente | Corregido | El HTML inicial se genera con el carrito y los precios guardados en esa sesión. |
+| Primera carga de la pantalla del cliente | Corregido | El HTML inicial se genera con el carrito y los precios del canal persistente de esa caja. |
 | Formulario de stock dependiente de JavaScript | Corregido | Conserva sugerencias limitadas con JavaScript; sin JavaScript acepta una búsqueda textual si identifica exactamente un producto y explica las coincidencias ambiguas. |
 | Plantilla antigua `stock_formulario.html` | Corregido | Se eliminó después de comprobar que no tenía rutas, inclusiones ni referencias. |
 | Error de acceso genérico para cuenta inactiva | No reproducido como defecto | Se conserva deliberadamente el mismo error de credenciales para no revelar qué cuentas existen o están inactivas. |

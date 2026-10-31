@@ -1,6 +1,6 @@
-import secrets
 from uuid import UUID, uuid4
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -15,7 +15,7 @@ from django.views.decorators.cache import never_cache
 from catalogo.models import Producto
 from usuarios.models import Usuario
 
-from .models import Venta
+from .models import EstadoPantallaCliente, Venta
 from .services import PreciosCambiaron, VentaNoValida, confirmar_venta
 
 
@@ -23,8 +23,8 @@ CLAVE_CARRITO = "carrito_venta"
 CLAVE_PRECIOS_CARRITO = "precios_carrito_venta"
 CLAVE_VERSION_CARRITO = "version_carrito_venta"
 CLAVE_IDEMPOTENCIA_VENTA = "clave_idempotencia_venta"
-CLAVE_PANTALLA_CLIENTE = "token_pantalla_cliente"
-CLAVE_ULTIMA_VENTA_CLIENTE = "ultima_venta_pantalla_cliente"
+COOKIE_PANTALLA_CLIENTE = "punto_aparte_pantalla_cliente"
+EDAD_COOKIE_PANTALLA = 60 * 60 * 24 * 365
 
 
 def _lineas_del_carrito(carrito, precios_vistos=None):
@@ -42,7 +42,7 @@ def _lineas_del_carrito(carrito, precios_vistos=None):
         if not producto:
             problemas.append(
                 f"El producto con identificador {producto_id} ya no existe. "
-                "Vacía la venta antes de continuar."
+                "Limpia la venta antes de continuar."
             )
             continue
         cantidad = int(cantidad_guardada)
@@ -115,28 +115,80 @@ def _rotar_version_carrito(request):
     return version
 
 
-def _finalizar_carrito_cobrado(request, venta):
+def _finalizar_carrito_cobrado(request):
     request.session.pop(CLAVE_CARRITO, None)
     request.session.pop(CLAVE_PRECIOS_CARRITO, None)
     request.session[CLAVE_IDEMPOTENCIA_VENTA] = str(uuid4())
-    request.session[CLAVE_ULTIMA_VENTA_CLIENTE] = venta.pk
     return _rotar_version_carrito(request)
 
 
-def _token_pantalla_cliente(request):
-    token = request.session.get(CLAVE_PANTALLA_CLIENTE)
-    if not token:
-        token = secrets.token_urlsafe(32)
-        request.session[CLAVE_PANTALLA_CLIENTE] = token
-    return token
+def _estado_pantalla_de_caja(request):
+    token = request.COOKIES.get(COOKIE_PANTALLA_CLIENTE, "")
+    try:
+        token_uuid = UUID(token)
+    except (TypeError, ValueError, AttributeError):
+        token_uuid = None
+
+    estado = None
+    if token_uuid:
+        estado = EstadoPantallaCliente.objects.filter(token=token_uuid).first()
+    if estado is None:
+        estado = EstadoPantallaCliente.objects.create()
+
+    if CLAVE_CARRITO not in request.session and estado.carrito:
+        request.session[CLAVE_CARRITO] = dict(estado.carrito)
+        request.session[CLAVE_PRECIOS_CARRITO] = dict(estado.precios)
+    return estado
 
 
-def _validar_token_pantalla_cliente(request):
-    esperado = request.session.get(CLAVE_PANTALLA_CLIENTE, "")
+def _agregar_cookie_pantalla(response, estado):
+    response.set_cookie(
+        COOKIE_PANTALLA_CLIENTE,
+        str(estado.token),
+        max_age=EDAD_COOKIE_PANTALLA,
+        httponly=True,
+        secure=settings.SESSION_COOKIE_SECURE,
+        samesite="Lax",
+    )
+    return response
+
+
+def _sincronizar_estado_pantalla(
+    estado,
+    *,
+    carrito,
+    precios,
+    ultima_venta=None,
+    actualizar_ultima_venta=False,
+):
+    campos = []
+    carrito = dict(carrito)
+    precios = dict(precios)
+    if estado.carrito != carrito:
+        estado.carrito = carrito
+        campos.append("carrito")
+    if estado.precios != precios:
+        estado.precios = precios
+        campos.append("precios")
+    if actualizar_ultima_venta and estado.ultima_venta_id != getattr(
+        ultima_venta, "pk", None
+    ):
+        estado.ultima_venta = ultima_venta
+        campos.append("ultima_venta")
+    if campos:
+        estado.save(update_fields=[*campos, "actualizado"])
+
+
+def _estado_pantalla_por_token(request):
     recibido = request.headers.get("X-Pantalla-Cliente-Token", "")
-    if not esperado or not recibido or not secrets.compare_digest(esperado, recibido):
+    try:
+        token = UUID(recibido)
+    except (TypeError, ValueError, AttributeError):
         raise PermissionDenied
-    return recibido
+    estado = EstadoPantallaCliente.objects.filter(token=token).first()
+    if estado is None:
+        raise PermissionDenied
+    return estado
 
 
 @login_required
@@ -180,6 +232,7 @@ def lista_ventas(request):
 
 @login_required
 def caja(request):
+    estado_pantalla = _estado_pantalla_de_caja(request)
     carrito = request.session.get(CLAVE_CARRITO, {})
     precios_vistos = _asegurar_precios_carrito(request, carrito)
     clave_idempotencia = _clave_idempotencia_venta(request)
@@ -190,6 +243,16 @@ def caja(request):
     solicitud_dinamica = (
         request.headers.get("X-Requested-With") == "XMLHttpRequest"
     )
+
+    def responder(response, *, ultima_venta=None, venta_confirmada=False):
+        _sincronizar_estado_pantalla(
+            estado_pantalla,
+            carrito=request.session.get(CLAVE_CARRITO, {}),
+            precios=request.session.get(CLAVE_PRECIOS_CARRITO, {}),
+            ultima_venta=ultima_venta,
+            actualizar_ultima_venta=venta_confirmada,
+        )
+        return _agregar_cookie_pantalla(response, estado_pantalla)
 
     if request.method == "POST":
         accion = request.POST.get("accion")
@@ -210,7 +273,7 @@ def caja(request):
             request.session.pop(CLAVE_PRECIOS_CARRITO, None)
             request.session[CLAVE_IDEMPOTENCIA_VENTA] = str(uuid4())
             _rotar_version_carrito(request)
-            return redirect(f"{request.path}?carrito=abierto")
+            return responder(redirect(f"{request.path}?carrito=abierto"))
 
         if accion == "agregar":
             try:
@@ -251,7 +314,7 @@ def caja(request):
                         version_carrito = _rotar_version_carrito(request)
 
             if not solicitud_dinamica:
-                return redirect("ventas:caja")
+                return responder(redirect("ventas:caja"))
 
         if accion == "escanear":
             codigo = request.POST.get("codigo", "").strip()
@@ -280,7 +343,7 @@ def caja(request):
                     codigo_estado = "limite_stock"
 
             if not solicitud_dinamica:
-                return redirect("ventas:caja")
+                return responder(redirect("ventas:caja"))
 
         if accion == "actualizar":
             carrito_anterior = dict(carrito)
@@ -309,7 +372,7 @@ def caja(request):
                     messages.error(
                         request,
                         "Un producto de la compra ya no existe. "
-                        "Vacía la venta antes de continuar.",
+                        "Limpia la venta antes de continuar.",
                     )
                 elif not producto.activo:
                     messages.error(
@@ -331,7 +394,7 @@ def caja(request):
                 request.session[CLAVE_PRECIOS_CARRITO] = precios_vistos
                 version_carrito = _rotar_version_carrito(request)
             if not solicitud_dinamica:
-                return redirect("ventas:caja")
+                return responder(redirect("ventas:caja"))
 
         if accion == "confirmar":
             medio_pago_seleccionado = request.POST.get("medio_pago", "")
@@ -358,7 +421,9 @@ def caja(request):
                 ).first()
 
             if venta_repetida:
-                return redirect("ventas:detalle", venta_id=venta_repetida.pk)
+                return responder(
+                    redirect("ventas:detalle", venta_id=venta_repetida.pk)
+                )
             if not clave_recibida_uuid or clave_recibida != clave_idempotencia:
                 error_cobro = (
                     "La confirmación venció. Revisa la compra e intenta nuevamente."
@@ -395,8 +460,12 @@ def caja(request):
                 except VentaNoValida as error:
                     error_cobro = str(error)
                 else:
-                    _finalizar_carrito_cobrado(request, venta)
-                    return redirect("ventas:detalle", venta_id=venta.pk)
+                    _finalizar_carrito_cobrado(request)
+                    return responder(
+                        redirect("ventas:detalle", venta_id=venta.pk),
+                        ultima_venta=venta,
+                        venta_confirmada=True,
+                    )
 
     busqueda = request.GET.get("q", "").strip()
     productos = Producto.objects.filter(activo=True)
@@ -449,17 +518,32 @@ def caja(request):
     )
     if codigo_estado is not None:
         respuesta.headers["X-Codigo-Estado"] = codigo_estado
-    return respuesta
+    return responder(respuesta)
 
 
 @never_cache
 @login_required
 def pantalla_cliente(request):
-    token = _token_pantalla_cliente(request)
+    estado = _estado_pantalla_de_caja(request)
     carrito = request.session.get(CLAVE_CARRITO, {})
+    _sincronizar_estado_pantalla(
+        estado,
+        carrito=carrito,
+        precios=_asegurar_precios_carrito(request, carrito),
+    )
+    return _agregar_cookie_pantalla(
+        redirect("ventas:pantalla_cliente_publica", token=estado.token),
+        estado,
+    )
+
+
+@never_cache
+def pantalla_cliente_publica(request, token):
+    estado = get_object_or_404(EstadoPantallaCliente, token=token)
+    carrito = estado.carrito
     lineas, total, _ = _lineas_del_carrito(
         carrito,
-        _asegurar_precios_carrito(request, carrito),
+        estado.precios,
     )
     return render(
         request,
@@ -468,23 +552,19 @@ def pantalla_cliente(request):
             "lineas": lineas,
             "total": total,
             "estado_url": reverse("ventas:estado_pantalla_cliente"),
-            "pantalla_cliente_token": token,
-            "ultima_venta_id": request.session.get(
-                CLAVE_ULTIMA_VENTA_CLIENTE,
-                "",
-            ),
+            "pantalla_cliente_token": estado.token,
+            "ultima_venta_id": estado.ultima_venta_id or "",
         },
     )
 
 
 @never_cache
-@login_required
 def estado_pantalla_cliente(request):
-    _validar_token_pantalla_cliente(request)
-    carrito = request.session.get(CLAVE_CARRITO, {})
+    estado = _estado_pantalla_por_token(request)
+    carrito = estado.carrito
     lineas, total, _ = _lineas_del_carrito(
         carrito,
-        _asegurar_precios_carrito(request, carrito),
+        estado.precios,
     )
     return JsonResponse({
         "productos": [
@@ -497,10 +577,7 @@ def estado_pantalla_cliente(request):
             for linea in lineas
         ],
         "total": total,
-        "ultima_venta_id": request.session.get(
-            CLAVE_ULTIMA_VENTA_CLIENTE,
-            "",
-        ),
+        "ultima_venta_id": estado.ultima_venta_id or "",
     })
 
 

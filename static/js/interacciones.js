@@ -1,4 +1,65 @@
 /* Menús fuera del contenedor desplazable, sin alterar acciones ni permisos. */
+const controlMenu = document.querySelector('[data-menu-principal]');
+const menuMovil = document.querySelector('#menu-movil');
+const escritorio = window.matchMedia('(min-width: 992px)');
+
+function preferenciaMenuContraido() {
+    try {
+        return localStorage.getItem('punto-aparte-menu-contraido') === '1';
+    } catch {
+        return false;
+    }
+}
+
+function guardarPreferenciaMenu(contraido) {
+    try {
+        localStorage.setItem('punto-aparte-menu-contraido', contraido ? '1' : '0');
+    } catch {
+        // El menú sigue funcionando aunque el navegador bloquee localStorage.
+    }
+}
+
+function actualizarControlMenu() {
+    if (!controlMenu) return;
+    const expandido = escritorio.matches
+        ? !document.body.classList.contains('pa-menu-contraido')
+        : menuMovil?.classList.contains('show') || false;
+    controlMenu.setAttribute('aria-expanded', String(expandido));
+    controlMenu.setAttribute(
+        'aria-label',
+        expandido ? 'Ocultar menú principal' : 'Abrir menú principal'
+    );
+}
+
+if (controlMenu && menuMovil) {
+    document.body.classList.toggle(
+        'pa-menu-contraido',
+        escritorio.matches && preferenciaMenuContraido()
+    );
+    controlMenu.addEventListener('click', () => {
+        if (escritorio.matches) {
+            const contraido = document.body.classList.toggle('pa-menu-contraido');
+            guardarPreferenciaMenu(contraido);
+            actualizarControlMenu();
+            return;
+        }
+        bootstrap.Offcanvas.getOrCreateInstance(menuMovil).show();
+    });
+    menuMovil.addEventListener('shown.bs.offcanvas', actualizarControlMenu);
+    menuMovil.addEventListener('hidden.bs.offcanvas', actualizarControlMenu);
+    escritorio.addEventListener('change', () => {
+        document.body.classList.toggle(
+            'pa-menu-contraido',
+            escritorio.matches && preferenciaMenuContraido()
+        );
+        if (escritorio.matches) {
+            bootstrap.Offcanvas.getInstance(menuMovil)?.hide();
+        }
+        actualizarControlMenu();
+    });
+    actualizarControlMenu();
+}
+
 const menus = new Map();
 let formularioDesactivacion = null;
 const modalDesactivacion = document.querySelector('#modal-confirmar-desactivacion');
@@ -406,6 +467,36 @@ function prepararControlCantidad(input, alCambiar) {
     });
 }
 
+const numeroClpCaja = new Intl.NumberFormat('es-CL', {
+    maximumFractionDigits: 0,
+});
+const formatearClpCaja = valor => `$${numeroClpCaja.format(valor)}`;
+
+function actualizarResumenCarrito(form) {
+    let total = 0;
+    let lineasActivas = 0;
+    for (const input of form.querySelectorAll('.pa-cantidad-valor')) {
+        const cantidad = Number.parseInt(input.value || '0', 10);
+        const precio = Number.parseInt(input.dataset.precioUnitario || '0', 10);
+        const subtotal = Math.max(0, cantidad) * precio;
+        total += subtotal;
+        if (cantidad > 0) lineasActivas += 1;
+        const celda = input.closest('tr')?.querySelector('[data-subtotal-linea]');
+        if (celda) celda.textContent = formatearClpCaja(subtotal);
+    }
+
+    for (const elemento of document.querySelectorAll(
+        '[data-total-carrito], [data-total-carrito-movil], '
+        + '[data-total-cobro], [data-total-cobro-boton]'
+    )) {
+        elemento.textContent = formatearClpCaja(total);
+    }
+    const contador = document.querySelector('[data-contador-carrito]');
+    if (contador) {
+        contador.textContent = `${lineasActivas} producto${lineasActivas === 1 ? '' : 's'}`;
+    }
+}
+
 let colaActualizacionesCarrito = Promise.resolve();
 let operacionesCarritoPendientes = 0;
 
@@ -464,15 +555,31 @@ function trasladarErroresAlEstado(doc, selectorEstado) {
     doc.querySelector('[data-mensajes]')?.replaceChildren();
 }
 
+function actualizarVersionCarrito(doc) {
+    const currentPanel = document.querySelector('[data-carrito-panel]');
+    const nextPanel = doc.querySelector('[data-carrito-panel]');
+    if (currentPanel && nextPanel) {
+        currentPanel.dataset.versionCarrito = nextPanel.dataset.versionCarrito;
+    }
+}
+
 function aplicarActualizacionCarrito(doc) {
     const nextPanel = doc.querySelector('[data-carrito-panel]');
     if (!nextPanel) throw new Error('Carrito no disponible');
+    const controlActivo = document.activeElement?.closest(
+        '[data-carrito-panel] .pa-cantidad-valor'
+    );
+    const nombreControlActivo = controlActivo?.name;
+    const seleccionActiva = controlActivo ? [
+        controlActivo.selectionStart,
+        controlActivo.selectionEnd,
+    ] : null;
 
     const currentMessages = document.querySelector('[data-mensajes]');
     const nextMessages = doc.querySelector('[data-mensajes]');
     if (currentMessages && nextMessages) currentMessages.replaceWith(nextMessages);
 
-    const modales = ['modal-cobro', 'modal-vaciar-venta'].map(id => {
+    const modales = ['modal-cobro'].map(id => {
         const modal = doc.querySelector(`#${id}`);
         modal?.remove();
         document.querySelector(`#${id}`)?.remove();
@@ -482,6 +589,17 @@ function aplicarActualizacionCarrito(doc) {
     const currentPanel = document.querySelector('[data-carrito-panel]');
     currentPanel.replaceWith(nextPanel);
     prepararCarrito(nextPanel);
+    if (nombreControlActivo) {
+        const siguienteControl = nextPanel.querySelector(
+            `[name="${CSS.escape(nombreControlActivo)}"]`
+        );
+        if (siguienteControl) {
+            siguienteControl.focus({preventScroll: true});
+            if (seleccionActiva.every(valor => valor !== null)) {
+                siguienteControl.setSelectionRange(...seleccionActiva);
+            }
+        }
+    }
     modales.forEach(modal => {
         if (modal) {
             document.body.append(modal);
@@ -550,46 +668,51 @@ function prepararFormularioCobro(contenedor = document) {
 }
 
 function prepararCarrito(panel = document) {
+    prepararLimpiarCarrito(panel);
     const form = panel.querySelector('[data-carrito-form]');
     if (!form) return;
     const status = form.querySelector('[data-carrito-estado]');
     let timer;
-    let cambioPendiente = false;
+    let revisionLocal = 0;
+    let cambioProgramado = false;
 
     const sincronizar = async () => {
         clearTimeout(timer);
-        if (!cambioPendiente) {
-            cambioPendiente = true;
+        if (!cambioProgramado) {
             registrarOperacionCarrito();
         }
+        cambioProgramado = false;
+        const revisionEnviada = revisionLocal;
         const datos = new FormData(form);
-        const controles = [...form.querySelectorAll('button, input[type="number"]')];
-        controles.forEach(control => control.disabled = true);
         form.setAttribute('aria-busy', 'true');
         status.textContent = '';
         status.classList.remove('pa-estado-error');
         try {
             const {doc} = await solicitarActualizacionCarrito(form, datos);
             trasladarErroresAlEstado(doc, '[data-carrito-estado]');
-            aplicarActualizacionCarrito(doc);
+            if (revisionEnviada === revisionLocal) {
+                aplicarActualizacionCarrito(doc);
+            } else {
+                actualizarVersionCarrito(doc);
+                if (operacionesCarritoPendientes <= 1) {
+                    form.removeAttribute('aria-busy');
+                }
+            }
         } catch (error) {
             form.removeAttribute('aria-busy');
-            form.querySelectorAll('.pa-cantidad-valor').forEach(input => {
-                input.disabled = false;
-                ajustarBotonesCantidad(input);
-            });
             status.textContent = 'No se pudo actualizar la compra. Intenta nuevamente.';
             status.classList.add('pa-estado-error');
         } finally {
-            cambioPendiente = false;
             finalizarOperacionCarrito();
         }
     };
 
     const programar = demora => {
         clearTimeout(timer);
-        if (!cambioPendiente) {
-            cambioPendiente = true;
+        revisionLocal += 1;
+        actualizarResumenCarrito(form);
+        if (!cambioProgramado) {
+            cambioProgramado = true;
             registrarOperacionCarrito();
         }
         timer = setTimeout(sincronizar, demora);
@@ -600,6 +723,33 @@ function prepararCarrito(panel = document) {
     form.addEventListener('submit', event => {
         event.preventDefault();
         sincronizar();
+    });
+}
+
+function prepararLimpiarCarrito(contenedor = document) {
+    const form = contenedor.querySelector('[data-limpiar-carrito]');
+    if (!form || form.dataset.limpiarListo) return;
+    form.dataset.limpiarListo = 'true';
+    form.addEventListener('submit', async event => {
+        event.preventDefault();
+        registrarOperacionCarrito();
+        const boton = form.querySelector('button[type="submit"]');
+        boton.disabled = true;
+        try {
+            const {doc} = await solicitarActualizacionCarrito(
+                form, new FormData(form)
+            );
+            aplicarActualizacionCarrito(doc);
+        } catch {
+            boton.disabled = false;
+            const estado = document.querySelector('[data-carrito-estado]');
+            if (estado) {
+                estado.textContent = 'No se pudo limpiar la compra. Intenta nuevamente.';
+                estado.classList.add('pa-estado-error');
+            }
+        } finally {
+            finalizarOperacionCarrito();
+        }
     });
 }
 

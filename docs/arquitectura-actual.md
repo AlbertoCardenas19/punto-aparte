@@ -15,7 +15,7 @@ Confirma versiones contra `requirements.txt`, `package.json` y el entorno de eje
 | --- | --- | --- |
 | `usuarios` | `Usuario` | Cuenta personalizada, roles y administración de usuarios. |
 | `catalogo` | `Categoria`, `Producto`, `MovimientoStock` | Catálogo, existencia y auditoría de movimientos de inventario. |
-| `ventas` | `Venta`, `DetalleVenta` | Venta, cajero, medio de pago y detalle histórico de productos. |
+| `ventas` | `Venta`, `DetalleVenta`, `EstadoPantallaCliente` | Venta, cajero, medio de pago, detalle histórico y canal local de pantalla del cliente. |
 
 Relaciones relevantes:
 
@@ -25,10 +25,11 @@ Relaciones relevantes:
 - `DetalleVenta` → `Venta`: varios detalles por venta.
 - `DetalleVenta` → `Producto`: referencia al producto y, además, conserva nombre, precio unitario y subtotal de la operación.
 - `MovimientoStock` → `Producto` y `Usuario`: registra producto afectado y responsable. Las salidas creadas al confirmar una venta también se relacionan con `Venta`; el campo es nullable para conservar movimientos manuales e históricos sin asociación inequívoca.
+- `EstadoPantallaCliente` conserva carrito, precios y última venta de una caja local. Un UUID aleatorio separa cada caja y autoriza únicamente su pantalla de cliente.
 
 ## Flujo de una venta implementado
 
-1. La vista de Venta mantiene una selección temporal en la sesión. La búsqueda consulta el catálogo activo en el servidor y pagina los resultados; un código de barras exacto puede agregar una unidad. La pantalla del cliente consulta ese mismo carrito mediante un endpoint protegido por la sesión y un token aleatorio. Puede abrirse desde la navegación con el carrito vacío; al confirmar una venta agradece durante cinco segundos y vuelve al estado de espera.
+1. La vista de Venta mantiene una selección temporal en la sesión y la sincroniza con el canal persistente de la caja local. La búsqueda consulta el catálogo activo en el servidor y pagina los resultados; un código de barras exacto puede agregar una unidad. La pantalla del cliente consulta solo ese canal mediante un UUID aleatorio, por lo que continúa al cerrar sesión o cambiar de cajero. Puede abrirse con el carrito vacío; al confirmar una venta agradece durante cinco segundos y vuelve al estado de espera.
 2. El cajero selecciona efectivo, tarjeta o transferencia. Tarjeta y transferencia requieren confirmación manual; después, la confirmación delega en `ventas/services.py`.
 3. El servicio valida el medio de pago, productos activos, cantidades y stock.
 4. Dentro de una transacción, bloquea las filas de producto y vuelve a comprobar la clave idempotente antes de validar stock. Si no existe, crea la venta y detalles, descuenta stock y registra movimientos de salida.
@@ -51,11 +52,11 @@ El detalle exacto debe confirmarse leyendo el árbol actual; no asumas que el ZI
 
 ## Interfaz
 
-Las plantillas extienden `templates/base.html`, que carga Bootstrap local y el sistema común de `static/css/punto-aparte.css`. Las páginas autenticadas comparten una barra superior compacta, un menú lateral de escritorio y un menú móvil. Las variantes de acceso y Venta se encuentran en `static/css/acceso.css` y `static/css/caja.css`.
+Las plantillas extienden `templates/base.html`, que carga Bootstrap local y el sistema común de `static/css/punto-aparte.css`. Las páginas autenticadas comparten una barra superior compacta y un botón de menú visible: contrae el lateral en escritorio y abre un offcanvas en móvil. El logo conserva su enlace independiente a Inicio. Las variantes de acceso y Venta se encuentran en `static/css/acceso.css` y `static/css/caja.css`.
 
 Las vistas actuales incluyen:
 
-- Venta con catálogo paginado, carrito de sesión, selección de medio de pago y pantalla del cliente de solo lectura.
+- Venta con catálogo paginado, totales optimistas mientras se sincronizan cantidades, selección de medio de pago y pantalla del cliente de solo lectura aislada por caja.
 - Productos y movimientos de stock se exportan según la búsqueda y los filtros visibles a CSV, XLSX o PDF sin dependencias externas. Categorías conserva la administración de estado. «Movimientos de stock» abre directamente el historial y ofrece un único acceso al formulario separado; el formulario busca productos de forma predictiva y, sin JavaScript, resuelve una búsqueda textual única. Mantiene los ingresos y ajustes como operaciones internas distintas.
 - Consulta de ventas: el Cajero ve las propias y el Jefe ve todas, con filtros de fecha y cajero según permiso.
 - Usuarios para Jefe.
@@ -81,7 +82,7 @@ DataTables se sirve localmente y se usa en los listados de productos, categoría
 
 - Tarjeta y transferencia se confirman manualmente. No existe conexión con el terminal Mercado Pago ni con el banco.
 - El detalle de una venta es un comprobante interno imprimible; no es integración tributaria.
-- La pantalla del cliente se actualiza por consultas periódicas al servidor y solo expone el carrito de la misma sesión. No constituye una integración externa.
+- La pantalla del cliente se actualiza por consultas periódicas al servidor y solo expone el canal identificado por su UUID aleatorio. La apertura inicial exige una cuenta autorizada, pero la pantalla ya abierta y su endpoint no dependen después de la sesión personal. No constituye una integración externa.
 - La aplicación no dispone de una comprobación fiable de conectividad para imponer automáticamente efectivo cuando no hay internet; el cajero recibe esa indicación en el cobro. La selección de documento y los datos de factura dependen de la definición e integración tributaria pendiente.
 - No existe apertura, cierre ni arqueo de caja; la librería debe confirmar primero si ese flujo corresponde a su operación.
 - Confirma en el código actual si existe el flujo antes de tomar decisiones basadas en esta fotografía.

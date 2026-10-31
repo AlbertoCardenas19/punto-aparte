@@ -63,7 +63,7 @@ async function consultarEstado() {
         if (!response.ok) throw new Error('HTTP');
         actualizarPantalla(await response.json());
     } catch (error) {
-        estado.textContent = 'No se pudo actualizar la compra. Revisa la sesión de la caja.';
+        estado.textContent = estado.dataset.mensajeReconexion;
     }
 }
 

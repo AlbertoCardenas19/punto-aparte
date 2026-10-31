@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -42,6 +44,27 @@ class Venta(models.Model):
 
     def __str__(self):
         return f"Venta #{self.pk}"
+
+
+class EstadoPantallaCliente(models.Model):
+    token = models.UUIDField(default=uuid4, unique=True, editable=False)
+    carrito = models.JSONField(default=dict, blank=True)
+    precios = models.JSONField(default=dict, blank=True)
+    ultima_venta = models.ForeignKey(
+        Venta,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="estados_pantalla_cliente",
+    )
+    actualizado = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "estado de pantalla del cliente"
+        verbose_name_plural = "estados de pantalla del cliente"
+
+    def __str__(self):
+        return f"Pantalla del cliente {self.pk}"
 
 
 class DetalleVenta(models.Model):

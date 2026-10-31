@@ -13,6 +13,11 @@ urlpatterns = [
         name="pantalla_cliente",
     ),
     path(
+        "pantalla-cliente/<uuid:token>/",
+        views.pantalla_cliente_publica,
+        name="pantalla_cliente_publica",
+    ),
+    path(
         "pantalla-cliente/estado/",
         views.estado_pantalla_cliente,
         name="estado_pantalla_cliente",

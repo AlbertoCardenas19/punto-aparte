@@ -5,20 +5,20 @@ from unittest.mock import patch
 from uuid import uuid4
 
 from django.db import close_old_connections, connection
-from django.test import TestCase, TransactionTestCase
+from django.test import Client, TestCase, TransactionTestCase
 from django.urls import reverse
 
 from catalogo.models import MovimientoStock, Producto
 from usuarios.models import Usuario
 
-from .models import DetalleVenta, Venta
+from .models import DetalleVenta, EstadoPantallaCliente, Venta
 from .services import PreciosCambiaron, confirmar_venta
 from .views import (
     CLAVE_CARRITO,
     CLAVE_IDEMPOTENCIA_VENTA,
-    CLAVE_PANTALLA_CLIENTE,
     CLAVE_PRECIOS_CARRITO,
     CLAVE_VERSION_CARRITO,
+    COOKIE_PANTALLA_CLIENTE,
 )
 
 
@@ -379,12 +379,228 @@ class EstadoCarritoTests(TestCase):
     def test_pantalla_cliente_carga_el_carrito_en_la_primera_respuesta(self):
         self._guardar_carrito()
 
-        response = self.client.get(reverse("ventas:pantalla_cliente"))
+        apertura = self.client.get(reverse("ventas:pantalla_cliente"))
+        response = self.client.get(apertura.url)
 
         self.assertContains(response, "Cuaderno")
         self.assertContains(response, "$1.234")
         self.assertContains(response, "data-cliente-compra")
-        self.assertTrue(self.client.session[CLAVE_PANTALLA_CLIENTE])
+        self.assertTrue(self.client.cookies[COOKIE_PANTALLA_CLIENTE].value)
+
+    def test_catalogo_pagina_y_busca_tambien_productos_no_cargados(self):
+        Producto.objects.create(nombre="Zeta especial", precio=900, stock=1)
+        for indice in range(12):
+            Producto.objects.create(
+                nombre=f"Producto {indice:02d}",
+                precio=500,
+                stock=1,
+            )
+
+        pagina = self.client.get(reverse("ventas:caja"))
+        busqueda = self.client.get(
+            reverse("ventas:caja"),
+            {"q": "Zeta especial"},
+        )
+
+        self.assertEqual(len(pagina.context["pagina"].object_list), 12)
+        self.assertNotContains(pagina, "Zeta especial")
+        self.assertContains(busqueda, "Zeta especial")
+
+    def test_compra_actual_usa_limpiar_sin_modal_y_datos_para_totales(self):
+        vacia = self.client.get(reverse("ventas:caja"))
+        self._guardar_carrito()
+        con_producto = self.client.get(reverse("ventas:caja"))
+
+        self.assertContains(vacia, "data-limpiar-carrito")
+        self.assertContains(vacia, "disabled")
+        self.assertContains(con_producto, "Limpiar</button>")
+        self.assertNotContains(con_producto, "modal-vaciar-venta")
+        self.assertContains(con_producto, "data-precio-unitario=\"1234\"")
+        self.assertContains(con_producto, "data-subtotal-linea")
+        self.assertContains(con_producto, "data-total-carrito")
+
+    def test_detalle_conserva_una_sola_nueva_venta_flotante(self):
+        venta = Venta.objects.create(
+            cajero=self.cajero,
+            medio_pago=Venta.MedioPago.EFECTIVO,
+            total=0,
+        )
+
+        response = self.client.get(
+            reverse("ventas:detalle", args=[venta.pk])
+        )
+
+        self.assertContains(response, "Nueva venta", count=1)
+        self.assertContains(response, "pa-venta-flotante")
+
+    def test_menu_tiene_control_independiente_del_logo(self):
+        response = self.client.get(reverse("ventas:caja"))
+
+        self.assertContains(response, "data-menu-principal")
+        self.assertContains(response, 'aria-controls="menu-escritorio menu-movil"')
+        self.assertContains(response, 'id="menu-escritorio"')
+        self.assertContains(response, f'href="{reverse("inicio")}"')
+
+
+class PantallaClienteTests(TestCase):
+    def setUp(self):
+        self.cajero = Usuario.objects.create_user(
+            username="ignorado",
+            first_name="Ana",
+            last_name="Pérez",
+            email="pantalla@example.com",
+            password="clave-segura",
+        )
+        self.otro_cajero = Usuario.objects.create_user(
+            username="ignorado",
+            first_name="Luis",
+            last_name="Soto",
+            email="otro@example.com",
+            password="clave-segura",
+        )
+        self.producto = Producto.objects.create(
+            nombre="Cuaderno pantalla", precio=1500, stock=4
+        )
+        self.client.force_login(self.cajero)
+
+    def _guardar_carrito(self, client=None, producto=None):
+        client = client or self.client
+        producto = producto or self.producto
+        sesion = client.session
+        sesion[CLAVE_CARRITO] = {str(producto.pk): 1}
+        sesion[CLAVE_PRECIOS_CARRITO] = {str(producto.pk): producto.precio}
+        sesion.save()
+
+    def _abrir_pantalla(self, client=None):
+        client = client or self.client
+        apertura = client.get(reverse("ventas:pantalla_cliente"))
+        self.assertEqual(apertura.status_code, 302)
+        pagina = client.get(apertura.url)
+        self.assertEqual(pagina.status_code, 200)
+        estado = EstadoPantallaCliente.objects.get(
+            token=client.cookies[COOKIE_PANTALLA_CLIENTE].value,
+        )
+        return estado, pagina
+
+    def _consultar_estado(self, client, estado):
+        return client.get(
+            reverse("ventas:estado_pantalla_cliente"),
+            HTTP_X_PANTALLA_CLIENTE_TOKEN=str(estado.token),
+        )
+
+    def test_apertura_exige_login_pero_pantalla_autorizada_es_independiente(self):
+        anonimo = Client()
+
+        apertura = anonimo.get(reverse("ventas:pantalla_cliente"))
+
+        self.assertEqual(apertura.status_code, 302)
+        self.assertIn(reverse("login"), apertura.url)
+
+    def test_estado_sigue_disponible_despues_de_cerrar_sesion(self):
+        self._guardar_carrito()
+        estado, pagina = self._abrir_pantalla()
+        self.assertContains(pagina, "Cuaderno pantalla")
+
+        self.client.post(reverse("logout"))
+        response = self._consultar_estado(self.client, estado)
+        recarga = self.client.get(
+            reverse(
+                "ventas:pantalla_cliente_publica",
+                args=[estado.token],
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(recarga.status_code, 200)
+        self.assertEqual(
+            response.json()["productos"][0]["nombre"],
+            "Cuaderno pantalla",
+        )
+
+    def test_otro_usuario_de_la_misma_caja_recupera_la_venta_activa(self):
+        self._guardar_carrito()
+        estado, _ = self._abrir_pantalla()
+        self.client.post(reverse("logout"))
+        self.client.force_login(self.otro_cajero)
+
+        self.client.get(reverse("ventas:caja"))
+
+        self.assertEqual(
+            self.client.session[CLAVE_CARRITO],
+            {str(self.producto.pk): 1},
+        )
+        response = self._consultar_estado(self.client, estado)
+        self.assertEqual(response.json()["total"], 1500)
+
+    def test_tokens_aislan_los_datos_de_dos_cajas(self):
+        segundo_producto = Producto.objects.create(
+            nombre="Lápiz otra caja", precio=700, stock=2
+        )
+        otra_caja = Client()
+        otra_caja.force_login(self.otro_cajero)
+        self._guardar_carrito(self.client, self.producto)
+        self._guardar_carrito(otra_caja, segundo_producto)
+        primer_estado, _ = self._abrir_pantalla(self.client)
+        segundo_estado, _ = self._abrir_pantalla(otra_caja)
+
+        primera_respuesta = self._consultar_estado(self.client, primer_estado)
+        segunda_respuesta = self._consultar_estado(otra_caja, segundo_estado)
+
+        self.assertNotEqual(primer_estado.token, segundo_estado.token)
+        self.assertEqual(
+            primera_respuesta.json()["productos"][0]["nombre"],
+            "Cuaderno pantalla",
+        )
+        self.assertEqual(
+            segunda_respuesta.json()["productos"][0]["nombre"],
+            "Lápiz otra caja",
+        )
+
+    def test_token_ausente_o_invalido_recibe_403(self):
+        estado, _ = self._abrir_pantalla()
+
+        sin_token = self.client.get(
+            reverse("ventas:estado_pantalla_cliente")
+        )
+        otro_token = self.client.get(
+            reverse("ventas:estado_pantalla_cliente"),
+            HTTP_X_PANTALLA_CLIENTE_TOKEN=str(uuid4()),
+        )
+
+        self.assertEqual(sin_token.status_code, 403)
+        self.assertEqual(otro_token.status_code, 403)
+        self.assertTrue(EstadoPantallaCliente.objects.filter(pk=estado.pk).exists())
+
+    def test_sin_venta_muestra_espera_y_estado_vacio(self):
+        estado, pagina = self._abrir_pantalla()
+
+        response = self._consultar_estado(self.client, estado)
+
+        self.assertContains(pagina, "Bienvenido")
+        self.assertContains(pagina, "Reconectando…")
+        self.assertEqual(response.json()["productos"], [])
+        self.assertEqual(response.json()["total"], 0)
+
+    def test_confirmar_venta_limpia_el_canal_y_publica_la_ultima_venta(self):
+        self._guardar_carrito()
+        self.client.get(reverse("ventas:caja"))
+        sesion = self.client.session
+
+        response = self.client.post(reverse("ventas:caja"), {
+            "accion": "confirmar",
+            "medio_pago": Venta.MedioPago.EFECTIVO,
+            "clave_idempotencia": sesion[CLAVE_IDEMPOTENCIA_VENTA],
+            "version_carrito": sesion[CLAVE_VERSION_CARRITO],
+        })
+
+        venta = Venta.objects.get()
+        estado = EstadoPantallaCliente.objects.get(
+            token=self.client.cookies[COOKIE_PANTALLA_CLIENTE].value,
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(estado.carrito, {})
+        self.assertEqual(estado.precios, {})
+        self.assertEqual(estado.ultima_venta, venta)
 
 
 @skipUnless(

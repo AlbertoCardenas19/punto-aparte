@@ -106,14 +106,17 @@
         <div class="pa-caja-panel" data-carrito-panel data-version-carrito="{{ version_carrito }}">
             <div class="pa-caja-compra">
                 <div class="d-flex justify-content-between align-items-center gap-3 pa-caja-resumen">
-                    <h2 class="h4 fw-bold mb-0">Compra actual</h2>
-                    <div class="d-flex flex-wrap justify-content-end align-items-center gap-2">
-                        <span class="small text-secondary">{{ lineas_carrito|length }} producto{{ lineas_carrito|length|pluralize:"s" }}</span>
-                        {% if hay_carrito %}
-                        <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal"
-                            data-bs-target="#modal-vaciar-venta">Vaciar venta</button>
-                        {% endif %}
+                    <div class="d-flex flex-wrap align-items-baseline gap-2">
+                        <h2 class="h4 fw-bold mb-0">Compra actual</h2>
+                        <span class="small text-secondary" data-contador-carrito>{{ lineas_carrito|length }} producto{{ lineas_carrito|length|pluralize:"s" }}</span>
                     </div>
+                    <form method="post" data-limpiar-carrito>
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="vaciar">
+                        <input type="hidden" name="version_carrito" value="{{ version_carrito }}">
+                        <button class="btn btn-sm btn-outline-secondary" type="submit"
+                            {% if not hay_carrito %}disabled{% endif %}>Limpiar</button>
+                    </form>
                 </div>
 
                 {% if problemas_carrito %}
@@ -154,6 +157,7 @@
                                             <input class="pa-cantidad-valor" type="number"
                                                 aria-label="Cantidad de {{ linea.producto.nombre }}"
                                                 name="cantidad_{{ linea.producto.pk }}" value="{{ linea.cantidad }}"
+                                                data-precio-unitario="{{ linea.precio_unitario }}"
                                                 min="0" max="{{ linea.producto.stock }}" step="1" inputmode="numeric">
                                             <button class="pa-cantidad-boton" type="button" data-cantidad-sumar
                                                 aria-label="Sumar una unidad de {{ linea.producto.nombre }}"
@@ -163,7 +167,7 @@
                                         <span class="small text-danger">Producto inactivo</span>
                                         {% endif %}
                                     </td>
-                                    <td data-label="Subtotal">{{ linea.subtotal|clp }}</td>
+                                    <td data-label="Subtotal" data-subtotal-linea>{{ linea.subtotal|clp }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -176,12 +180,12 @@
 
                 <div class="pa-caja-total d-flex justify-content-between fw-bold mb-3">
                     <span>Total</span>
-                    <span>{{ total_carrito|clp }}</span>
+                    <span data-total-carrito>{{ total_carrito|clp }}</span>
                 </div>
 
                 {% if not problemas_carrito %}
                 <button class="btn pa-caja-cobrar btn-lg w-100" type="button" data-bs-toggle="modal"
-                    data-bs-target="#modal-cobro" data-cobrar>Cobrar {{ total_carrito|clp }}</button>
+                    data-bs-target="#modal-cobro" data-cobrar>Cobrar <span data-total-cobro-boton>{{ total_carrito|clp }}</span></button>
                 {% endif %}
                 {% else %}
                 <p class="text-secondary mb-0">
@@ -195,30 +199,6 @@
 </div>
 
 {% if hay_carrito %}
-<div class="modal fade" id="modal-vaciar-venta" tabindex="-1"
-    aria-labelledby="modal-vaciar-venta-titulo" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title h5" id="modal-vaciar-venta-titulo">Vaciar venta</h2>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-            <div class="modal-body">
-                <p class="mb-0">Se quitarán todos los productos de la compra actual.</p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Volver</button>
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="accion" value="vaciar">
-                    <input type="hidden" name="version_carrito" value="{{ version_carrito }}">
-                    <button class="btn btn-outline-danger" type="submit">Confirmar y vaciar</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
 {% if lineas_carrito %}
 {% if not problemas_carrito %}
 <div class="modal fade" id="modal-cobro" tabindex="-1" aria-labelledby="modal-cobro-titulo" aria-hidden="true">
@@ -229,7 +209,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
-                <p>Se registrará una venta por <strong>{{ total_carrito|clp }}</strong>.</p>
+                <p>Se registrará una venta por <strong data-total-cobro>{{ total_carrito|clp }}</strong>.</p>
                 <form id="form-cobro" method="post" data-form-cobro>
                     {% csrf_token %}
                     <input type="hidden" name="accion" value="confirmar">
