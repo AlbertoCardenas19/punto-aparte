@@ -388,8 +388,14 @@ for (const form of document.querySelectorAll('[data-busqueda-viva]')) {
     status.setAttribute('role', 'status');
     form.append(status);
     let timer, controller, version = 0;
+    let inicioRafaga = 0, ultimoCambio = 0;
 
     input.addEventListener('input', () => {
+        const ahora = performance.now();
+        if (!ultimoCambio || ahora - ultimoCambio > 120) {
+            inicioRafaga = ahora;
+        }
+        ultimoCambio = ahora;
         clearTimeout(timer);
         controller?.abort();
         const current = ++version;
@@ -424,12 +430,21 @@ for (const form of document.querySelectorAll('[data-busqueda-viva]')) {
 
     input.addEventListener('keydown', async event => {
         if (event.key !== 'Enter' || !input.value.trim()) return;
+        const ahora = performance.now();
+        const codigo = input.value.trim();
+        const entradaRapida = (
+            ultimoCambio
+            && ahora - ultimoCambio <= 120
+            && ultimoCambio - inicioRafaga <= Math.max(200, codigo.length * 40)
+            && !/\s/.test(codigo)
+        );
+        if (!entradaRapida) return;
         event.preventDefault();
         clearTimeout(timer);
         controller?.abort();
         ++version;
         const url = new URL(form.action || location.href);
-        url.search = new URLSearchParams({q: input.value.trim()}).toString();
+        url.search = new URLSearchParams({q: codigo}).toString();
         const token = document.querySelector('[name="csrfmiddlewaretoken"]')?.value;
         if (!token) {
             location.assign(url);
@@ -438,24 +453,32 @@ for (const form of document.querySelectorAll('[data-busqueda-viva]')) {
         const datos = new FormData();
         datos.append('csrfmiddlewaretoken', token);
         datos.append('accion', 'escanear');
-        datos.append('codigo', input.value.trim());
+        datos.append('codigo', codigo);
         status.textContent = 'Buscando…';
         registrarOperacionCarrito();
         try {
             const {doc, response} = await solicitarActualizacionCarrito(
                 form, datos, url
             );
-            reemplazarResultadosBusqueda(doc, url);
             const codigoEstado = response.headers.get('X-Codigo-Estado');
+            const urlCreacion = response.headers.get('X-Codigo-Creacion-Url');
+            if (codigoEstado === 'crear_producto' && urlCreacion) {
+                location.assign(urlCreacion);
+                return;
+            }
+            reemplazarResultadosBusqueda(doc, url);
             if (codigoEstado === 'agregado') {
                 aplicarActualizacionCarrito(doc);
             }
             const mensajesCodigo = {
-                no_encontrado: 'No se encontró un producto activo con ese código.',
+                no_encontrado: 'Producto no encontrado. Solicita a un Jefe que lo registre',
+                inactivo: 'El producto está inactivo.',
                 sin_stock: 'Producto encontrado, pero está sin stock.',
                 limite_stock: 'Ya agregaste todo el stock disponible.',
             };
-            status.textContent = mensajesCodigo[codigoEstado] || '';
+            status.textContent = response.headers.get('X-Codigo-Mensaje')
+                || mensajesCodigo[codigoEstado]
+                || '';
         } catch (error) {
             status.textContent = 'No se pudo buscar. Usa el botón Buscar para intentarlo nuevamente.';
         } finally {

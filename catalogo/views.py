@@ -11,6 +11,10 @@ from django.utils import timezone
 
 from usuarios.decorators import jefe_required
 from usuarios.models import Usuario
+from ventas.escaneo import (
+    obtener_alta_desde_escaneo,
+    registrar_producto_creado,
+)
 
 from .forms import (
     CategoriaForm,
@@ -197,10 +201,34 @@ def exportar_movimientos_stock(request, formato):
 
 @jefe_required
 def crear_producto(request):
-    form = ProductoForm(request.POST or None)
+    token_escaneo = (
+        request.POST.get("desde_escaneo", "")
+        if request.method == "POST"
+        else request.GET.get("desde_escaneo", "")
+    )
+    alta_desde_escaneo = obtener_alta_desde_escaneo(
+        request,
+        token_escaneo,
+    )
+    inicial = {}
+    if request.method == "GET" and alta_desde_escaneo:
+        inicial["codigo_barras"] = alta_desde_escaneo["codigo"]
+
+    form = ProductoForm(
+        request.POST if request.method == "POST" else None,
+        initial=inicial,
+    )
 
     if request.method == "POST" and form.is_valid():
-        form.save()
+        producto = form.save()
+        if alta_desde_escaneo and registrar_producto_creado(
+            request,
+            token_escaneo,
+            producto.pk,
+        ):
+            return redirect(
+                f"{reverse('ventas:caja')}?producto_creado={token_escaneo}"
+            )
         return redirect("catalogo:lista_productos")
 
     return render(
@@ -210,6 +238,12 @@ def crear_producto(request):
             "form": form,
             "titulo": "Agregar producto",
             "url_cancelar": "catalogo:lista_productos",
+            "url_cancelar_directa": (
+                reverse("ventas:caja") if alta_desde_escaneo else ""
+            ),
+            "token_escaneo": (
+                alta_desde_escaneo["token"] if alta_desde_escaneo else ""
+            ),
         },
     )
 

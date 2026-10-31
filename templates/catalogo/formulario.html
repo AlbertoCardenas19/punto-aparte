@@ -11,11 +11,14 @@
 
                 <form method="post">
                     {% csrf_token %}
+                    {% if token_escaneo %}
+                    <input type="hidden" name="desde_escaneo" value="{{ token_escaneo }}">
+                    {% endif %}
                     {{ form.as_p }}
 
                     <div class="d-flex flex-wrap gap-2 pa-form-acciones">
                         <button class="btn btn-pa" type="submit">Guardar</button>
-                        <a class="btn btn-outline-secondary" href="{% url url_cancelar %}">
+                        <a class="btn btn-outline-secondary" href="{% if url_cancelar_directa %}{{ url_cancelar_directa }}{% else %}{% url url_cancelar %}{% endif %}">
                             Cancelar
                         </a>
                     </div>

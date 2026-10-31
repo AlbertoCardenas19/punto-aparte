@@ -1,3 +1,4 @@
+from urllib.parse import urlencode
 from uuid import UUID, uuid4
 
 from django.conf import settings
@@ -17,6 +18,10 @@ from catalogo.models import Producto
 from usuarios.decorators import jefe_required
 from usuarios.models import Usuario
 
+from .escaneo import (
+    consumir_producto_creado,
+    iniciar_alta_desde_escaneo,
+)
 from .forms import AnulacionVentaForm
 from .models import EstadoPantallaCliente, Venta
 from .services import (
@@ -36,6 +41,14 @@ CLAVE_IDEMPOTENCIA_VENTA = "clave_idempotencia_venta"
 CLAVES_IDEMPOTENCIA_ANULACION = "claves_idempotencia_anulacion"
 COOKIE_PANTALLA_CLIENTE = "punto_aparte_pantalla_cliente"
 EDAD_COOKIE_PANTALLA = 60 * 60 * 24 * 365
+MENSAJES_CODIGO = {
+    "no_encontrado": (
+        "Producto no encontrado. Solicita a un Jefe que lo registre"
+    ),
+    "inactivo": "El producto está inactivo.",
+    "sin_stock": "Producto encontrado, pero está sin stock.",
+    "limite_stock": "Ya agregaste todo el stock disponible.",
+}
 
 
 def _clave_idempotencia_anulacion(request, venta_id):
@@ -169,6 +182,33 @@ def _rotar_version_carrito(request):
     version = str(uuid4())
     request.session[CLAVE_VERSION_CARRITO] = version
     return version
+
+
+def _agregar_unidad_al_carrito(
+    request,
+    producto,
+    carrito,
+    precios_vistos,
+    precios_normales_vistos,
+):
+    if producto.stock <= 0:
+        return "sin_stock", _version_carrito(request)
+
+    id_texto = str(producto.pk)
+    nueva_cantidad = int(carrito.get(id_texto, 0)) + 1
+    if nueva_cantidad > producto.stock:
+        return "limite_stock", _version_carrito(request)
+
+    if id_texto not in carrito:
+        precios_vistos[id_texto] = producto.precio_venta
+        precios_normales_vistos[id_texto] = producto.precio
+        request.session[CLAVE_PRECIOS_CARRITO] = precios_vistos
+        request.session[
+            CLAVE_PRECIOS_NORMALES_CARRITO
+        ] = precios_normales_vistos
+    carrito[id_texto] = nueva_cantidad
+    request.session[CLAVE_CARRITO] = carrito
+    return "agregado", _rotar_version_carrito(request)
 
 
 def _finalizar_carrito_cobrado(request):
@@ -307,6 +347,8 @@ def caja(request):
     clave_idempotencia = _clave_idempotencia_venta(request)
     version_carrito = _version_carrito(request)
     codigo_estado = None
+    codigo_mensaje = None
+    codigo_creacion_url = None
     error_cobro = None
     medio_pago_seleccionado = Venta.MedioPago.EFECTIVO
     solicitud_dinamica = (
@@ -326,6 +368,45 @@ def caja(request):
             actualizar_ultima_venta=venta_confirmada,
         )
         return _agregar_cookie_pantalla(response, estado_pantalla)
+
+    token_producto_creado = request.GET.get("producto_creado", "")
+    if request.method == "GET" and token_producto_creado:
+        producto_id = consumir_producto_creado(
+            request,
+            token_producto_creado,
+        )
+        if producto_id is not None:
+            producto = Producto.objects.filter(
+                pk=producto_id,
+                activo=True,
+            ).first()
+            if producto is None:
+                messages.error(
+                    request,
+                    "El producto registrado ya no está disponible.",
+                )
+            else:
+                estado_agregado, version_carrito = (
+                    _agregar_unidad_al_carrito(
+                        request,
+                        producto,
+                        carrito,
+                        precios_vistos,
+                        precios_normales_vistos,
+                    )
+                )
+                if estado_agregado == "agregado":
+                    messages.success(
+                        request,
+                        "Producto registrado y agregado a la compra.",
+                    )
+                elif estado_agregado == "sin_stock":
+                    messages.info(
+                        request,
+                        "Producto registrado, pero no se agregó porque no "
+                        "tiene stock disponible.",
+                    )
+        return responder(redirect("ventas:caja"))
 
     if request.method == "POST":
         accion = request.POST.get("accion")
@@ -396,35 +477,41 @@ def caja(request):
 
         if accion == "escanear":
             codigo = request.POST.get("codigo", "").strip()
-            producto = Producto.objects.filter(
-                codigo_barras=codigo,
-                activo=True,
-            ).first()
-            if not producto:
-                codigo_estado = "no_encontrado"
-            elif producto.stock <= 0:
-                codigo_estado = "sin_stock"
-            else:
-                id_texto = str(producto.pk)
-                nueva_cantidad = int(carrito.get(id_texto, 0)) + 1
-                if nueva_cantidad <= producto.stock:
-                    if id_texto not in carrito:
-                        precios_vistos[id_texto] = producto.precio_venta
-                        precios_normales_vistos[id_texto] = producto.precio
-                        request.session[
-                            CLAVE_PRECIOS_CARRITO
-                        ] = precios_vistos
-                        request.session[
-                            CLAVE_PRECIOS_NORMALES_CARRITO
-                        ] = precios_normales_vistos
-                    carrito[id_texto] = nueva_cantidad
-                    request.session[CLAVE_CARRITO] = carrito
-                    version_carrito = _rotar_version_carrito(request)
-                    codigo_estado = "agregado"
+            producto = None
+            if codigo:
+                producto = Producto.objects.filter(
+                    codigo_barras=codigo,
+                ).first()
+            if producto is not None and not producto.activo:
+                codigo_estado = "inactivo"
+            elif producto is None:
+                if codigo and request.user.rol == Usuario.Rol.JEFE:
+                    token = iniciar_alta_desde_escaneo(request, codigo)
+                    codigo_estado = "crear_producto"
+                    codigo_creacion_url = (
+                        f"{reverse('catalogo:crear_producto')}?"
+                        f"{urlencode({'desde_escaneo': token})}"
+                    )
                 else:
-                    codigo_estado = "limite_stock"
+                    codigo_estado = "no_encontrado"
+            else:
+                codigo_estado, version_carrito = (
+                    _agregar_unidad_al_carrito(
+                        request,
+                        producto,
+                        carrito,
+                        precios_vistos,
+                        precios_normales_vistos,
+                    )
+                )
+
+            codigo_mensaje = MENSAJES_CODIGO.get(codigo_estado)
 
             if not solicitud_dinamica:
+                if codigo_creacion_url:
+                    return responder(redirect(codigo_creacion_url))
+                if codigo_mensaje:
+                    messages.error(request, codigo_mensaje)
                 return responder(redirect("ventas:caja"))
 
         if accion == "actualizar":
@@ -618,6 +705,10 @@ def caja(request):
     )
     if codigo_estado is not None:
         respuesta.headers["X-Codigo-Estado"] = codigo_estado
+    if codigo_mensaje:
+        respuesta.headers["X-Codigo-Mensaje"] = codigo_mensaje
+    if codigo_creacion_url:
+        respuesta.headers["X-Codigo-Creacion-Url"] = codigo_creacion_url
     return responder(respuesta)
 
 

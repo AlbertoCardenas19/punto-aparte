@@ -1,5 +1,6 @@
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from urllib.parse import parse_qs, urlparse
 from unittest import skipUnless
 from unittest.mock import patch
 from uuid import uuid4
@@ -12,6 +13,7 @@ from catalogo.models import MovimientoStock, Producto
 from usuarios.models import Usuario
 
 from .models import DetalleVenta, EstadoPantallaCliente, Venta
+from .escaneo import CLAVE_ALTA_DESDE_ESCANEO
 from .services import (
     AnulacionNoValida,
     PreciosCambiaron,
@@ -1010,6 +1012,10 @@ class EstadoCarritoTests(TestCase):
         self.assertEqual(no_encontrado.headers["X-Codigo-Estado"], "no_encontrado")
         self.assertEqual(sin_stock.headers["X-Codigo-Estado"], "sin_stock")
         self.assertEqual(agregado.headers["X-Codigo-Estado"], "agregado")
+        self.assertEqual(
+            self.client.session[CLAVE_CARRITO][str(self.producto.pk)],
+            1,
+        )
 
     def test_pantalla_cliente_carga_el_carrito_en_la_primera_respuesta(self):
         self._guardar_carrito()
@@ -1139,6 +1145,225 @@ class EstadoCarritoTests(TestCase):
             response,
             '<span class="small text-secondary" data-contador-carrito>1 producto</span>',
             html=True,
+        )
+
+
+class FlujoCodigoDesconocidoTests(TestCase):
+    def setUp(self):
+        self.jefe = Usuario.objects.create_user(
+            username="ignorado",
+            first_name="Julia",
+            last_name="Jefa",
+            email="jefa-codigos@example.com",
+            password="clave-segura",
+            rol=Usuario.Rol.JEFE,
+        )
+        self.cajero = Usuario.objects.create_user(
+            username="ignorado",
+            first_name="Carlos",
+            last_name="Caja",
+            email="cajero-codigos@example.com",
+            password="clave-segura",
+            rol=Usuario.Rol.CAJERO,
+        )
+        self.producto_carrito = Producto.objects.create(
+            nombre="Producto en compra",
+            codigo_barras="780000000001",
+            precio=1200,
+            stock=3,
+        )
+
+    def _guardar_carrito(self):
+        sesion = self.client.session
+        producto_id = str(self.producto_carrito.pk)
+        sesion[CLAVE_CARRITO] = {producto_id: 1}
+        sesion[CLAVE_PRECIOS_CARRITO] = {producto_id: 1200}
+        sesion[CLAVE_PRECIOS_NORMALES_CARRITO] = {producto_id: 1200}
+        sesion[CLAVE_VERSION_CARRITO] = str(uuid4())
+        sesion.save()
+
+    def _escanear(self, codigo, *, usuario=None):
+        self.client.force_login(usuario or self.jefe)
+        self.client.get(reverse("ventas:caja"))
+        return self.client.post(
+            reverse("ventas:caja"),
+            {
+                "accion": "escanear",
+                "codigo": codigo,
+                "version_carrito": self.client.session[
+                    CLAVE_VERSION_CARRITO
+                ],
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+    @staticmethod
+    def _datos_producto(codigo, token):
+        return {
+            "nombre": "Producto recién registrado",
+            "marca": "",
+            "descripcion": "",
+            "codigo_barras": codigo,
+            "precio": 2500,
+            "oferta_modalidad": "",
+            "oferta_valor": "",
+            "categorias": [],
+            "desde_escaneo": token,
+        }
+
+    def _iniciar_alta(self, codigo):
+        respuesta = self._escanear(codigo)
+        url = respuesta.headers["X-Codigo-Creacion-Url"]
+        token = parse_qs(urlparse(url).query)["desde_escaneo"][0]
+        return respuesta, url, token
+
+    def test_jefe_abre_alta_precargada_y_conserva_el_carrito(self):
+        self.client.force_login(self.jefe)
+        self._guardar_carrito()
+
+        respuesta, url, token = self._iniciar_alta("780000000099")
+        formulario = self.client.get(url)
+
+        self.assertEqual(
+            respuesta.headers["X-Codigo-Estado"],
+            "crear_producto",
+        )
+        self.assertEqual(
+            formulario.context["form"]["codigo_barras"].value(),
+            "780000000099",
+        )
+        self.assertContains(
+            formulario,
+            f'name="desde_escaneo" value="{token}"',
+        )
+        self.assertContains(formulario, f'href="{reverse("ventas:caja")}"')
+        self.assertEqual(
+            self.client.session[CLAVE_CARRITO],
+            {str(self.producto_carrito.pk): 1},
+        )
+
+    def test_cajero_recibe_mensaje_y_no_puede_crear_producto(self):
+        respuesta = self._escanear("780000000088", usuario=self.cajero)
+        datos = self._datos_producto("780000000088", str(uuid4()))
+
+        apertura = self.client.get(reverse("catalogo:crear_producto"))
+        envio = self.client.post(reverse("catalogo:crear_producto"), datos)
+
+        self.assertEqual(
+            respuesta.headers["X-Codigo-Estado"],
+            "no_encontrado",
+        )
+        self.assertEqual(
+            respuesta.headers["X-Codigo-Mensaje"],
+            "Producto no encontrado. Solicita a un Jefe que lo registre",
+        )
+        self.assertNotIn("X-Codigo-Creacion-Url", respuesta.headers)
+        self.assertEqual(apertura.status_code, 403)
+        self.assertEqual(envio.status_code, 403)
+        self.assertFalse(
+            Producto.objects.filter(codigo_barras="780000000088").exists()
+        )
+
+    def test_codigo_de_producto_inactivo_no_inicia_un_alta(self):
+        Producto.objects.create(
+            nombre="Producto inactivo",
+            codigo_barras="780000000077",
+            precio=900,
+            activo=False,
+        )
+
+        respuesta = self._escanear("780000000077")
+
+        self.assertEqual(respuesta.headers["X-Codigo-Estado"], "inactivo")
+        self.assertEqual(
+            respuesta.headers["X-Codigo-Mensaje"],
+            "El producto está inactivo.",
+        )
+        self.assertNotIn("X-Codigo-Creacion-Url", respuesta.headers)
+        self.assertNotIn(CLAVE_ALTA_DESDE_ESCANEO, self.client.session)
+        self.assertEqual(
+            Producto.objects.filter(codigo_barras="780000000077").count(),
+            1,
+        )
+
+    def test_busqueda_textual_sin_resultados_no_inicia_un_alta(self):
+        self.client.force_login(self.jefe)
+
+        respuesta = self.client.get(
+            reverse("ventas:caja"),
+            {"q": "texto que no existe"},
+        )
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertContains(
+            respuesta,
+            "No hay productos que coincidan con «texto que no existe».",
+        )
+        self.assertNotIn(CLAVE_ALTA_DESDE_ESCANEO, self.client.session)
+
+    def test_producto_nuevo_sin_stock_regresa_sin_agregarlo(self):
+        self.client.force_login(self.jefe)
+        self._guardar_carrito()
+        _, _, token = self._iniciar_alta("780000000066")
+
+        guardado = self.client.post(
+            reverse("catalogo:crear_producto"),
+            self._datos_producto("780000000066", token),
+        )
+        regreso = self.client.get(guardado.url, follow=True)
+        producto = Producto.objects.get(codigo_barras="780000000066")
+
+        self.assertRedirects(
+            guardado,
+            f"{reverse('ventas:caja')}?producto_creado={token}",
+            fetch_redirect_response=False,
+        )
+        self.assertNotIn(str(producto.pk), self.client.session[CLAVE_CARRITO])
+        self.assertEqual(
+            self.client.session[CLAVE_CARRITO][
+                str(self.producto_carrito.pk)
+            ],
+            1,
+        )
+        self.assertContains(
+            regreso,
+            "no se agregó porque no tiene stock disponible",
+        )
+
+    def test_producto_con_stock_se_agrega_una_sola_vez_ante_reenvios(self):
+        self.client.force_login(self.jefe)
+        self._guardar_carrito()
+        _, _, token = self._iniciar_alta("780000000055")
+        datos = self._datos_producto("780000000055", token)
+
+        guardado = self.client.post(reverse("catalogo:crear_producto"), datos)
+        producto = Producto.objects.get(codigo_barras="780000000055")
+        producto.stock = 2
+        producto.save(update_fields=["stock"])
+        reenviado = self.client.post(
+            reverse("catalogo:crear_producto"),
+            datos,
+        )
+        primer_regreso = self.client.get(guardado.url, follow=True)
+        segundo_regreso = self.client.get(guardado.url, follow=True)
+
+        self.assertEqual(reenviado.status_code, 200)
+        self.assertIn(
+            "codigo_barras",
+            reenviado.context["form"].errors,
+        )
+        self.assertEqual(
+            primer_regreso.redirect_chain,
+            [(reverse("ventas:caja"), 302)],
+        )
+        self.assertEqual(segundo_regreso.status_code, 200)
+        self.assertEqual(
+            self.client.session[CLAVE_CARRITO][str(producto.pk)],
+            1,
+        )
+        self.assertEqual(
+            Producto.objects.filter(codigo_barras="780000000055").count(),
+            1,
         )
 
 
