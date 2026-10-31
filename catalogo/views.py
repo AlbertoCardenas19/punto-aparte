@@ -1,4 +1,5 @@
 import unicodedata
+from urllib.parse import urlencode
 from uuid import UUID, uuid4
 
 from django.contrib.auth.decorators import login_required
@@ -11,10 +12,6 @@ from django.utils import timezone
 
 from usuarios.decorators import jefe_required
 from usuarios.models import Usuario
-from ventas.escaneo import (
-    obtener_alta_desde_escaneo,
-    registrar_producto_creado,
-)
 
 from .forms import (
     CategoriaForm,
@@ -55,6 +52,43 @@ def lista_productos(request):
         "catalogo/lista_productos.html",
         {"productos": productos.order_by("nombre")},
     )
+
+
+@login_required
+def consultar_codigo_producto(request):
+    codigo = request.GET.get("codigo", "").strip()
+    if not codigo:
+        return JsonResponse(
+            {"estado": "no_encontrado", "mensaje": "Producto no encontrado"},
+            status=400,
+        )
+
+    producto = Producto.objects.filter(codigo_barras=codigo).first()
+    if producto is not None:
+        if not producto.activo:
+            return JsonResponse({
+                "estado": "inactivo",
+                "mensaje": "El producto está inactivo.",
+            })
+        return JsonResponse({
+            "estado": "encontrado",
+            "mensaje": "Producto encontrado.",
+        })
+
+    respuesta = {
+        "estado": "no_encontrado",
+        "mensaje": "Producto no encontrado",
+    }
+    if request.user.rol == Usuario.Rol.JEFE:
+        respuesta["url_alta"] = (
+            f"{reverse('catalogo:crear_producto')}?"
+            f"{urlencode({'codigo_barras': codigo})}"
+        )
+    else:
+        respuesta["mensaje"] = (
+            "Producto no encontrado. Solicita a un Jefe que lo registre"
+        )
+    return JsonResponse(respuesta)
 
 
 def _productos_visibles(usuario):
@@ -201,18 +235,11 @@ def exportar_movimientos_stock(request, formato):
 
 @jefe_required
 def crear_producto(request):
-    token_escaneo = (
-        request.POST.get("desde_escaneo", "")
-        if request.method == "POST"
-        else request.GET.get("desde_escaneo", "")
-    )
-    alta_desde_escaneo = obtener_alta_desde_escaneo(
-        request,
-        token_escaneo,
-    )
     inicial = {}
-    if request.method == "GET" and alta_desde_escaneo:
-        inicial["codigo_barras"] = alta_desde_escaneo["codigo"]
+    if request.method == "GET":
+        codigo_inicial = request.GET.get("codigo_barras", "").strip()
+        if codigo_inicial:
+            inicial["codigo_barras"] = codigo_inicial
 
     form = ProductoForm(
         request.POST if request.method == "POST" else None,
@@ -220,15 +247,7 @@ def crear_producto(request):
     )
 
     if request.method == "POST" and form.is_valid():
-        producto = form.save()
-        if alta_desde_escaneo and registrar_producto_creado(
-            request,
-            token_escaneo,
-            producto.pk,
-        ):
-            return redirect(
-                f"{reverse('ventas:caja')}?producto_creado={token_escaneo}"
-            )
+        form.save()
         return redirect("catalogo:lista_productos")
 
     return render(
@@ -238,12 +257,6 @@ def crear_producto(request):
             "form": form,
             "titulo": "Agregar producto",
             "url_cancelar": "catalogo:lista_productos",
-            "url_cancelar_directa": (
-                reverse("ventas:caja") if alta_desde_escaneo else ""
-            ),
-            "token_escaneo": (
-                alta_desde_escaneo["token"] if alta_desde_escaneo else ""
-            ),
         },
     )
 

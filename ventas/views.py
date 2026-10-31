@@ -1,4 +1,3 @@
-from urllib.parse import urlencode
 from uuid import UUID, uuid4
 
 from django.conf import settings
@@ -18,10 +17,6 @@ from catalogo.models import Producto
 from usuarios.decorators import jefe_required
 from usuarios.models import Usuario
 
-from .escaneo import (
-    consumir_producto_creado,
-    iniciar_alta_desde_escaneo,
-)
 from .forms import AnulacionVentaForm
 from .models import EstadoPantallaCliente, Venta
 from .services import (
@@ -42,9 +37,7 @@ CLAVES_IDEMPOTENCIA_ANULACION = "claves_idempotencia_anulacion"
 COOKIE_PANTALLA_CLIENTE = "punto_aparte_pantalla_cliente"
 EDAD_COOKIE_PANTALLA = 60 * 60 * 24 * 365
 MENSAJES_CODIGO = {
-    "no_encontrado": (
-        "Producto no encontrado. Solicita a un Jefe que lo registre"
-    ),
+    "no_encontrado": "Producto no encontrado",
     "inactivo": "El producto está inactivo.",
     "sin_stock": "Producto encontrado, pero está sin stock.",
     "limite_stock": "Ya agregaste todo el stock disponible.",
@@ -348,7 +341,6 @@ def caja(request):
     version_carrito = _version_carrito(request)
     codigo_estado = None
     codigo_mensaje = None
-    codigo_creacion_url = None
     error_cobro = None
     medio_pago_seleccionado = Venta.MedioPago.EFECTIVO
     solicitud_dinamica = (
@@ -368,45 +360,6 @@ def caja(request):
             actualizar_ultima_venta=venta_confirmada,
         )
         return _agregar_cookie_pantalla(response, estado_pantalla)
-
-    token_producto_creado = request.GET.get("producto_creado", "")
-    if request.method == "GET" and token_producto_creado:
-        producto_id = consumir_producto_creado(
-            request,
-            token_producto_creado,
-        )
-        if producto_id is not None:
-            producto = Producto.objects.filter(
-                pk=producto_id,
-                activo=True,
-            ).first()
-            if producto is None:
-                messages.error(
-                    request,
-                    "El producto registrado ya no está disponible.",
-                )
-            else:
-                estado_agregado, version_carrito = (
-                    _agregar_unidad_al_carrito(
-                        request,
-                        producto,
-                        carrito,
-                        precios_vistos,
-                        precios_normales_vistos,
-                    )
-                )
-                if estado_agregado == "agregado":
-                    messages.success(
-                        request,
-                        "Producto registrado y agregado a la compra.",
-                    )
-                elif estado_agregado == "sin_stock":
-                    messages.info(
-                        request,
-                        "Producto registrado, pero no se agregó porque no "
-                        "tiene stock disponible.",
-                    )
-        return responder(redirect("ventas:caja"))
 
     if request.method == "POST":
         accion = request.POST.get("accion")
@@ -485,15 +438,7 @@ def caja(request):
             if producto is not None and not producto.activo:
                 codigo_estado = "inactivo"
             elif producto is None:
-                if codigo and request.user.rol == Usuario.Rol.JEFE:
-                    token = iniciar_alta_desde_escaneo(request, codigo)
-                    codigo_estado = "crear_producto"
-                    codigo_creacion_url = (
-                        f"{reverse('catalogo:crear_producto')}?"
-                        f"{urlencode({'desde_escaneo': token})}"
-                    )
-                else:
-                    codigo_estado = "no_encontrado"
+                codigo_estado = "no_encontrado"
             else:
                 codigo_estado, version_carrito = (
                     _agregar_unidad_al_carrito(
@@ -508,8 +453,6 @@ def caja(request):
             codigo_mensaje = MENSAJES_CODIGO.get(codigo_estado)
 
             if not solicitud_dinamica:
-                if codigo_creacion_url:
-                    return responder(redirect(codigo_creacion_url))
                 if codigo_mensaje:
                     messages.error(request, codigo_mensaje)
                 return responder(redirect("ventas:caja"))
@@ -707,8 +650,6 @@ def caja(request):
         respuesta.headers["X-Codigo-Estado"] = codigo_estado
     if codigo_mensaje:
         respuesta.headers["X-Codigo-Mensaje"] = codigo_mensaje
-    if codigo_creacion_url:
-        respuesta.headers["X-Codigo-Creacion-Url"] = codigo_creacion_url
     return responder(respuesta)
 
 

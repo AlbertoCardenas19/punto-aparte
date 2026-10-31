@@ -30,6 +30,11 @@ urlpatterns = [
         name="registrar_movimiento_stock",
     ),
     path("productos/nuevo/", views.crear_producto, name="crear_producto"),
+    path(
+        "productos/consultar-codigo/",
+        views.consultar_codigo_producto,
+        name="consultar_codigo_producto",
+    ),
     path("categorias/nueva/", views.crear_categoria, name="crear_categoria"),
     path(
         "categorias/<int:categoria_id>/editar/",

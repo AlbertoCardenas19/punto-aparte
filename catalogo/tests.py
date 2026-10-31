@@ -163,6 +163,151 @@ class IntegridadCatalogoTests(TestCase):
         self.assertEqual(form.cleaned_data["producto"], producto)
 
 
+class EscaneoCatalogoTests(TestCase):
+    def setUp(self):
+        self.jefe = Usuario.objects.create_user(
+            username="ignorado",
+            first_name="Julia",
+            last_name="Jefa",
+            email="jefa-catalogo-codigo@example.com",
+            password="clave-segura",
+            rol=Usuario.Rol.JEFE,
+        )
+        self.cajero = Usuario.objects.create_user(
+            username="ignorado",
+            first_name="Carlos",
+            last_name="Caja",
+            email="cajero-catalogo-codigo@example.com",
+            password="clave-segura",
+            rol=Usuario.Rol.CAJERO,
+        )
+        self.producto = Producto.objects.create(
+            nombre="Código existente",
+            codigo_barras="7801111111111",
+            precio=1000,
+            stock=2,
+        )
+
+    @staticmethod
+    def _datos_producto(codigo):
+        return {
+            "nombre": "Producto desde escaneo",
+            "marca": "",
+            "descripcion": "",
+            "codigo_barras": codigo,
+            "precio": 1500,
+            "oferta_modalidad": "",
+            "oferta_valor": "",
+            "categorias": [],
+        }
+
+    def _consultar(self, codigo, usuario):
+        self.client.force_login(usuario)
+        return self.client.get(
+            reverse("catalogo:consultar_codigo_producto"),
+            {"codigo": codigo},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+    def test_codigo_existente_activo_se_reconoce_sin_abrir_alta(self):
+        respuesta = self._consultar(
+            self.producto.codigo_barras,
+            self.jefe,
+        )
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.json()["estado"], "encontrado")
+        self.assertNotIn("url_alta", respuesta.json())
+
+    def test_codigo_desconocido_abre_alta_precargada_solo_para_jefe(self):
+        codigo = "7803333333333"
+        respuesta = self._consultar(codigo, self.jefe)
+        datos = respuesta.json()
+
+        formulario = self.client.get(datos["url_alta"])
+        guardado = self.client.post(
+            reverse("catalogo:crear_producto"),
+            self._datos_producto(codigo),
+        )
+
+        self.assertEqual(datos["estado"], "no_encontrado")
+        self.assertEqual(datos["mensaje"], "Producto no encontrado")
+        self.assertEqual(
+            formulario.context["form"]["codigo_barras"].value(),
+            codigo,
+        )
+        self.assertRedirects(
+            guardado,
+            reverse("catalogo:lista_productos"),
+        )
+        self.assertTrue(
+            Producto.objects.filter(codigo_barras=codigo).exists()
+        )
+
+    def test_cajero_no_recibe_url_de_alta_ni_puede_usar_formulario(self):
+        codigo = "7804444444444"
+        respuesta = self._consultar(codigo, self.cajero)
+        datos = respuesta.json()
+
+        apertura = self.client.get(reverse("catalogo:crear_producto"))
+        envio = self.client.post(
+            reverse("catalogo:crear_producto"),
+            self._datos_producto(codigo),
+        )
+
+        self.assertEqual(datos["estado"], "no_encontrado")
+        self.assertEqual(
+            datos["mensaje"],
+            "Producto no encontrado. Solicita a un Jefe que lo registre",
+        )
+        self.assertNotIn("url_alta", datos)
+        self.assertEqual(apertura.status_code, 403)
+        self.assertEqual(envio.status_code, 403)
+        self.assertFalse(
+            Producto.objects.filter(codigo_barras=codigo).exists()
+        )
+
+    def test_codigo_inactivo_no_ofrece_alta_ni_crea_duplicado(self):
+        producto = Producto.objects.create(
+            nombre="Código inactivo",
+            codigo_barras="7802222222222",
+            precio=900,
+            activo=False,
+        )
+
+        for usuario in (self.jefe, self.cajero):
+            with self.subTest(rol=usuario.rol):
+                respuesta = self._consultar(
+                    producto.codigo_barras,
+                    usuario,
+                )
+                self.assertEqual(respuesta.json()["estado"], "inactivo")
+                self.assertEqual(
+                    respuesta.json()["mensaje"],
+                    "El producto está inactivo.",
+                )
+                self.assertNotIn("url_alta", respuesta.json())
+
+        self.assertEqual(
+            Producto.objects.filter(
+                codigo_barras=producto.codigo_barras,
+            ).count(),
+            1,
+        )
+
+    def test_busqueda_textual_normal_no_abre_formulario(self):
+        self.client.force_login(self.jefe)
+
+        respuesta = self.client.get(
+            reverse("catalogo:lista_productos"),
+            {"q": "texto corriente sin coincidencias"},
+        )
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertNotIn("Location", respuesta.headers)
+        self.assertContains(respuesta, "data-escaneo-codigo-url")
+
+
 class OfertasProductoTests(TestCase):
     def setUp(self):
         self.jefe = Usuario.objects.create_user(
