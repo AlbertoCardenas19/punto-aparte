@@ -17,6 +17,7 @@ from .views import (
     CLAVE_CARRITO,
     CLAVE_IDEMPOTENCIA_VENTA,
     CLAVE_PRECIOS_CARRITO,
+    CLAVE_PRECIOS_NORMALES_CARRITO,
     CLAVE_VERSION_CARRITO,
     COOKIE_PANTALLA_CLIENTE,
 )
@@ -35,11 +36,12 @@ class ConfirmarVentaTests(TestCase):
             nombre="Cuaderno", precio=1000, stock=10
         )
 
-    def _lineas(self, precio=1000):
+    def _lineas(self, precio=1000, precio_normal=None):
         return [{
             "producto_id": self.producto.pk,
             "cantidad": 2,
             "precio_unitario": precio,
+            "precio_normal": precio if precio_normal is None else precio_normal,
         }]
 
     def test_reintentar_la_misma_clave_no_duplica_venta_ni_stock(self):
@@ -129,8 +131,122 @@ class ConfirmarVentaTests(TestCase):
         detalle = venta.detalles.get()
         self.assertTrue(creada)
         self.assertEqual(venta.total, 2400)
+        self.assertEqual(detalle.precio_normal, 1200)
+        self.assertEqual(detalle.descuento_unitario, 0)
         self.assertEqual(detalle.precio_unitario, 1200)
         self.assertEqual(detalle.subtotal, 2400)
+
+    def test_oferta_porcentaje_redondea_y_conserva_importes_historicos(self):
+        self.producto.precio = 101
+        self.producto.oferta_modalidad = Producto.ModalidadOferta.PORCENTAJE
+        self.producto.oferta_valor = "50"
+        self.producto.oferta_activa = True
+        self.producto.save(update_fields=[
+            "precio",
+            "oferta_modalidad",
+            "oferta_valor",
+            "oferta_activa",
+        ])
+
+        venta, creada = confirmar_venta(
+            lineas=self._lineas(precio=51, precio_normal=101),
+            cajero=self.cajero,
+            medio_pago=Venta.MedioPago.EFECTIVO,
+            clave_idempotencia=uuid4(),
+        )
+        detalle = venta.detalles.get()
+
+        self.assertTrue(creada)
+        self.assertEqual(venta.total, 102)
+        self.assertEqual(detalle.precio_normal, 101)
+        self.assertEqual(detalle.descuento_unitario, 50)
+        self.assertEqual(detalle.precio_unitario, 51)
+        self.assertEqual(detalle.subtotal, 102)
+
+        self.producto.precio = 500
+        self.producto.oferta_valor = "10"
+        self.producto.save(update_fields=["precio", "oferta_valor"])
+        detalle.refresh_from_db()
+        self.assertEqual(
+            (
+                detalle.precio_normal,
+                detalle.descuento_unitario,
+                detalle.precio_unitario,
+                detalle.subtotal,
+            ),
+            (101, 50, 51, 102),
+        )
+
+        self.client.force_login(self.cajero)
+        comprobante = self.client.get(
+            reverse("ventas:detalle", args=[venta.pk])
+        )
+        self.assertContains(comprobante, "Precio normal")
+        self.assertContains(comprobante, "Descuento unitario")
+        self.assertContains(comprobante, "Precio unitario final")
+        self.assertContains(comprobante, "$101")
+        self.assertContains(comprobante, "$50")
+        self.assertContains(comprobante, "$51")
+
+    def test_oferta_precio_final_es_idempotente(self):
+        self.producto.oferta_modalidad = Producto.ModalidadOferta.PRECIO_FINAL
+        self.producto.oferta_valor = "750"
+        self.producto.oferta_activa = True
+        self.producto.save(update_fields=[
+            "oferta_modalidad",
+            "oferta_valor",
+            "oferta_activa",
+        ])
+        clave = uuid4()
+
+        primera, creada = confirmar_venta(
+            lineas=self._lineas(precio=750, precio_normal=1000),
+            cajero=self.cajero,
+            medio_pago=Venta.MedioPago.EFECTIVO,
+            clave_idempotencia=clave,
+        )
+        self.producto.oferta_valor = "500"
+        self.producto.save(update_fields=["oferta_valor"])
+        repetida, creada_repetida = confirmar_venta(
+            lineas=self._lineas(precio=750, precio_normal=1000),
+            cajero=self.cajero,
+            medio_pago=Venta.MedioPago.EFECTIVO,
+            clave_idempotencia=clave,
+        )
+
+        detalle = primera.detalles.get()
+        self.producto.refresh_from_db()
+        self.assertTrue(creada)
+        self.assertFalse(creada_repetida)
+        self.assertEqual(repetida.pk, primera.pk)
+        self.assertEqual(Venta.objects.count(), 1)
+        self.assertEqual(detalle.precio_normal, 1000)
+        self.assertEqual(detalle.descuento_unitario, 250)
+        self.assertEqual(detalle.precio_unitario, 750)
+        self.assertEqual(detalle.subtotal, 1500)
+        self.assertEqual(self.producto.stock, 8)
+
+    def test_oferta_inactiva_no_rebaja_la_venta(self):
+        self.producto.oferta_modalidad = Producto.ModalidadOferta.PRECIO_FINAL
+        self.producto.oferta_valor = "600"
+        self.producto.oferta_activa = False
+        self.producto.save(update_fields=[
+            "oferta_modalidad",
+            "oferta_valor",
+            "oferta_activa",
+        ])
+
+        venta, _ = confirmar_venta(
+            lineas=self._lineas(),
+            cajero=self.cajero,
+            medio_pago=Venta.MedioPago.EFECTIVO,
+            clave_idempotencia=uuid4(),
+        )
+
+        detalle = venta.detalles.get()
+        self.assertEqual(detalle.precio_normal, 1000)
+        self.assertEqual(detalle.descuento_unitario, 0)
+        self.assertEqual(detalle.precio_unitario, 1000)
 
     def test_reenviar_el_formulario_devuelve_la_venta_existente(self):
         self.client.force_login(self.cajero)
@@ -200,6 +316,100 @@ class ConfirmarVentaTests(TestCase):
             version,
         )
 
+    def test_activar_oferta_con_carrito_abierto_exige_confirmar_de_nuevo(self):
+        self.client.force_login(self.cajero)
+        clave = str(uuid4())
+        version = str(uuid4())
+        producto_id = str(self.producto.pk)
+        sesion = self.client.session
+        sesion[CLAVE_CARRITO] = {producto_id: 2}
+        sesion[CLAVE_PRECIOS_CARRITO] = {producto_id: 1000}
+        sesion[CLAVE_PRECIOS_NORMALES_CARRITO] = {producto_id: 1000}
+        sesion[CLAVE_IDEMPOTENCIA_VENTA] = clave
+        sesion[CLAVE_VERSION_CARRITO] = version
+        sesion.save()
+        self.producto.oferta_modalidad = Producto.ModalidadOferta.PORCENTAJE
+        self.producto.oferta_valor = "25"
+        self.producto.oferta_activa = True
+        self.producto.save(update_fields=[
+            "oferta_modalidad",
+            "oferta_valor",
+            "oferta_activa",
+        ])
+
+        primera = self.client.post(reverse("ventas:caja"), {
+            "accion": "confirmar",
+            "medio_pago": Venta.MedioPago.EFECTIVO,
+            "clave_idempotencia": clave,
+            "version_carrito": version,
+        })
+
+        self.assertEqual(primera.status_code, 200)
+        self.assertContains(primera, "Uno o más precios cambiaron")
+        self.assertContains(primera, "Normal:")
+        self.assertContains(primera, "Oferta:")
+        self.assertContains(primera, "$1.500")
+        self.assertFalse(Venta.objects.exists())
+        sesion = self.client.session
+        self.assertEqual(sesion[CLAVE_PRECIOS_CARRITO], {producto_id: 750})
+        self.assertEqual(
+            sesion[CLAVE_PRECIOS_NORMALES_CARRITO],
+            {producto_id: 1000},
+        )
+        self.assertNotEqual(sesion[CLAVE_VERSION_CARRITO], version)
+
+        segunda = self.client.post(reverse("ventas:caja"), {
+            "accion": "confirmar",
+            "medio_pago": Venta.MedioPago.EFECTIVO,
+            "clave_idempotencia": clave,
+            "version_carrito": sesion[CLAVE_VERSION_CARRITO],
+        })
+
+        self.assertEqual(segunda.status_code, 302)
+        self.assertEqual(Venta.objects.get().total, 1500)
+
+    def test_cambio_precio_normal_con_oferta_fija_exige_reconfirmar(self):
+        self.client.force_login(self.cajero)
+        self.producto.oferta_modalidad = Producto.ModalidadOferta.PRECIO_FINAL
+        self.producto.oferta_valor = "800"
+        self.producto.oferta_activa = True
+        self.producto.save(update_fields=[
+            "oferta_modalidad",
+            "oferta_valor",
+            "oferta_activa",
+        ])
+        clave = str(uuid4())
+        version = str(uuid4())
+        producto_id = str(self.producto.pk)
+        sesion = self.client.session
+        sesion[CLAVE_CARRITO] = {producto_id: 1}
+        sesion[CLAVE_PRECIOS_CARRITO] = {producto_id: 800}
+        sesion[CLAVE_PRECIOS_NORMALES_CARRITO] = {producto_id: 1000}
+        sesion[CLAVE_IDEMPOTENCIA_VENTA] = clave
+        sesion[CLAVE_VERSION_CARRITO] = version
+        sesion.save()
+        self.producto.precio = 1200
+        self.producto.save(update_fields=["precio"])
+
+        respuesta = self.client.post(reverse("ventas:caja"), {
+            "accion": "confirmar",
+            "medio_pago": Venta.MedioPago.EFECTIVO,
+            "clave_idempotencia": clave,
+            "version_carrito": version,
+        })
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertContains(respuesta, "Uno o más precios cambiaron")
+        self.assertFalse(Venta.objects.exists())
+        self.assertEqual(
+            self.client.session[CLAVE_PRECIOS_CARRITO],
+            {producto_id: 800},
+        )
+        self.assertEqual(
+            self.client.session[CLAVE_PRECIOS_NORMALES_CARRITO],
+            {producto_id: 1200},
+        )
+
     def test_venta_existente_con_clave_actual_limpia_y_rota_el_carrito(self):
         self.client.force_login(self.cajero)
         clave = uuid4()
@@ -232,6 +442,7 @@ class ConfirmarVentaTests(TestCase):
         sesion = self.client.session
         self.assertNotIn(CLAVE_CARRITO, sesion)
         self.assertNotIn(CLAVE_PRECIOS_CARRITO, sesion)
+        self.assertNotIn(CLAVE_PRECIOS_NORMALES_CARRITO, sesion)
         self.assertNotEqual(sesion[CLAVE_IDEMPOTENCIA_VENTA], str(clave))
         self.assertNotEqual(sesion[CLAVE_VERSION_CARRITO], version)
 
@@ -317,7 +528,12 @@ class EstadoCarritoTests(TestCase):
         producto = producto or self.producto
         sesion = self.client.session
         sesion[CLAVE_CARRITO] = {str(producto.pk): 1}
-        sesion[CLAVE_PRECIOS_CARRITO] = {str(producto.pk): producto.precio}
+        sesion[CLAVE_PRECIOS_CARRITO] = {
+            str(producto.pk): producto.precio_venta,
+        }
+        sesion[CLAVE_PRECIOS_NORMALES_CARRITO] = {
+            str(producto.pk): producto.precio,
+        }
         sesion.save()
 
     def test_producto_inactivo_permanece_visible_y_bloquea_cobro(self):
@@ -421,6 +637,28 @@ class EstadoCarritoTests(TestCase):
         self.assertContains(con_producto, "data-carrito-cuerpo")
         self.assertContains(con_producto, "data-cobro-accion")
 
+    def test_nueva_venta_muestra_precio_normal_y_oferta(self):
+        self.producto.oferta_modalidad = Producto.ModalidadOferta.PRECIO_FINAL
+        self.producto.oferta_valor = "999"
+        self.producto.oferta_activa = True
+        self.producto.save(update_fields=[
+            "oferta_modalidad",
+            "oferta_valor",
+            "oferta_activa",
+        ])
+
+        catalogo = self.client.get(reverse("ventas:caja"))
+        self._guardar_carrito()
+        carrito = self.client.get(reverse("ventas:caja"))
+
+        self.assertContains(catalogo, "Normal:")
+        self.assertContains(catalogo, "$1.234")
+        self.assertContains(catalogo, "Oferta:")
+        self.assertContains(catalogo, "$999")
+        self.assertContains(carrito, "Normal:")
+        self.assertContains(carrito, "Oferta:")
+        self.assertContains(carrito, "data-precio-unitario=\"999\"")
+
     def test_detalle_conserva_una_sola_nueva_venta_flotante(self):
         venta = Venta.objects.create(
             cajero=self.cajero,
@@ -485,7 +723,12 @@ class PantallaClienteTests(TestCase):
         producto = producto or self.producto
         sesion = client.session
         sesion[CLAVE_CARRITO] = {str(producto.pk): 1}
-        sesion[CLAVE_PRECIOS_CARRITO] = {str(producto.pk): producto.precio}
+        sesion[CLAVE_PRECIOS_CARRITO] = {
+            str(producto.pk): producto.precio_venta,
+        }
+        sesion[CLAVE_PRECIOS_NORMALES_CARRITO] = {
+            str(producto.pk): producto.precio,
+        }
         sesion.save()
 
     def _abrir_pantalla(self, client=None):
@@ -533,6 +776,30 @@ class PantallaClienteTests(TestCase):
             response.json()["productos"][0]["nombre"],
             "Cuaderno pantalla",
         )
+
+    def test_pantalla_muestra_precio_normal_y_precio_de_oferta(self):
+        self.producto.oferta_modalidad = Producto.ModalidadOferta.PRECIO_FINAL
+        self.producto.oferta_valor = "900"
+        self.producto.oferta_activa = True
+        self.producto.save(update_fields=[
+            "oferta_modalidad",
+            "oferta_valor",
+            "oferta_activa",
+        ])
+        self._guardar_carrito()
+
+        estado, pagina = self._abrir_pantalla()
+        response = self._consultar_estado(self.client, estado)
+        producto = response.json()["productos"][0]
+
+        self.assertContains(pagina, "Normal:")
+        self.assertContains(pagina, "$1.500")
+        self.assertContains(pagina, "Oferta:")
+        self.assertContains(pagina, "$900")
+        self.assertEqual(producto["precio_normal"], 1500)
+        self.assertEqual(producto["descuento_unitario"], 600)
+        self.assertEqual(producto["precio_unitario"], 900)
+        self.assertEqual(producto["subtotal"], 900)
 
     def test_otro_usuario_de_la_misma_caja_recupera_la_venta_activa(self):
         self._guardar_carrito()
@@ -617,6 +884,7 @@ class PantallaClienteTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(estado.carrito, {})
         self.assertEqual(estado.precios, {})
+        self.assertEqual(estado.precios_normales, {})
         self.assertEqual(estado.ultima_venta, venta)
 
 

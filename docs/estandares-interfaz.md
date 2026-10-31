@@ -19,7 +19,7 @@ Lee este documento antes de modificar pantallas. Define requisitos aprobados; su
 - Las páginas deben adaptarse a escritorio y móvil, con etiquetas legibles, foco visible y navegación utilizable con teclado. Marca la sección activa de navegación.
 - En tablas con acciones por fila, agrúpalas en un menú desplegable «Acciones». Conserva las acciones y permisos existentes. El menú debe verse completo por encima de la tabla, sin recortes ni desplazamientos para alcanzar sus opciones.
 - Mantén las acciones globales fuera de las filas; no repitas el historial general por producto.
-- En Venta, conserva tarjetas compactas con nombre, precio, estado de stock y botón explícito «Agregar». Las cantidades se modifican en «Compra actual»; en móvil, el carrito puede plegarse, pero el total permanece visible.
+- En Venta, conserva tarjetas compactas con nombre, precio, estado de stock y botón explícito «Agregar». Cuando exista una oferta activa, muestra juntos el precio normal y el precio final de oferta, sin depender solo del color. Las cantidades se modifican en «Compra actual»; en móvil, el carrito puede plegarse, pero el total permanece visible.
 - Usa ventanas modales solo para tareas breves con comportamiento real, como confirmar un cobro en efectivo. No presentes integraciones pendientes como si estuvieran disponibles.
 
 ## Idioma, mensajes y errores

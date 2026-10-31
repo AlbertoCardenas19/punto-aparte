@@ -163,6 +163,145 @@ class IntegridadCatalogoTests(TestCase):
         self.assertEqual(form.cleaned_data["producto"], producto)
 
 
+class OfertasProductoTests(TestCase):
+    def setUp(self):
+        self.jefe = Usuario.objects.create_user(
+            username="ignorado",
+            first_name="Julia",
+            last_name="Jefa",
+            email="ofertas-jefe@example.com",
+            password="clave-segura",
+            rol=Usuario.Rol.JEFE,
+        )
+        self.cajero = Usuario.objects.create_user(
+            username="ignorado",
+            first_name="Carlos",
+            last_name="Caja",
+            email="ofertas-caja@example.com",
+            password="clave-segura",
+            rol=Usuario.Rol.CAJERO,
+        )
+
+    def _datos_producto(self, **cambios):
+        datos = {
+            "nombre": "Cuaderno oferta",
+            "marca": "",
+            "descripcion": "",
+            "codigo_barras": "",
+            "precio": 1000,
+            "oferta_modalidad": "",
+            "oferta_valor": "",
+            "categorias": [],
+        }
+        datos.update(cambios)
+        return datos
+
+    def test_porcentaje_activo_redondea_al_peso_mas_cercano(self):
+        producto = Producto(
+            nombre="Lápiz oferta",
+            precio=101,
+            oferta_modalidad=Producto.ModalidadOferta.PORCENTAJE,
+            oferta_valor="50.00",
+            oferta_activa=True,
+        )
+
+        producto.full_clean()
+
+        self.assertEqual(producto.precio_venta, 51)
+        self.assertEqual(producto.descuento_oferta, 50)
+        self.assertTrue(producto.tiene_oferta_activa)
+
+    def test_precio_final_activo_e_inactivo(self):
+        producto = Producto(
+            nombre="Libro oferta",
+            precio=1200,
+            oferta_modalidad=Producto.ModalidadOferta.PRECIO_FINAL,
+            oferta_valor="799.00",
+            oferta_activa=True,
+        )
+        producto.full_clean()
+        self.assertEqual(producto.precio_venta, 799)
+
+        producto.oferta_activa = False
+        producto.full_clean()
+        self.assertEqual(producto.precio_venta, 1200)
+
+    def test_formulario_rechaza_porcentaje_y_precio_promocional_invalidos(self):
+        porcentaje = ProductoForm(self._datos_producto(
+            oferta_modalidad=Producto.ModalidadOferta.PORCENTAJE,
+            oferta_valor="101",
+            oferta_activa="on",
+        ))
+        precio_final = ProductoForm(self._datos_producto(
+            oferta_modalidad=Producto.ModalidadOferta.PRECIO_FINAL,
+            oferta_valor="1000",
+            oferta_activa="on",
+        ))
+
+        self.assertFalse(porcentaje.is_valid())
+        self.assertIn("menor o igual que 100", porcentaje.errors["oferta_valor"][0])
+        self.assertFalse(precio_final.is_valid())
+        self.assertIn("menor que el precio normal", precio_final.errors["oferta_valor"][0])
+
+    def test_cambio_de_precio_no_puede_invalidar_oferta_fija(self):
+        producto = Producto.objects.create(
+            nombre="Agenda oferta",
+            precio=1000,
+            oferta_modalidad=Producto.ModalidadOferta.PRECIO_FINAL,
+            oferta_valor="800",
+            oferta_activa=True,
+        )
+        form = ProductoForm(
+            self._datos_producto(
+                nombre=producto.nombre,
+                precio=700,
+                oferta_modalidad=Producto.ModalidadOferta.PRECIO_FINAL,
+                oferta_valor="800",
+                oferta_activa="on",
+            ),
+            instance=producto,
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("menor que el precio normal", form.errors["oferta_valor"][0])
+        producto.refresh_from_db()
+        self.assertEqual(producto.precio, 1000)
+
+    def test_solo_jefe_puede_configurar_y_cajero_ve_precio_resultante(self):
+        self.client.force_login(self.jefe)
+        creacion = self.client.post(
+            reverse("catalogo:crear_producto"),
+            self._datos_producto(
+                oferta_modalidad=Producto.ModalidadOferta.PORCENTAJE,
+                oferta_valor="20",
+                oferta_activa="on",
+            ),
+        )
+        producto = Producto.objects.get(nombre="Cuaderno oferta")
+        self.assertEqual(creacion.status_code, 302)
+        self.assertTrue(producto.oferta_activa)
+        self.assertEqual(producto.precio_venta, 800)
+
+        self.client.force_login(self.cajero)
+        edicion = self.client.post(
+            reverse("catalogo:editar_producto", args=[producto.pk]),
+            self._datos_producto(
+                precio=1000,
+                oferta_modalidad=Producto.ModalidadOferta.PRECIO_FINAL,
+                oferta_valor="500",
+                oferta_activa="on",
+            ),
+        )
+        listado = self.client.get(reverse("catalogo:lista_productos"))
+
+        self.assertEqual(edicion.status_code, 403)
+        producto.refresh_from_db()
+        self.assertEqual(producto.precio_venta, 800)
+        self.assertContains(listado, "$800")
+        self.assertNotContains(listado, "$1.000")
+        self.assertNotContains(listado, "Porcentaje de descuento")
+
+
 class ExportacionesCatalogoTests(TestCase):
     def setUp(self):
         self.jefe = Usuario.objects.create_user(

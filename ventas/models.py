@@ -50,6 +50,7 @@ class EstadoPantallaCliente(models.Model):
     token = models.UUIDField(default=uuid4, unique=True, editable=False)
     carrito = models.JSONField(default=dict, blank=True)
     precios = models.JSONField(default=dict, blank=True)
+    precios_normales = models.JSONField(default=dict, blank=True)
     ultima_venta = models.ForeignKey(
         Venta,
         on_delete=models.SET_NULL,
@@ -82,6 +83,8 @@ class DetalleVenta(models.Model):
     cantidad = models.PositiveIntegerField(
         validators=[MinValueValidator(1)],
     )
+    precio_normal = models.PositiveIntegerField()
+    descuento_unitario = models.PositiveIntegerField(default=0)
     precio_unitario = models.PositiveIntegerField()
     subtotal = models.PositiveIntegerField()
 

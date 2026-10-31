@@ -56,7 +56,12 @@
                     <td class="all fw-semibold" data-search="{{ producto.nombre }} {{ producto.descripcion }} {{ producto.marca }} {{ producto.codigo_barras|default_if_none:'' }} {% for categoria in producto.categorias.all %}{{ categoria.nombre }} {% endfor %}">
                         {{ producto.nombre }}
                     </td>
-                    <td data-order="{{ producto.precio }}">{{ producto.precio|clp }}</td>
+                    <td data-order="{{ producto.precio_venta }}">
+                        {{ producto.precio_venta|clp }}
+                        {% if producto.tiene_oferta_activa %}
+                        <span class="badge text-bg-primary ms-1">Oferta</span>
+                        {% endif %}
+                    </td>
                     <td data-order="{{ producto.stock }}">
                         {% if producto.stock == 0 %}
                         {% include "includes/sin_stock.html" %}

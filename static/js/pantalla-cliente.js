@@ -27,14 +27,33 @@ function actualizarPantalla(datos) {
         for (const [etiqueta, valor] of [
             ['Producto', producto.nombre],
             ['Cantidad', producto.cantidad],
-            ['Precio unitario', formatearClp(producto.precio_unitario)],
-            ['Total', formatearClp(producto.subtotal)],
         ]) {
             const celda = document.createElement('td');
             celda.dataset.label = etiqueta;
             celda.textContent = valor;
             fila.append(celda);
         }
+        const precio = document.createElement('td');
+        precio.dataset.label = 'Precio unitario';
+        if (producto.descuento_unitario > 0) {
+            const normal = document.createElement('span');
+            normal.className = 'pa-cliente-precio-normal';
+            normal.append('Normal: ');
+            const precioNormal = document.createElement('del');
+            precioNormal.textContent = formatearClp(producto.precio_normal);
+            normal.append(precioNormal);
+            const oferta = document.createElement('strong');
+            oferta.className = 'pa-cliente-precio-oferta';
+            oferta.textContent = `Oferta: ${formatearClp(producto.precio_unitario)}`;
+            precio.append(normal, oferta);
+        } else {
+            precio.textContent = formatearClp(producto.precio_unitario);
+        }
+        fila.append(precio);
+        const subtotal = document.createElement('td');
+        subtotal.dataset.label = 'Total';
+        subtotal.textContent = formatearClp(producto.subtotal);
+        fila.append(subtotal);
         productos.append(fila);
     }
     total.textContent = formatearClp(datos.total);

@@ -37,10 +37,31 @@ class ProductoForm(BootstrapFormMixin, forms.ModelForm):
             "descripcion",
             "codigo_barras",
             "precio",
+            "oferta_modalidad",
+            "oferta_valor",
+            "oferta_activa",
             "categorias",
         )
         widgets = {
             "categorias": forms.SelectMultiple(attrs={"size": "6"}),
+            "oferta_valor": forms.NumberInput(attrs={
+                "min": "0",
+                "step": "0.01",
+                "inputmode": "decimal",
+            }),
+        }
+        help_texts = {
+            "oferta_modalidad": (
+                "Elige porcentaje o un precio final. Déjalo vacío si no "
+                "configurarás una oferta."
+            ),
+            "oferta_valor": (
+                "Para porcentaje admite hasta dos decimales; para precio final "
+                "usa pesos enteros."
+            ),
+            "oferta_activa": (
+                "Al activarla, Nueva venta aplicará automáticamente el precio rebajado."
+            ),
         }
 
     def __init__(self, *args, **kwargs):

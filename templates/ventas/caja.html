@@ -34,7 +34,14 @@
                 <h2 class="h6 fw-bold">
                     {{ producto.nombre }}{% if producto.marca %} · {{ producto.marca }}{% endif %}
                 </h2>
-                <p class="pa-caja-precio">{{ producto.precio|clp }}</p>
+                <p class="pa-caja-precio">
+                    {% if producto.tiene_oferta_activa %}
+                    <span class="pa-precio-normal">Normal: <del>{{ producto.precio|clp }}</del></span>
+                    <span class="pa-precio-oferta">Oferta: <strong>{{ producto.precio_venta|clp }}</strong></span>
+                    {% else %}
+                    <span>{{ producto.precio|clp }}</span>
+                    {% endif %}
+                </p>
                 <div class="pa-caja-indicadores">
                     <span class="pa-stock-disponible">Stock disponible: {{ producto.stock }}</span>
                     {% if producto.stock == 0 %}{% include "includes/sin_stock.html" %}{% endif %}
@@ -151,7 +158,14 @@
                                         <td data-label="Producto">
                                             {{ linea.producto.nombre }}
                                         </td>
-                                        <td data-label="Precio unitario">{{ linea.precio_unitario|clp }}</td>
+                                        <td data-label="Precio unitario">
+                                            {% if linea.descuento_unitario %}
+                                            <span class="pa-precio-normal">Normal: <del>{{ linea.precio_normal|clp }}</del></span>
+                                            <span class="pa-precio-oferta">Oferta: <strong>{{ linea.precio_unitario|clp }}</strong></span>
+                                            {% else %}
+                                            {{ linea.precio_unitario|clp }}
+                                            {% endif %}
+                                        </td>
                                         <td data-label="Unid.">
                                             <div class="pa-cantidad-control">
                                                 <button class="pa-cantidad-boton" type="button" data-cantidad-restar

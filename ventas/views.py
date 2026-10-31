@@ -21,14 +21,20 @@ from .services import PreciosCambiaron, VentaNoValida, confirmar_venta
 
 CLAVE_CARRITO = "carrito_venta"
 CLAVE_PRECIOS_CARRITO = "precios_carrito_venta"
+CLAVE_PRECIOS_NORMALES_CARRITO = "precios_normales_carrito_venta"
 CLAVE_VERSION_CARRITO = "version_carrito_venta"
 CLAVE_IDEMPOTENCIA_VENTA = "clave_idempotencia_venta"
 COOKIE_PANTALLA_CLIENTE = "punto_aparte_pantalla_cliente"
 EDAD_COOKIE_PANTALLA = 60 * 60 * 24 * 365
 
 
-def _lineas_del_carrito(carrito, precios_vistos=None):
+def _lineas_del_carrito(
+    carrito,
+    precios_vistos=None,
+    precios_normales_vistos=None,
+):
     precios_vistos = precios_vistos or {}
+    precios_normales_vistos = precios_normales_vistos or {}
     productos = {
         str(producto.pk): producto
         for producto in Producto.objects.filter(pk__in=carrito.keys())
@@ -47,13 +53,19 @@ def _lineas_del_carrito(carrito, precios_vistos=None):
             continue
         cantidad = int(cantidad_guardada)
         precio_unitario = int(
-            precios_vistos.get(producto_id, producto.precio)
+            precios_vistos.get(producto_id, producto.precio_venta)
         )
+        precio_normal = int(
+            precios_normales_vistos.get(producto_id, producto.precio)
+        )
+        descuento_unitario = max(0, precio_normal - precio_unitario)
         subtotal = precio_unitario * cantidad
         total += subtotal
         lineas.append({
             "producto": producto,
             "cantidad": cantidad,
+            "precio_normal": precio_normal,
+            "descuento_unitario": descuento_unitario,
             "precio_unitario": precio_unitario,
             "subtotal": subtotal,
             "disponible": producto.activo,
@@ -77,7 +89,7 @@ def _asegurar_precios_carrito(request, carrito):
         try:
             int(precios[producto_id])
         except (KeyError, TypeError, ValueError):
-            precios[producto_id] = producto.precio
+            precios[producto_id] = producto.precio_venta
             cambio = True
 
     for producto_id in set(precios) - set(carrito):
@@ -86,6 +98,28 @@ def _asegurar_precios_carrito(request, carrito):
 
     if cambio:
         request.session[CLAVE_PRECIOS_CARRITO] = precios
+    return precios
+
+
+def _asegurar_precios_normales_carrito(request, carrito):
+    precios = request.session.get(CLAVE_PRECIOS_NORMALES_CARRITO, {})
+    precios = dict(precios) if isinstance(precios, dict) else {}
+    cambio = False
+
+    for producto in Producto.objects.filter(pk__in=carrito.keys()):
+        producto_id = str(producto.pk)
+        try:
+            int(precios[producto_id])
+        except (KeyError, TypeError, ValueError):
+            precios[producto_id] = producto.precio
+            cambio = True
+
+    for producto_id in set(precios) - set(carrito):
+        precios.pop(producto_id)
+        cambio = True
+
+    if cambio:
+        request.session[CLAVE_PRECIOS_NORMALES_CARRITO] = precios
     return precios
 
 
@@ -118,6 +152,7 @@ def _rotar_version_carrito(request):
 def _finalizar_carrito_cobrado(request):
     request.session.pop(CLAVE_CARRITO, None)
     request.session.pop(CLAVE_PRECIOS_CARRITO, None)
+    request.session.pop(CLAVE_PRECIOS_NORMALES_CARRITO, None)
     request.session[CLAVE_IDEMPOTENCIA_VENTA] = str(uuid4())
     return _rotar_version_carrito(request)
 
@@ -138,6 +173,9 @@ def _estado_pantalla_de_caja(request):
     if CLAVE_CARRITO not in request.session and estado.carrito:
         request.session[CLAVE_CARRITO] = dict(estado.carrito)
         request.session[CLAVE_PRECIOS_CARRITO] = dict(estado.precios)
+        request.session[CLAVE_PRECIOS_NORMALES_CARRITO] = dict(
+            estado.precios_normales
+        )
     return estado
 
 
@@ -158,18 +196,23 @@ def _sincronizar_estado_pantalla(
     *,
     carrito,
     precios,
+    precios_normales,
     ultima_venta=None,
     actualizar_ultima_venta=False,
 ):
     campos = []
     carrito = dict(carrito)
     precios = dict(precios)
+    precios_normales = dict(precios_normales)
     if estado.carrito != carrito:
         estado.carrito = carrito
         campos.append("carrito")
     if estado.precios != precios:
         estado.precios = precios
         campos.append("precios")
+    if estado.precios_normales != precios_normales:
+        estado.precios_normales = precios_normales
+        campos.append("precios_normales")
     if actualizar_ultima_venta and estado.ultima_venta_id != getattr(
         ultima_venta, "pk", None
     ):
@@ -235,6 +278,10 @@ def caja(request):
     estado_pantalla = _estado_pantalla_de_caja(request)
     carrito = request.session.get(CLAVE_CARRITO, {})
     precios_vistos = _asegurar_precios_carrito(request, carrito)
+    precios_normales_vistos = _asegurar_precios_normales_carrito(
+        request,
+        carrito,
+    )
     clave_idempotencia = _clave_idempotencia_venta(request)
     version_carrito = _version_carrito(request)
     codigo_estado = None
@@ -249,6 +296,10 @@ def caja(request):
             estado_pantalla,
             carrito=request.session.get(CLAVE_CARRITO, {}),
             precios=request.session.get(CLAVE_PRECIOS_CARRITO, {}),
+            precios_normales=request.session.get(
+                CLAVE_PRECIOS_NORMALES_CARRITO,
+                {},
+            ),
             ultima_venta=ultima_venta,
             actualizar_ultima_venta=venta_confirmada,
         )
@@ -271,6 +322,7 @@ def caja(request):
         if accion == "vaciar":
             request.session.pop(CLAVE_CARRITO, None)
             request.session.pop(CLAVE_PRECIOS_CARRITO, None)
+            request.session.pop(CLAVE_PRECIOS_NORMALES_CARRITO, None)
             request.session[CLAVE_IDEMPOTENCIA_VENTA] = str(uuid4())
             _rotar_version_carrito(request)
             return responder(redirect(f"{request.path}?carrito=abierto"))
@@ -305,10 +357,14 @@ def caja(request):
                         )
                     else:
                         if id_texto not in carrito:
-                            precios_vistos[id_texto] = producto.precio
+                            precios_vistos[id_texto] = producto.precio_venta
+                            precios_normales_vistos[id_texto] = producto.precio
                             request.session[
                                 CLAVE_PRECIOS_CARRITO
                             ] = precios_vistos
+                            request.session[
+                                CLAVE_PRECIOS_NORMALES_CARRITO
+                            ] = precios_normales_vistos
                         carrito[id_texto] = nueva_cantidad
                         request.session[CLAVE_CARRITO] = carrito
                         version_carrito = _rotar_version_carrito(request)
@@ -331,10 +387,14 @@ def caja(request):
                 nueva_cantidad = int(carrito.get(id_texto, 0)) + 1
                 if nueva_cantidad <= producto.stock:
                     if id_texto not in carrito:
-                        precios_vistos[id_texto] = producto.precio
+                        precios_vistos[id_texto] = producto.precio_venta
+                        precios_normales_vistos[id_texto] = producto.precio
                         request.session[
                             CLAVE_PRECIOS_CARRITO
                         ] = precios_vistos
+                        request.session[
+                            CLAVE_PRECIOS_NORMALES_CARRITO
+                        ] = precios_normales_vistos
                     carrito[id_texto] = nueva_cantidad
                     request.session[CLAVE_CARRITO] = carrito
                     version_carrito = _rotar_version_carrito(request)
@@ -348,6 +408,7 @@ def caja(request):
         if accion == "actualizar":
             carrito_anterior = dict(carrito)
             precios_anteriores = dict(precios_vistos)
+            precios_normales_anteriores = dict(precios_normales_vistos)
             for id_texto in list(carrito):
                 try:
                     cantidad = int(request.POST.get(
@@ -364,6 +425,7 @@ def caja(request):
                 if cantidad == 0:
                     carrito.pop(id_texto)
                     precios_vistos.pop(id_texto, None)
+                    precios_normales_vistos.pop(id_texto, None)
                     continue
 
                 producto = Producto.objects.filter(pk=id_texto).first()
@@ -389,9 +451,16 @@ def caja(request):
                 else:
                     carrito[id_texto] = cantidad
 
-            if carrito != carrito_anterior or precios_vistos != precios_anteriores:
+            if (
+                carrito != carrito_anterior
+                or precios_vistos != precios_anteriores
+                or precios_normales_vistos != precios_normales_anteriores
+            ):
                 request.session[CLAVE_CARRITO] = carrito
                 request.session[CLAVE_PRECIOS_CARRITO] = precios_vistos
+                request.session[
+                    CLAVE_PRECIOS_NORMALES_CARRITO
+                ] = precios_normales_vistos
                 version_carrito = _rotar_version_carrito(request)
             if not solicitud_dinamica:
                 return responder(redirect("ventas:caja"))
@@ -409,6 +478,7 @@ def caja(request):
                     "producto_id": producto_id,
                     "cantidad": cantidad,
                     "precio_unitario": precios_vistos.get(producto_id),
+                    "precio_normal": precios_normales_vistos.get(producto_id),
                 }
                 for producto_id, cantidad in carrito.items()
             ]
@@ -452,9 +522,16 @@ def caja(request):
                 except PreciosCambiaron as error:
                     for producto_id, precio in error.precios_vigentes.items():
                         precios_vistos[str(producto_id)] = precio
+                    for producto_id, precio in (
+                        error.precios_normales_vigentes.items()
+                    ):
+                        precios_normales_vistos[str(producto_id)] = precio
                     request.session[
                         CLAVE_PRECIOS_CARRITO
                     ] = precios_vistos
+                    request.session[
+                        CLAVE_PRECIOS_NORMALES_CARRITO
+                    ] = precios_normales_vistos
                     version_carrito = _rotar_version_carrito(request)
                     error_cobro = str(error)
                 except VentaNoValida as error:
@@ -496,6 +573,7 @@ def caja(request):
     lineas_carrito, total_carrito, problemas_carrito = _lineas_del_carrito(
         carrito,
         precios_vistos,
+        precios_normales_vistos,
     )
 
     respuesta = render(
@@ -530,6 +608,7 @@ def pantalla_cliente(request):
         estado,
         carrito=carrito,
         precios=_asegurar_precios_carrito(request, carrito),
+        precios_normales=_asegurar_precios_normales_carrito(request, carrito),
     )
     return _agregar_cookie_pantalla(
         redirect("ventas:pantalla_cliente_publica", token=estado.token),
@@ -544,6 +623,7 @@ def pantalla_cliente_publica(request, token):
     lineas, total, _ = _lineas_del_carrito(
         carrito,
         estado.precios,
+        estado.precios_normales,
     )
     return render(
         request,
@@ -565,12 +645,15 @@ def estado_pantalla_cliente(request):
     lineas, total, _ = _lineas_del_carrito(
         carrito,
         estado.precios,
+        estado.precios_normales,
     )
     return JsonResponse({
         "productos": [
             {
                 "nombre": linea["producto"].nombre,
                 "cantidad": linea["cantidad"],
+                "precio_normal": linea["precio_normal"],
+                "descuento_unitario": linea["descuento_unitario"],
                 "precio_unitario": linea["precio_unitario"],
                 "subtotal": linea["subtotal"],
             }

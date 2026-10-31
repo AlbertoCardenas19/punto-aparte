@@ -46,7 +46,14 @@
                             <tr>
                                 <td data-label="Producto">{{ linea.producto.nombre }}</td>
                                 <td data-label="Cantidad">{{ linea.cantidad }}</td>
-                                <td data-label="Precio unitario">{{ linea.precio_unitario|clp }}</td>
+                                <td data-label="Precio unitario">
+                                    {% if linea.descuento_unitario %}
+                                    <span class="pa-cliente-precio-normal">Normal: <del>{{ linea.precio_normal|clp }}</del></span>
+                                    <strong class="pa-cliente-precio-oferta">Oferta: {{ linea.precio_unitario|clp }}</strong>
+                                    {% else %}
+                                    {{ linea.precio_unitario|clp }}
+                                    {% endif %}
+                                </td>
                                 <td data-label="Total">{{ linea.subtotal|clp }}</td>
                             </tr>
                             {% endfor %}

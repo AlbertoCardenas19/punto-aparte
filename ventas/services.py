@@ -10,8 +10,9 @@ class VentaNoValida(Exception):
 
 
 class PreciosCambiaron(VentaNoValida):
-    def __init__(self, precios_vigentes):
+    def __init__(self, precios_vigentes, precios_normales_vigentes=None):
         self.precios_vigentes = precios_vigentes
+        self.precios_normales_vigentes = precios_normales_vigentes or {}
         super().__init__(
             "Uno o más precios cambiaron. Actualizamos la compra y el total; "
             "revisa los valores y confirma nuevamente."
@@ -41,12 +42,16 @@ def confirmar_venta(*, lineas, cajero, medio_pago, clave_idempotencia):
 
     cantidades = {}
     precios_vistos = {}
+    precios_normales_vistos = {}
 
     for linea in lineas:
         try:
             producto_id = int(linea["producto_id"])
             cantidad = int(linea["cantidad"])
             precio_visto = int(linea["precio_unitario"])
+            precio_normal_visto = int(
+                linea.get("precio_normal", precio_visto)
+            )
         except (KeyError, TypeError, ValueError):
             raise VentaNoValida(
                 "Hay un producto, una cantidad o un precio no válido."
@@ -54,17 +59,21 @@ def confirmar_venta(*, lineas, cajero, medio_pago, clave_idempotencia):
 
         if producto_id <= 0 or cantidad <= 0:
             raise VentaNoValida("La cantidad debe ser mayor que cero.")
-        if precio_visto < 0:
+        if precio_visto < 0 or precio_normal_visto < 0:
             raise VentaNoValida("El precio de la venta no es válido.")
 
         if (
             producto_id in precios_vistos
-            and precios_vistos[producto_id] != precio_visto
+            and (
+                precios_vistos[producto_id] != precio_visto
+                or precios_normales_vistos[producto_id] != precio_normal_visto
+            )
         ):
             raise VentaNoValida("Hay precios inconsistentes en la venta.")
 
         cantidades[producto_id] = cantidades.get(producto_id, 0) + cantidad
         precios_vistos[producto_id] = precio_visto
+        precios_normales_vistos[producto_id] = precio_normal_visto
 
     if not cantidades:
         raise VentaNoValida("Agrega al menos un producto a la venta.")
@@ -98,13 +107,26 @@ def confirmar_venta(*, lineas, cajero, medio_pago, clave_idempotencia):
                 f"Disponible: {producto.stock}."
             )
 
-    precios_vigentes = {
-        producto.pk: producto.precio
+    productos_con_cambio = [
+        producto
         for producto in productos
-        if precios_vistos[producto.pk] != producto.precio
+        if (
+            precios_vistos[producto.pk] != producto.precio_venta
+            or precios_normales_vistos[producto.pk] != producto.precio
+        )
+    ]
+    precios_vigentes = {
+        producto.pk: producto.precio_venta
+        for producto in productos_con_cambio
     }
     if precios_vigentes:
-        raise PreciosCambiaron(precios_vigentes)
+        raise PreciosCambiaron(
+            precios_vigentes,
+            {
+                producto.pk: producto.precio
+                for producto in productos_con_cambio
+            },
+        )
 
     total = sum(
         precios_vistos[producto.pk] * cantidades[producto.pk]
@@ -138,6 +160,10 @@ def confirmar_venta(*, lineas, cajero, medio_pago, clave_idempotencia):
             producto=producto,
             nombre_producto=producto.nombre,
             cantidad=cantidad,
+            precio_normal=producto.precio,
+            descuento_unitario=(
+                producto.precio - precios_vistos[producto.pk]
+            ),
             precio_unitario=precios_vistos[producto.pk],
             subtotal=precios_vistos[producto.pk] * cantidad,
         )

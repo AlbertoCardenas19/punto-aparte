@@ -273,7 +273,7 @@ def exportar_productos(productos, formato):
             ", ".join(
                 categoria.nombre for categoria in producto.categorias.all()
             ),
-            formatear_clp(producto.precio),
+            formatear_clp(producto.precio_venta),
             producto.stock,
             "Activo" if producto.activo else "Inactivo",
         )

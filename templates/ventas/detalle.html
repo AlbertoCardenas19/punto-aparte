@@ -29,7 +29,9 @@
                             <tr>
                                 <th>Producto</th>
                                 <th>Cantidad</th>
-                                <th>Precio unitario</th>
+                                <th>Precio normal</th>
+                                <th>Descuento unitario</th>
+                                <th>Precio unitario final</th>
                                 <th>Subtotal</th>
                             </tr>
                         </thead>
@@ -38,6 +40,8 @@
                             <tr>
                                 <td>{{ detalle.nombre_producto }}</td>
                                 <td>{{ detalle.cantidad }}</td>
+                                <td>{{ detalle.precio_normal|clp }}</td>
+                                <td>{% if detalle.descuento_unitario %}−{{ detalle.descuento_unitario|clp }}{% else %}{{ detalle.descuento_unitario|clp }}{% endif %}</td>
                                 <td>{{ detalle.precio_unitario|clp }}</td>
                                 <td>{{ detalle.subtotal|clp }}</td>
                             </tr>
@@ -45,7 +49,7 @@
                         </tbody>
                         <tfoot class="pa-venta-total">
                             <tr class="fw-bold">
-                                <td colspan="3" class="text-end">Total</td>
+                                <td colspan="5" class="text-end">Total</td>
                                 <td>{{ venta.total|clp }}</td>
                             </tr>
                         </tfoot>

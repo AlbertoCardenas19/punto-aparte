@@ -50,6 +50,18 @@ Estas son reglas aprobadas; consulta `estado-actual.md` para saber cuáles está
 
 ## Descuentos
 
+### Ofertas por producto
+
+- El Jefe puede configurar una oferta en un producto mediante porcentaje de descuento o precio promocional final.
+- La oferta se activa y desactiva manualmente y no tiene fechas de vigencia.
+- Una oferta activa se aplica automáticamente en Nueva venta y no se combina con otro descuento.
+- Los porcentajes se calculan sobre el precio normal y el resultado se redondea al peso más cercano; los medios pesos se redondean hacia arriba.
+- El precio promocional final se registra en pesos enteros y debe ser menor que el precio normal.
+- Cada detalle de venta conserva precio normal, descuento unitario, precio unitario final y subtotal. Cambiar después el producto o su oferta no altera ventas históricas.
+- Si cambia el precio normal o final mientras el producto está en el carrito, el sistema actualiza los importes y exige una nueva confirmación explícita.
+
+### Cupones y descuentos generales pendientes
+
 - Requieren autorización del dueño.
 - Tienen una fecha de vigencia propia; esto no implica fechas de vencimiento para productos.
 - Cada descuento se usa una vez por cliente y no se combina con otro.
@@ -74,4 +86,4 @@ Estas son reglas aprobadas; consulta `estado-actual.md` para saber cuáles está
 
 - Administración de listas escolares.
 - Fechas de vencimiento o lotes de vencimiento de productos.
-- Suponer que la terminal, facturación electrónica, descuentos o caja diaria ya están implementados: son requisitos, pero la revisión del código indica que siguen pendientes.
+- Suponer que la terminal, facturación electrónica, cupones, descuentos generales o caja diaria ya están implementados: son requisitos, pero siguen pendientes. Las ofertas automáticas por producto sí están definidas por separado.
