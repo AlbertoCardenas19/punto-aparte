@@ -15,7 +15,10 @@ Lee este documento antes de modificar pantallas. Define requisitos aprobados; su
 - Agrupa Productos y Categorías bajo Catálogo; ingresos, ajustes e historial bajo Inventario; y Usuarios bajo Administración, visible solo para Jefe. No muestres enlaces hacia pantallas pendientes o vacías.
 - Mantén tipografía, espaciado, botones, campos, tarjetas, tablas, estados y mensajes coherentes entre acceso, inicio, catálogo, stock, usuarios, caja y detalle de venta.
 - Centraliza estilos comunes en `static/css/punto-aparte.css`; limita los estilos de acceso y caja a sus variantes. Evita duplicar reglas o introducir excepciones de color y tamaño sin propósito.
-- Distingue acciones principales, secundarias y destructivas. Usa tamaños consistentes para funciones equivalentes y controles grandes donde lo requiera la operación de caja.
+- Usa azul oscuro del banner para la acción primaria. Usa blanco o gris claro con borde discreto para acciones secundarias. Reserva el rojo exclusivamente para anular, desactivar o eliminar. Los controles deshabilitados se muestran en gris.
+- Mantén alturas, radios, espaciado, foco visible, estados hover y contraste consistentes y accesibles. Dentro de una misma tarjeta puede existir como máximo un botón primario.
+- En encabezados, deja el título a la izquierda y alinea las acciones a la derecha y a la misma altura. En móvil, permite que las acciones pasen debajo y se apilen cuando no quepan.
+- Dentro de tarjetas, separa visualmente el área de acciones del contenido. En tarjetas del mismo tipo, alinea esas áreas a la misma altura, usa tamaños uniformes y deja separación regular entre botones; en móvil, apílalos cuando sea necesario.
 - Las páginas deben adaptarse a escritorio y móvil, con etiquetas legibles, foco visible y navegación utilizable con teclado. Marca la sección activa de navegación.
 - En tablas con acciones por fila, agrúpalas en un menú desplegable «Acciones». Conserva las acciones y permisos existentes. El menú debe verse completo por encima de la tabla, sin recortes ni desplazamientos para alcanzar sus opciones.
 - Mantén las acciones globales fuera de las filas; no repitas el historial general por producto.

@@ -196,6 +196,25 @@ class OfertasProductoTests(TestCase):
         datos.update(cambios)
         return datos
 
+    def test_ayuda_valor_oferta_depende_de_la_modalidad(self):
+        porcentaje = ProductoForm(self._datos_producto(
+            oferta_modalidad=Producto.ModalidadOferta.PORCENTAJE,
+            oferta_valor="15",
+        ))
+        precio_final = ProductoForm(self._datos_producto(
+            oferta_modalidad=Producto.ModalidadOferta.PRECIO_FINAL,
+            oferta_valor="4990",
+        ))
+
+        self.assertIn(
+            "por ejemplo «15»",
+            porcentaje.fields["oferta_valor"].help_text,
+        )
+        self.assertIn(
+            "por ejemplo «4.990»",
+            precio_final.fields["oferta_valor"].help_text,
+        )
+
     def test_porcentaje_activo_redondea_al_peso_mas_cercano(self):
         producto = Producto(
             nombre="Lápiz oferta",

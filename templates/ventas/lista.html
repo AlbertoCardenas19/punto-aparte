@@ -67,7 +67,7 @@
                     <td>{{ venta.get_medio_pago_display }}</td>
                     <td data-order="{{ venta.total }}">{{ venta.total|clp }}</td>
                     <td><span class="badge {% if venta.estado == 'COMPLETADA' %}text-bg-success{% elif venta.estado == 'ANULADA' %}text-bg-danger{% else %}text-bg-secondary{% endif %}">{{ venta.get_estado_display }}</span></td>
-                    <td class="all"><a class="btn btn-sm btn-outline-primary" href="{% url 'ventas:detalle' venta.pk %}">Ver detalle</a></td>
+                    <td class="all"><a class="btn btn-sm btn-outline-secondary" href="{% url 'ventas:detalle' venta.pk %}">Ver detalle</a></td>
                 </tr>
                 {% endfor %}
             </tbody>

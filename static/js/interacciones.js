@@ -4,6 +4,32 @@ const menuMovil = document.querySelector('#menu-movil');
 const menuEscritorio = document.querySelector('#menu-escritorio');
 const escritorio = window.matchMedia('(min-width: 992px)');
 
+function prepararAyudaValorOferta() {
+    const modalidad = document.querySelector('[data-modalidad-oferta]');
+    const valor = document.querySelector('[data-valor-oferta]');
+    const ayuda = document.querySelector('#id_oferta_valor_helptext');
+    if (!modalidad || !valor || !ayuda) return;
+
+    const textos = {
+        PORCENTAJE: 'Porcentaje de descuento, por ejemplo «15».',
+        PRECIO_FINAL: 'Precio final, por ejemplo «4.990» (ingresa 4990).',
+    };
+    const ejemplos = {
+        PORCENTAJE: '15',
+        PRECIO_FINAL: '4990',
+    };
+    const actualizar = () => {
+        ayuda.textContent = textos[modalidad.value]
+            || 'Selecciona una modalidad para ver un ejemplo del valor.';
+        valor.placeholder = ejemplos[modalidad.value] || '';
+    };
+    ayuda.setAttribute('aria-live', 'polite');
+    modalidad.addEventListener('change', actualizar);
+    actualizar();
+}
+
+prepararAyudaValorOferta();
+
 function preferenciaMenuContraido() {
     try {
         return localStorage.getItem('punto-aparte-menu-contraido') === '1';

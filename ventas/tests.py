@@ -351,8 +351,10 @@ class ConfirmarVentaTests(TestCase):
 
         self.assertEqual(primera.status_code, 200)
         self.assertContains(primera, "Uno o más precios cambiaron")
-        self.assertContains(primera, "Normal:")
-        self.assertContains(primera, "Oferta:")
+        self.assertContains(primera, "<del>$1.000</del>", html=True)
+        self.assertContains(primera, "<strong>$750</strong>", html=True)
+        self.assertNotContains(primera, "Normal:")
+        self.assertNotContains(primera, "Oferta:")
         self.assertContains(primera, "$1.500")
         self.assertFalse(Venta.objects.exists())
         sesion = self.client.session
@@ -1069,10 +1071,12 @@ class EstadoCarritoTests(TestCase):
         self._guardar_carrito()
         carrito = self.client.get(reverse("ventas:caja"))
 
-        self.assertContains(catalogo, "Normal:")
+        self.assertContains(catalogo, "<del>$1.234</del>", html=True)
         self.assertContains(catalogo, "$1.234")
-        self.assertContains(catalogo, "Oferta:")
+        self.assertContains(catalogo, "<strong>$999</strong>", html=True)
         self.assertContains(catalogo, "$999")
+        self.assertNotContains(catalogo, "Normal:")
+        self.assertNotContains(catalogo, "Oferta:")
         self.assertContains(
             carrito,
             '<td data-label="Precio unitario">$999</td>',

@@ -56,8 +56,7 @@ class ProductoForm(BootstrapFormMixin, forms.ModelForm):
                 "configurarás una oferta."
             ),
             "oferta_valor": (
-                "Para porcentaje admite hasta dos decimales; para precio final "
-                "usa pesos enteros."
+                "Selecciona una modalidad para ver un ejemplo del valor."
             ),
             "oferta_activa": (
                 "Al activarla, Nueva venta aplicará automáticamente el precio rebajado."
@@ -72,6 +71,22 @@ class ProductoForm(BootstrapFormMixin, forms.ModelForm):
                 Q(activo=True) | Q(productos=self.instance)
             ).distinct()
         self.fields["categorias"].queryset = categorias.order_by("nombre")
+        self.fields["oferta_modalidad"].widget.attrs[
+            "data-modalidad-oferta"
+        ] = ""
+        self.fields["oferta_valor"].widget.attrs["data-valor-oferta"] = ""
+        modalidad = self["oferta_modalidad"].value()
+        self.fields["oferta_valor"].help_text = self.ayuda_valor_oferta(
+            modalidad
+        )
+
+    @staticmethod
+    def ayuda_valor_oferta(modalidad):
+        if modalidad == Producto.ModalidadOferta.PORCENTAJE:
+            return "Porcentaje de descuento, por ejemplo «15»."
+        if modalidad == Producto.ModalidadOferta.PRECIO_FINAL:
+            return "Precio final, por ejemplo «4.990» (ingresa 4990)."
+        return "Selecciona una modalidad para ver un ejemplo del valor."
 
     def clean_nombre(self):
         return normalizar_mayuscula_inicial(self.cleaned_data["nombre"])

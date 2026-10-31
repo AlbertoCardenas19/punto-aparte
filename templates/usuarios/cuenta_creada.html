@@ -7,10 +7,10 @@
     <p><strong>Nombre de usuario:</strong> {{ cuenta.username }}</p>
     <label for="password-temporal">Contraseña temporal</label>
     <input class="form-control mb-3" id="password-temporal" value="{{ temporal }}" readonly autocomplete="off">
-    <div class="pa-accion-estado">
-        <button class="btn btn-outline-primary" type="button" data-copiar-password>Copiar contraseña</button>
-        <p class="pa-estado-breve" role="status" data-estado-copia></p>
+    <div class="pa-form-acciones">
+        <button class="btn btn-outline-secondary" type="button" data-copiar-password>Copiar contraseña</button>
+        <a class="btn btn-pa" href="{% url 'usuarios:lista' %}">Volver a usuarios</a>
+        <p class="pa-estado-breve w-100" role="status" data-estado-copia></p>
     </div>
-    <a class="btn btn-pa" href="{% url 'usuarios:lista' %}">Volver a usuarios</a>
 </div></section>
 {% endblock %}

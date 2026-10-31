@@ -14,7 +14,7 @@
 .pa-caja .pa-caja-precio { display: flex; flex-direction: column; align-items: flex-start; min-height: 3.25rem; font-size: 1.25rem; font-weight: 750; margin: .3rem 0 .6rem; }
 .pa-caja .pa-precio-normal { display: block; color: var(--pa-muted); font-size: .78rem; font-weight: 500; line-height: 1.35; }
 .pa-caja .pa-precio-oferta { display: block; color: var(--pa-red); font-size: .95rem; line-height: 1.35; }
-.pa-caja [data-agregar-producto] { margin-top: 1.35rem; }
+.pa-caja [data-agregar-producto] { border-top: 1px solid var(--pa-border); margin-top: auto; padding-top: 1rem; }
 .pa-caja [data-agregar-producto] .pa-estado-breve { margin-bottom: 0; }
 .pa-caja .form-control { border-color: #d9e1eb; border-radius: .65rem; min-height: 2.75rem; }
 .pa-caja .pa-caja-resumen { padding-bottom: 1.5rem; border-bottom: 1px solid #d9e1eb; margin-bottom: 1rem; }
@@ -31,8 +31,8 @@
 .pa-caja .pa-cantidad-valor::-webkit-inner-spin-button, .pa-caja .pa-cantidad-valor::-webkit-outer-spin-button { appearance: none; margin: 0; }
 .pa-caja .pa-cantidad-control :focus-visible { outline: 3px solid #6f91b5; outline-offset: 2px; position: relative; z-index: 1; }
 .pa-caja .pa-caja-total { font-size: clamp(1.4rem, 2vw, 1.8rem); gap: .75rem; flex-wrap: wrap; }
-.pa-caja .pa-caja-cobrar { --bs-btn-color: white; --bs-btn-bg: #13294c; --bs-btn-border-color: #13294c; --bs-btn-hover-color: white; --bs-btn-hover-bg: #203e65; --bs-btn-hover-border-color: #203e65; --bs-btn-active-color: white; --bs-btn-active-bg: #0c1c35; --bs-btn-active-border-color: #0c1c35; --bs-btn-focus-shadow-rgb: 19, 41, 76; min-height: 4.5rem; margin-top: .75rem; font-weight: 700; border-radius: .85rem; }
-.pa-caja .pa-caja-cobrar:disabled { background: #13294c !important; border-color: #13294c !important; color: #fff !important; opacity: 1; }
+.pa-caja [data-cobro-accion]:not(:empty) { border-top: 1px solid var(--pa-border); margin-top: 1.25rem; padding-top: 1.25rem; }
+.pa-caja .pa-caja-cobrar { --bs-btn-color: white; --bs-btn-bg: var(--pa-navy); --bs-btn-border-color: var(--pa-navy); --bs-btn-hover-color: white; --bs-btn-hover-bg: #294e70; --bs-btn-hover-border-color: #294e70; --bs-btn-active-color: white; --bs-btn-active-bg: #102438; --bs-btn-active-border-color: #102438; --bs-btn-focus-shadow-rgb: 23, 50, 77; min-height: 4.5rem; font-weight: 700; border-radius: .85rem; }
 .pa-caja .pa-medios-pago { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; }
 .pa-caja .pa-medio-pago { display: flex; align-items: center; gap: .5rem; min-width: 0; border: 1px solid var(--pa-border); border-radius: .7rem; padding: .75rem; font-size: .9rem; }
 .pa-caja .pa-medio-pago:has(input:checked) { border-color: var(--pa-navy); background: #edf2f7; }
