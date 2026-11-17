@@ -609,8 +609,21 @@ function actualizarVersionCarrito(doc) {
 }
 
 let carritoDescartadoAlSalir = false;
+let actualizacionPendienteModal = null;
 function aplicarActualizacionCarrito(doc) {
     if (carritoDescartadoAlSalir) return;
+    const modalCobroAbierto = document.querySelector('#modal-cobro.show');
+    if (modalCobroAbierto) {
+        const programarCierre = actualizacionPendienteModal === null;
+        actualizacionPendienteModal = doc;
+        if (programarCierre) modalCobroAbierto.addEventListener('hidden.bs.modal', () => {
+            const pendiente = actualizacionPendienteModal;
+            actualizacionPendienteModal = null;
+            aplicarActualizacionCarrito(pendiente);
+        }, {once: true});
+        bootstrap.Modal.getOrCreateInstance(modalCobroAbierto).hide();
+        return;
+    }
     const nextPanel = doc.querySelector('[data-carrito-panel]');
     if (!nextPanel) throw new Error('Carrito no disponible');
     const controlActivo = document.activeElement?.closest(
