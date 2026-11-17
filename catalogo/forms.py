@@ -71,6 +71,10 @@ class ProductoForm(BootstrapFormMixin, forms.ModelForm):
                 Q(activo=True) | Q(productos=self.instance)
             ).distinct()
         self.fields["categorias"].queryset = categorias.order_by("nombre")
+        self.fields["oferta_modalidad"].choices = [
+            ("", "Selecciona una opción"),
+            *Producto.ModalidadOferta.choices,
+        ]
         self.fields["oferta_modalidad"].widget.attrs[
             "data-modalidad-oferta"
         ] = ""

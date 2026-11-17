@@ -114,3 +114,16 @@ body > .dropdown-menu { z-index: 1080; border-color: var(--pa-border); border-ra
 .pa-app div.dt-container .dt-info { color: var(--pa-muted); font-size: .875rem; }
 .pa-app table.dataTable > tbody > tr.child ul.dtr-details { width: 100%; }
 @media (max-width: 575.98px) { .pa-app div.dt-container .dt-layout-row { align-items: stretch; } .pa-app div.dt-container .dt-search, .pa-app div.dt-container .dt-length { justify-content: space-between; } }
+.pa-galeria-pantalla {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+    gap: 1rem;
+}
+.pa-galeria-miniatura {
+    width: 100%;
+    height: 150px;
+    object-fit: contain;
+    background: #f4f5f7;
+}
+.pa-galeria-asa { touch-action: none; cursor: grab; }
+.pa-galeria-arrastrando { opacity: .65; outline: 2px solid currentColor; }

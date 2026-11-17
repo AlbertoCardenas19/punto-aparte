@@ -8,7 +8,7 @@ from django.db import IntegrityError, close_old_connections, connection
 from django.test import Client, TestCase, TransactionTestCase
 from django.urls import reverse
 
-from catalogo.models import MovimientoStock, Producto
+from catalogo.models import ImagenPantalla, MovimientoStock, Producto
 from usuarios.models import Usuario
 
 from .models import DetalleVenta, EstadoPantallaCliente, Venta
@@ -967,6 +967,28 @@ class EstadoCarritoTests(TestCase):
         }
         sesion.save()
 
+    def test_respuesta_perdida_se_recupera_con_get_sin_repetir_agregado(self):
+        url = reverse("ventas:caja")
+        version = self.client.session[CLAVE_VERSION_CARRITO]
+        datos = {"accion": "agregar", "producto_id": self.producto.pk,
+                 "cantidad": 1, "version_carrito": version}
+        agregada = self.client.post(url, datos, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+        self.assertEqual(agregada.headers["X-Codigo-Estado"], "agregado")
+        self.assertEqual(self.client.session[CLAVE_CARRITO][str(self.producto.pk)], 1)
+        recuperada = self.client.get(url)
+        self.assertContains(recuperada, "En compra:")
+        self.assertEqual(recuperada.context["version_carrito"], self.client.session[CLAVE_VERSION_CARRITO])
+        self.assertEqual(self.client.session[CLAVE_CARRITO][str(self.producto.pk)], 1)
+        repetida_antigua = self.client.post(url, datos, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+        self.assertEqual(repetida_antigua.headers["X-Codigo-Estado"], "version_antigua")
+        self.assertEqual(self.client.session[CLAVE_CARRITO][str(self.producto.pk)], 1)
+        self.producto.stock = 1
+        self.producto.save(update_fields=["stock"])
+        datos["version_carrito"] = self.client.session[CLAVE_VERSION_CARRITO]
+        rechazada = self.client.post(url, datos, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+        self.assertEqual(rechazada.headers["X-Codigo-Estado"], "rechazado")
+        self.assertEqual(self.client.session[CLAVE_CARRITO][str(self.producto.pk)], 1)
+
     def test_producto_inactivo_permanece_visible_y_bloquea_cobro(self):
         self._guardar_carrito()
         self.producto.activo = False
@@ -1204,6 +1226,16 @@ class PantallaClienteTests(TestCase):
             reverse("ventas:estado_pantalla_cliente"),
             HTTP_X_PANTALLA_CLIENTE_TOKEN=str(estado.token),
         )
+
+    def test_carrusel_respeta_orden_y_omite_imagenes_ocultas(self):
+        ImagenPantalla.objects.create(imagen="pantalla/ultima.png", orden=9)
+        ImagenPantalla.objects.create(imagen="pantalla/primera.png", orden=1)
+        ImagenPantalla.objects.create(imagen="pantalla/oculta.png", orden=0, activa=False)
+        estado, _ = self._abrir_pantalla()
+        respuesta = self._consultar_estado(self.client, estado)
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual([url.rsplit("/", 1)[-1] for url in respuesta.json()["imagenes"]],
+                         ["primera.png", "ultima.png"])
 
     def test_apertura_exige_login_pero_pantalla_autorizada_es_independiente(self):
         anonimo = Client()

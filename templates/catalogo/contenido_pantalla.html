@@ -1,8 +1,30 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Contenido de pantalla | Punto Aparte{% endblock %}
 {% block content %}
 <div class="pa-encabezado-pagina"><h1 class="h2 fw-bold">Contenido de pantalla</h1></div>
-<p>Imágenes JPG, PNG o WebP de hasta 5 MB. La posición menor aparece primero.</p>
+<p>Imágenes JPG, PNG o WebP de hasta 5 MB. Arrastra una miniatura o usa sus botones para cambiar el orden del carrusel.</p>
 <form method="post" enctype="multipart/form-data" class="card card-body mb-3">{% csrf_token %}{{ form.as_p }}<button class="btn btn-pa" type="submit">Cargar imagen</button></form>
-<div class="row g-3">{% for item in imagenes %}<div class="col-md-4"><div class="card card-body"><img class="img-fluid mb-2" src="{{ item.imagen.url }}" alt="Contenido {{ item.pk }}"><p>{% if item.activa %}Activa{% else %}Inactiva{% endif %}</p><form method="post" class="mb-2">{% csrf_token %}<input type="hidden" name="accion" value="orden"><input type="hidden" name="imagen_id" value="{{ item.pk }}"><label>Posición <input type="number" name="orden" min="0" value="{{ item.orden }}" class="form-control"></label><small class="form-text text-secondary">Define en qué orden aparece la imagen</small><button class="btn btn-outline-secondary" type="submit">Guardar posición</button></form><form method="post">{% csrf_token %}<input type="hidden" name="accion" value="estado"><input type="hidden" name="imagen_id" value="{{ item.pk }}"><button class="btn btn-outline-secondary" type="submit">{% if item.activa %}Desactivar{% else %}Activar{% endif %}</button></form></div></div>{% endfor %}</div>
+<section data-galeria-pantalla data-url="{% url 'catalogo:contenido_pantalla' %}" aria-label="Imágenes de la pantalla del cliente">
+    <p class="pa-error-campo" data-galeria-error role="alert" hidden></p>
+    <div class="pa-galeria-pantalla" data-galeria-lista>
+        {% for item in imagenes %}
+        <article class="pa-galeria-item card" data-imagen-id="{{ item.pk }}">
+            <img src="{{ item.imagen.url }}" alt="Imagen {{ item.pk }} del carrusel" class="pa-galeria-miniatura">
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm pa-galeria-asa" data-arrastrar aria-label="Arrastrar imagen {{ item.pk }} para ordenar">Mover</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-mover="-1" aria-label="Mover imagen {{ item.pk }} antes">↑</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-mover="1" aria-label="Mover imagen {{ item.pk }} después">↓</button>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch" data-imagen-activa id="imagen-activa-{{ item.pk }}" {% if item.activa %}checked{% endif %} aria-label="Mostrar imagen {{ item.pk }} en la pantalla del cliente">
+                    <label class="form-check-label" for="imagen-activa-{{ item.pk }}">Mostrar en pantalla</label>
+                </div>
+            </div>
+        </article>
+        {% empty %}<p class="text-secondary">Aún no hay imágenes.</p>{% endfor %}
+    </div>
+</section>
 {% endblock %}
+{% block extra_js %}<script src="{% static 'js/galeria-pantalla.js' %}" defer></script>{% endblock %}

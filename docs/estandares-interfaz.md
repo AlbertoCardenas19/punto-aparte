@@ -12,7 +12,7 @@ Lee este documento antes de modificar pantallas. Define requisitos aprobados; su
 ## Componentes y adaptación
 
 - En escritorio, usa una barra superior compacta para identidad y sesión, y un menú lateral para las secciones. En móvil, ofrece el mismo menú mediante un control visible y accesible.
-- Agrupa Productos y Categorías bajo Catálogo; los historiales de ventas y stock deben ser fáciles de encontrar. Contenido de pantalla y Usuarios pertenecen a Administración, visible solo para Jefe.
+- Agrupa Productos y Categorías bajo Catálogo; Historiales contiene solo ventas y stock. Pantalla del cliente reúne Abrir pantalla y Contenido de pantalla (este último solo para Jefe). Usuarios pertenece a Administración.
 - Mantén tipografía, espaciado, botones, campos, tarjetas, tablas, estados y mensajes coherentes entre acceso, inicio, catálogo, stock, usuarios, caja y detalle de venta.
 - Centraliza estilos comunes en `static/css/punto-aparte.css`; limita los estilos de acceso y caja a sus variantes. Evita duplicar reglas o introducir excepciones de color y tamaño sin propósito.
 - Usa azul oscuro del banner para la acción primaria. Usa blanco o gris claro con borde discreto para acciones secundarias. Reserva el rojo exclusivamente para anular, desactivar o eliminar. Los controles deshabilitados se muestran en gris.
@@ -25,6 +25,7 @@ Lee este documento antes de modificar pantallas. Define requisitos aprobados; su
 - En Venta, conserva tarjetas compactas con nombre, precio, estado de stock y botón explícito «Agregar». Cuando exista una oferta activa, muestra juntos el precio normal y el precio final de oferta, sin depender solo del color. Las cantidades se modifican en «Compra actual»; en móvil, el carrito puede plegarse, pero el total permanece visible.
 - Usa ventanas modales solo para tareas breves con comportamiento real, como confirmar un cobro en efectivo. No presentes integraciones pendientes como si estuvieran disponibles.
 - En el modal de cobro, muestra el total arriba, una sola fila sin medio elegido al abrir y filas adicionales bajo demanda. El botón Cobrar se habilita únicamente con una distribución válida y la verificación manual se explica junto a la acción.
+- En Contenido de pantalla, muestra las imágenes como miniaturas ordenables por arrastre con ratón o tacto y mediante controles de teclado. El interruptor indica si cada imagen aparece en el carrusel; conserva visibles las desactivadas en la galería. Si no se puede guardar, restaura el estado anterior y muestra un error junto a la galería.
 
 ## Idioma, mensajes y errores
 

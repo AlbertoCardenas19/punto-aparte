@@ -202,6 +202,7 @@ class OfertasProductoTests(TestCase):
         return datos
 
     def test_ayuda_valor_oferta_depende_de_la_modalidad(self):
+        self.assertIn('>Selecciona una opción</option>', str(ProductoForm()["oferta_modalidad"]))
         porcentaje = ProductoForm(self._datos_producto(
             oferta_modalidad=Producto.ModalidadOferta.PORCENTAJE,
             oferta_valor="15",
@@ -456,6 +457,43 @@ class ContenidoPantallaPermisosTests(TestCase):
         )
         self.client.force_login(jefe)
         self.assertEqual(self.client.get(reverse("catalogo:contenido_pantalla")).status_code, 200)
+
+    def test_orden_e_interruptor_validan_permisos_y_persisten(self):
+        from .models import ImagenPantalla
+        primera = ImagenPantalla.objects.create(imagen="pantalla/primera.png", orden=2)
+        segunda = ImagenPantalla.objects.create(imagen="pantalla/segunda.png", orden=5)
+        url = reverse("catalogo:contenido_pantalla")
+        cajero = Usuario.objects.create_user(
+            username="ignorado", first_name="Caja", last_name="Imagen",
+            email="caja-imagen@example.test", password="clave-segura",
+        )
+        self.client.force_login(cajero)
+        self.assertEqual(self.client.post(url, {
+            "accion": "ordenar", "imagen_id": [segunda.pk, primera.pk],
+        }).status_code, 403)
+        jefe = Usuario.objects.create_user(
+            username="ignorado", first_name="Jefe", last_name="Imagen",
+            email="jefe-imagen@example.test", password="clave-segura", rol=Usuario.Rol.JEFE,
+        )
+        self.client.force_login(jefe)
+        self.assertEqual(self.client.post(url, {
+            "accion": "ordenar", "imagen_id": [segunda.pk, primera.pk],
+        }).status_code, 200)
+        self.assertEqual(list(ImagenPantalla.objects.values_list("pk", flat=True)), [segunda.pk, primera.pk])
+        self.assertEqual(self.client.post(url, {
+            "accion": "ordenar", "imagen_id": [primera.pk, primera.pk],
+        }).status_code, 409)
+        self.assertEqual(list(ImagenPantalla.objects.values_list("pk", flat=True)), [segunda.pk, primera.pk])
+        self.assertEqual(self.client.post(url, {
+            "accion": "estado", "imagen_id": segunda.pk, "activa": "0",
+        }).status_code, 200)
+        segunda.refresh_from_db()
+        self.assertFalse(segunda.activa)
+        self.assertEqual(self.client.post(url, {
+            "accion": "estado", "imagen_id": segunda.pk, "activa": "otro",
+        }).status_code, 400)
+        self.assertContains(self.client.get(url), 'data-imagen-id="%s"' % segunda.pk)
+        self.assertContains(self.client.get(url), "data-galeria-lista")
 
 
 class ImportacionProductosTests(TestCase):

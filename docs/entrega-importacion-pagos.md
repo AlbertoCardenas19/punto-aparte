@@ -35,7 +35,9 @@ El modal de cobro muestra el total y comienza con una fila sin medio elegido. Ca
 
 El Jefe carga JPG, PNG y WebP de hasta 5 MB en Contenido de pantalla, define su orden y las activa o desactiva. Django sirve `media/` solo en desarrollo; un despliegue debe configurar el servidor de archivos. La pantalla del cliente usa el canal local existente: carrusel cada ocho segundos con carrito vacío, compra al agregar productos y agradecimiento durante cinco segundos al cerrar una venta. Si no hay imágenes activas, muestra bienvenida. El descarte del carrito limpia también ese canal.
 
-En la interfaz, el campo se llama **Posición**: un número menor aparece antes en el carrusel. La ayuda del formulario dice «Define en qué orden aparece la imagen».
+La administración usa una galería de miniaturas: arrastrar o usar los botones de movimiento guarda el orden sin recargar, y cada imagen tiene un interruptor para mostrarla u ocultarla del carrusel. Las imágenes ocultas permanecen en la galería. El orden sigue guardado internamente en `orden`; el campo numérico ya no aparece.
+
+Al agregar un producto, la respuesta AJAX distingue un agregado aceptado de un rechazo y conserva la versión del carrito. Si se pierde la respuesta o falla la actualización visual, la caja consulta el estado autorizado mediante GET; nunca repite el POST de agregado. El cajero revisa la cantidad antes de volver a agregar.
 
 La salida desde Nueva venta solicita confirmación al seguir enlaces o cerrar sesión. Recargar conserva el carrito. Cerrar la pestaña o escribir una URL externa no garantiza un evento que permita limpiar datos; el carrito permanece en el canal hasta una acción explícita. El descarte usa la versión del carrito para rechazar solicitudes antiguas.
 

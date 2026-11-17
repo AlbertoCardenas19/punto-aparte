@@ -29,7 +29,7 @@ Punto Aparte es un sistema de punto de venta (POS) para una librería en Talca, 
 - Un producto puede pertenecer a varias categorías. Puede no tener código de barras.
 - No se puede vender más stock del disponible. El stock se descuenta al confirmar la venta y los movimientos deben conservar usuario, fecha, motivo y cantidades anterior/nueva.
 - La venta conserva nombre y precio unitario históricos en sus detalles, incluso si el producto cambia después.
-- Una venta acepta un solo medio de pago. Sin conexión a internet solo se permite efectivo. Las transferencias las confirma el cajero.
+- Una venta acepta efectivo, tarjeta y transferencia por separado o combinados; los montos aplicados suman exactamente el total. El efectivo recibido y el vuelto se calculan aparte. Los pagos externos los verifica manualmente el cajero.
 - Las anulaciones y devoluciones son procesos distintos y requieren motivo y autorización de Jefe según la regla acordada.
 - Las ofertas de producto las configura el Jefe, usan porcentaje o precio final, se activan manualmente y se aplican automáticamente sin fechas. Son distintas de los cupones o descuentos por cliente, que siguen pendientes, requieren autorización del dueño, tienen vigencia, se usan una vez por cliente y no se combinan.
 - Mantén el foco en la caja POS. La emisión tributaria chilena y la integración con terminal Mercado Pago siguen pendientes; no simules que ya están resueltas. La pantalla del cliente consulta únicamente el canal local de su caja y no depende de la sesión personal del cajero.

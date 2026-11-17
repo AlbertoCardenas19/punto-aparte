@@ -3,6 +3,7 @@ from uuid import UUID, uuid4
 
 from django.contrib.auth.decorators import login_required
 from django import forms
+from django.db import transaction
 from django.db.models import Count, Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render, get_object_or_404
@@ -36,9 +37,7 @@ CLAVE_OPERACION_STOCK = "clave_operacion_stock"
 class ImagenPantallaForm(forms.ModelForm):
     class Meta:
         model = ImagenPantalla
-        fields = ("imagen", "orden", "activa")
-        labels = {"orden": "Posición"}
-        help_texts = {"orden": "Define en qué orden aparece la imagen"}
+        fields = ("imagen",)
 
 
 @jefe_required
@@ -46,22 +45,36 @@ def contenido_pantalla(request):
     form = ImagenPantallaForm(request.POST or None, request.FILES or None)
     if request.method == "POST":
         accion = request.POST.get("accion")
-        if accion in {"estado", "orden"}:
-            imagen = get_object_or_404(ImagenPantalla, pk=request.POST.get("imagen_id"))
-            if accion == "estado":
-                imagen.activa = not imagen.activa
-                imagen.save(update_fields=["activa"])
-            else:
+        if accion == "ordenar":
+            ids = request.POST.getlist("imagen_id")
+            with transaction.atomic():
+                actuales = list(ImagenPantalla.objects.select_for_update().values_list("pk", flat=True))
                 try:
-                    orden = int(request.POST.get("orden", ""))
+                    propuestos = [int(pk) for pk in ids]
                 except ValueError:
-                    orden = -1
-                if orden >= 0:
-                    imagen.orden = orden
-                    imagen.save(update_fields=["orden"])
-            return redirect("catalogo:contenido_pantalla")
+                    propuestos = []
+                if len(propuestos) != len(actuales) or set(propuestos) != set(actuales):
+                    return JsonResponse({"error": "El orden cambió. Recarga la galería."}, status=409)
+                for posicion, pk in enumerate(propuestos):
+                    ImagenPantalla.objects.filter(pk=pk).update(orden=posicion)
+            return JsonResponse({"orden": propuestos})
+        if accion == "estado":
+            estado = request.POST.get("activa")
+            if estado not in {"0", "1"}:
+                return JsonResponse({"error": "Estado no válido."}, status=400)
+            try:
+                imagen_id = int(request.POST.get("imagen_id", ""))
+            except ValueError:
+                return JsonResponse({"error": "Imagen no válida."}, status=400)
+            imagen = get_object_or_404(ImagenPantalla, pk=imagen_id)
+            imagen.activa = estado == "1"
+            imagen.save(update_fields=["activa"])
+            return JsonResponse({"imagen_id": imagen.pk, "activa": imagen.activa})
         if form.is_valid():
-            form.save()
+            imagen = form.save(commit=False)
+            ultimo = ImagenPantalla.objects.order_by("-orden").values_list("orden", flat=True).first()
+            imagen.orden = (ultimo if ultimo is not None else -1) + 1
+            imagen.save()
             return redirect("catalogo:contenido_pantalla")
     return render(request, "catalogo/contenido_pantalla.html",
                   {"form": form, "imagenes": ImagenPantalla.objects.all()})

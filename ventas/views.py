@@ -389,6 +389,8 @@ def caja(request):
             accion in {"vaciar", "agregar", "escanear", "actualizar"}
             and request.POST.get("version_carrito") != version_carrito
         ):
+            if accion == "agregar":
+                codigo_estado = "version_antigua"
             messages.error(
                 request,
                 "La compra cambió mientras se procesaba la solicitud. "
@@ -405,6 +407,7 @@ def caja(request):
             return responder(redirect(f"{request.path}?carrito=abierto"))
 
         if accion == "agregar":
+            codigo_estado = "rechazado"
             try:
                 producto_id = int(request.POST.get("producto_id", ""))
                 cantidad = int(request.POST.get("cantidad", "1"))
@@ -445,6 +448,7 @@ def caja(request):
                         carrito[id_texto] = nueva_cantidad
                         request.session[CLAVE_CARRITO] = carrito
                         version_carrito = _rotar_version_carrito(request)
+                        codigo_estado = "agregado"
 
             if not solicitud_dinamica:
                 return responder(redirect("ventas:caja"))
