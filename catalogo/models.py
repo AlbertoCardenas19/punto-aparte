@@ -53,6 +53,7 @@ class Producto(models.Model):
         null=True,
         blank=True,
     )
+    referencia_importacion = models.CharField(max_length=100, unique=True, null=True, blank=True)
     precio = models.PositiveIntegerField(
         validators=[MinValueValidator(0)],
     )
