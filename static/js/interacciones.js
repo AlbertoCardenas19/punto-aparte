@@ -546,11 +546,10 @@ let operacionesCarritoPendientes = 0;
 
 function actualizarBloqueoCobro() {
     const bloqueado = operacionesCarritoPendientes > 0;
-    for (const control of document.querySelectorAll(
-        '[data-cobrar], [data-confirmar-cobro]'
-    )) {
+    for (const control of document.querySelectorAll('[data-cobrar]')) {
         control.disabled = bloqueado;
     }
+    document.querySelector('[data-form-cobro]')?.actualizarPago?.();
 }
 
 function registrarOperacionCarrito() {
@@ -639,6 +638,24 @@ function aplicarActualizacionCarrito(doc) {
     const nextMessages = doc.querySelector('[data-mensajes]');
     if (currentMessages && nextMessages) currentMessages.replaceWith(nextMessages);
 
+    const formularioAnterior = document.querySelector('#modal-cobro [data-form-cobro]');
+    const formularioNuevo = doc.querySelector('#modal-cobro [data-form-cobro]');
+    if (formularioAnterior && formularioNuevo) {
+        const filasActuales = [...formularioAnterior.querySelectorAll('[data-fila-pago]')];
+        const copias = filasActuales.map(fila => {
+            const copia = fila.cloneNode(true);
+            const originales = fila.querySelectorAll('input');
+            const copiados = copia.querySelectorAll('input');
+            originales.forEach((entrada, indice) => {
+                copiados[indice].value = entrada.value;
+                if (entrada.type === 'radio') copiados[indice].checked = entrada.checked;
+            });
+            return copia;
+        });
+        formularioNuevo.querySelector('[data-filas-pago]').replaceChildren(...copias);
+        formularioNuevo.querySelector('[name="efectivo_recibido"]').value =
+            formularioAnterior.querySelector('[name="efectivo_recibido"]').value;
+    }
     const modales = ['modal-cobro'].map(id => {
         const modal = doc.querySelector(`#${id}`);
         modal?.remove();
@@ -708,50 +725,104 @@ function prepararFormularioCobro(contenedor = document) {
     const form = contenedor.querySelector('[data-form-cobro]');
     if (!form || form.dataset.cobroListo) return;
     form.dataset.cobroListo = 'true';
-    const instruccion = form.querySelector('[data-instruccion-pago]');
-    const confirmacion = form.querySelector('[data-confirmacion-pago]');
-    const confirmacionTexto = form.querySelector('[data-confirmacion-pago-texto]');
-    const checkbox = form.querySelector('[name="pago_confirmado"]');
-    const checks = [...form.querySelectorAll('[data-usar-pago]')];
-    const montos = [...form.querySelectorAll('[data-monto-pago]')];
+    const filas = form.querySelector('[data-filas-pago]');
+    const plantilla = contenedor.querySelector('[data-plantilla-pago]');
+    const agregar = form.querySelector('[data-agregar-pago]');
     const recibido = form.querySelector('[name="efectivo_recibido"]');
     const total = Number(form.querySelector('[data-pagos-total]').dataset.pagosTotal);
-    const faltante = form.querySelector('[data-pago-faltante]');
-    const boton = document.querySelector(`[type="submit"][form="${form.id}"]`);
-    const actualizar = event => {
-        checks.forEach((check, indice) => {
-            montos[indice].disabled = !check.checked;
-            if (!check.checked) montos[indice].value = '0';
+    const boton = contenedor.querySelector(`[type="submit"][form="${form.id}"]`);
+    const pesos = monto => `$${new Intl.NumberFormat('es-CL').format(monto)}`;
+    let siguienteId = Math.max(0, ...[...filas.querySelectorAll('[data-fila-pago]')]
+        .map(fila => Number(fila.dataset.filaId))) + 1;
+    const filasActuales = () => [...filas.querySelectorAll('[data-fila-pago]')];
+    const enteroPositivo = valor => /^[0-9]{1,10}$/.test(valor) && Number(valor) > 0
+        && Number(valor) <= 2147483647;
+
+    const actualizar = () => {
+        const actuales = filasActuales();
+        const medios = actuales.map(fila => fila.querySelector('[data-medio-pago]:checked')?.value || '');
+        const usados = medios.filter(Boolean);
+        const montos = actuales.map(fila => fila.querySelector('[data-monto-pago]').value.trim());
+        const asignado = montos.reduce((suma, monto) => suma + (enteroPositivo(monto) ? Number(monto) : 0), 0);
+        const falta = Math.max(0, total - asignado);
+        const exceso = Math.max(0, asignado - total);
+        const efectivo = actuales.reduce((suma, fila, indice) => suma +
+            (medios[indice] === 'EFECTIVO' && enteroPositivo(montos[indice]) ? Number(montos[indice]) : 0), 0);
+        const recibidoValido = /^[0-9]{1,10}$/.test(recibido.value)
+            && Number(recibido.value) <= 2147483647;
+        const vuelto = efectivo && recibidoValido ? Math.max(0, Number(recibido.value) - efectivo) : 0;
+        form.querySelector('[data-efectivo-recibido]').hidden = efectivo === 0;
+        recibido.disabled = efectivo === 0;
+        form.querySelector('[data-pago-asignado]').textContent = pesos(asignado);
+        form.querySelector('[data-pago-falta]').textContent = pesos(falta);
+        form.querySelector('[data-pago-vuelto]').textContent = pesos(vuelto);
+        const error = form.querySelector('[data-pago-error]');
+        error.textContent = exceso ? `Sobran ${pesos(exceso)} en los montos aplicados.` :
+            usados.length !== new Set(usados).size ? 'No repitas un medio de pago.' :
+            efectivo && (!recibidoValido || Number(recibido.value) < efectivo)
+                ? 'El efectivo recibido debe cubrir el monto aplicado.' : '';
+        error.hidden = !error.textContent;
+        actuales.forEach((fila, indice) => {
+            fila.querySelector('[data-quitar-pago]').hidden = indice === 0;
+            fila.querySelector('.fw-semibold').textContent = `Pago ${indice + 1}`;
+            fila.querySelectorAll('[data-medio-pago]').forEach(radio => {
+                radio.disabled = radio.value !== medios[indice] && usados.includes(radio.value);
+            });
         });
-        if (event?.target.matches('[data-usar-pago]') && checks.filter(c => c.checked).length === 1) {
-            montos[checks.findIndex(c => c.checked)].value = String(total);
-        }
-        recibido.disabled = !checks[0].checked;
-        if (!checks[0].checked) recibido.value = '';
-        const suma = montos.reduce((valor, campo) => valor + (Number(campo.value) || 0), 0);
-        const diferencia = total - suma;
-        faltante.textContent = diferencia > 0 ? `Faltan $${diferencia} por asignar.`
-            : diferencia < 0 ? `Sobran $${-diferencia}.` : 'Total asignado.';
-        const requiereConfirmacion = checks[1].checked || checks[2].checked;
-        confirmacion.hidden = !requiereConfirmacion;
-        checkbox.required = requiereConfirmacion;
-        if (!requiereConfirmacion) checkbox.checked = false;
-        confirmacionTexto.textContent = 'Confirmo manualmente los pagos con tarjeta o transferencia seleccionados.';
-        instruccion.textContent = requiereConfirmacion ? 'Verifica los pagos externos antes de confirmar.' : 'Recibe el efectivo antes de confirmar.';
-        if (boton) boton.disabled = diferencia !== 0 ||
-            checks.some((c, i) => c.checked && Number(montos[i].value) <= 0) ||
-            (checks[0].checked && Number(recibido.value) < Number(montos[0].value));
+        agregar.disabled = actuales.length >= 3;
+        boton.disabled = operacionesCarritoPendientes > 0 || usados.length !== actuales.length ||
+            usados.length !== new Set(usados).size || montos.some(monto => !enteroPositivo(monto)) ||
+            asignado !== total || (efectivo > 0 && (!recibidoValido || Number(recibido.value) < efectivo));
     };
-    [...checks, ...montos, recibido].forEach(campo => campo.addEventListener('input', actualizar));
+    form.actualizarPago = actualizar;
+    filas.addEventListener('change', event => {
+        if (event.target.matches('[data-medio-pago]')) {
+            const fila = event.target.closest('[data-fila-pago]');
+            const monto = fila.querySelector('[data-monto-pago]');
+            if (!monto.value) {
+                const otros = filasActuales().filter(otra => otra !== fila).reduce((suma, otra) =>
+                    suma + (enteroPositivo(otra.querySelector('[data-monto-pago]').value)
+                        ? Number(otra.querySelector('[data-monto-pago]').value) : 0), 0);
+                monto.value = String(Math.max(0, total - otros));
+            }
+        }
+        actualizar();
+    });
+    filas.addEventListener('input', actualizar);
+    filas.addEventListener('click', event => {
+        const quitar = event.target.closest('[data-quitar-pago]');
+        if (quitar) { quitar.closest('[data-fila-pago]').remove(); actualizar(); }
+    });
+    agregar.addEventListener('click', () => {
+        if (filasActuales().length >= 3) return;
+        const fragmento = plantilla.content.cloneNode(true);
+        const fila = fragmento.querySelector('[data-fila-pago]');
+        const id = String(siguienteId++);
+        fila.dataset.filaId = id;
+        fila.querySelector('[name="fila_pago"]').value = id;
+        fila.querySelectorAll('[data-medio-pago]').forEach(radio => radio.name = `medio_${id}`);
+        const monto = fila.querySelector('[data-monto-pago]');
+        monto.name = `monto_${id}`;
+        monto.id = `monto-pago-${id}`;
+        fila.querySelector('label[for]').htmlFor = monto.id;
+        filas.append(fragmento);
+        actualizar();
+    });
+    form.querySelector('[data-efectivo-exacto]').addEventListener('click', () => {
+        const fila = filasActuales().find(item => item.querySelector('[data-medio-pago]:checked')?.value === 'EFECTIVO');
+        if (fila) recibido.value = fila.querySelector('[data-monto-pago]').value;
+        actualizar();
+    });
+    recibido.addEventListener('input', actualizar);
     form.addEventListener('submit', event => {
-        if (operacionesCarritoPendientes > 0) {
+        actualizar();
+        if (boton.disabled) {
             event.preventDefault();
             const estado = form.querySelector('[role="alert"]');
-            if (estado) estado.textContent = 'Espera a que termine de guardarse la compra.';
+            if (estado && operacionesCarritoPendientes > 0) estado.textContent = 'Espera a que termine de guardarse la compra.';
             return;
         }
-        const boton = document.querySelector(`[type="submit"][form="${form.id}"]`);
-        if (boton) boton.disabled = true;
+        boton.disabled = true;
         form.setAttribute('aria-busy', 'true');
     });
     actualizar();

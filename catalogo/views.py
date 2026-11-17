@@ -37,6 +37,8 @@ class ImagenPantallaForm(forms.ModelForm):
     class Meta:
         model = ImagenPantalla
         fields = ("imagen", "orden", "activa")
+        labels = {"orden": "Posición"}
+        help_texts = {"orden": "Define en qué orden aparece la imagen"}
 
 
 @jefe_required

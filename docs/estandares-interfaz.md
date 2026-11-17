@@ -24,6 +24,7 @@ Lee este documento antes de modificar pantallas. Define requisitos aprobados; su
 - Mantén las acciones globales fuera de las filas; no repitas el historial general por producto.
 - En Venta, conserva tarjetas compactas con nombre, precio, estado de stock y botón explícito «Agregar». Cuando exista una oferta activa, muestra juntos el precio normal y el precio final de oferta, sin depender solo del color. Las cantidades se modifican en «Compra actual»; en móvil, el carrito puede plegarse, pero el total permanece visible.
 - Usa ventanas modales solo para tareas breves con comportamiento real, como confirmar un cobro en efectivo. No presentes integraciones pendientes como si estuvieran disponibles.
+- En el modal de cobro, muestra el total arriba, una sola fila sin medio elegido al abrir y filas adicionales bajo demanda. El botón Cobrar se habilita únicamente con una distribución válida y la verificación manual se explica junto a la acción.
 
 ## Idioma, mensajes y errores
 

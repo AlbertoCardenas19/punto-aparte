@@ -242,35 +242,58 @@
                     <fieldset>
                         <legend class="h6 fw-bold">Medios de pago</legend>
                         <div data-pagos-total="{{ total_carrito }}">
-                            <label class="form-label d-block"><input type="checkbox" name="usar_efectivo" data-usar-pago checked> Efectivo</label>
-                            <input class="form-control mb-2" type="number" name="monto_efectivo" min="0" value="{{ total_carrito }}" aria-label="Monto efectivo" data-monto-pago>
-                            <label class="form-label d-block"><input type="checkbox" name="usar_tarjeta" data-usar-pago> Tarjeta</label>
-                            <input class="form-control mb-2" type="number" name="monto_tarjeta" min="0" value="0" aria-label="Monto tarjeta" data-monto-pago>
-                            <label class="form-label d-block"><input type="checkbox" name="usar_transferencia" data-usar-pago> Transferencia</label>
-                            <input class="form-control mb-2" type="number" name="monto_transferencia" min="0" value="0" aria-label="Monto transferencia" data-monto-pago>
-                            <label class="form-label" for="efectivo-recibido">Efectivo recibido</label>
-                            <input class="form-control" type="number" name="efectivo_recibido" id="efectivo-recibido" min="0" value="{{ total_carrito }}">
-                            <p class="pa-estado-breve mt-2" role="status" data-pago-faltante></p>
+                            <div data-filas-pago>
+                                {% for fila in filas_pago %}
+                                <div class="pa-fila-pago border rounded p-3 mb-2" data-fila-pago data-fila-id="{{ fila.id }}">
+                                    <input type="hidden" name="fila_pago" value="{{ fila.id }}">
+                                    <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                                        <span class="fw-semibold">Pago {{ forloop.counter }}</span>
+                                        <button class="btn btn-sm btn-outline-secondary" type="button" data-quitar-pago {% if forloop.first %}hidden{% endif %}>Quitar</button>
+                                    </div>
+                                    <div class="pa-medios-pago mb-2">
+                                        <label class="pa-medio-pago"><input class="form-check-input" type="radio" name="medio_{{ fila.id }}" value="EFECTIVO" {% if fila.medio == 'EFECTIVO' %}checked{% endif %} data-medio-pago> Efectivo</label>
+                                        <label class="pa-medio-pago"><input class="form-check-input" type="radio" name="medio_{{ fila.id }}" value="TARJETA" {% if fila.medio == 'TARJETA' %}checked{% endif %} data-medio-pago> Tarjeta</label>
+                                        <label class="pa-medio-pago"><input class="form-check-input" type="radio" name="medio_{{ fila.id }}" value="TRANSFERENCIA" {% if fila.medio == 'TRANSFERENCIA' %}checked{% endif %} data-medio-pago> Transferencia</label>
+                                    </div>
+                                    <label class="form-label" for="monto-pago-{{ fila.id }}">Monto aplicado</label>
+                                    <input class="form-control" type="number" name="monto_{{ fila.id }}" id="monto-pago-{{ fila.id }}" min="1" step="1" value="{{ fila.monto }}" inputmode="numeric" data-monto-pago>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <button class="btn btn-outline-secondary btn-sm" type="button" data-agregar-pago>+ Agregar otro medio</button>
+                            <div class="mt-3" data-efectivo-recibido hidden>
+                                <label class="form-label" for="efectivo-recibido">Efectivo recibido</label>
+                                <div class="input-group"><input class="form-control" type="number" name="efectivo_recibido" id="efectivo-recibido" min="0" step="1" value="{{ recibido_ingresado }}" inputmode="numeric"><button class="btn btn-outline-secondary" type="button" data-efectivo-exacto>Exacto</button></div>
+                            </div>
+                            <div class="pa-estado-breve mt-3" role="status" aria-live="polite">
+                                <div>Asignado: <strong data-pago-asignado>$0</strong></div>
+                                <div>Falta: <strong data-pago-falta>{{ total_carrito|clp }}</strong></div>
+                                <div>Vuelto: <strong data-pago-vuelto>$0</strong></div>
+                                <p class="pa-error-campo mb-0" data-pago-error hidden></p>
+                            </div>
                         </div>
                     </fieldset>
-
-                    <p class="small text-secondary mt-3 mb-2" data-instruccion-pago></p>
-                    <div class="form-check" data-confirmacion-pago hidden>
-                        <input class="form-check-input" type="checkbox" name="pago_confirmado" value="1"
-                            id="pago-confirmado">
-                        <label class="form-check-label" for="pago-confirmado" data-confirmacion-pago-texto></label>
-                    </div>
-                    <p class="small text-secondary mt-3 mb-0">
-                        El sistema no dispone de una comprobación fiable de conexión. Si no hay internet,
-                        usa únicamente efectivo.
-                    </p>
+                    <p class="small text-secondary mt-3 mb-0">Al cobrar, confirmas que recibiste y verificaste los pagos.</p>
                     {% if error_cobro %}<p class="pa-error-campo" role="alert">{{ error_cobro }}</p>{% endif %}
                 </form>
+                <template data-plantilla-pago>
+                    <div class="pa-fila-pago border rounded p-3 mb-2" data-fila-pago data-fila-id="__ID__">
+                        <input type="hidden" name="fila_pago" value="__ID__">
+                        <div class="d-flex justify-content-between align-items-center gap-2 mb-2"><span class="fw-semibold" data-numero-pago></span><button class="btn btn-sm btn-outline-secondary" type="button" data-quitar-pago>Quitar</button></div>
+                        <div class="pa-medios-pago mb-2">
+                            <label class="pa-medio-pago"><input class="form-check-input" type="radio" name="medio___ID__" value="EFECTIVO" data-medio-pago> Efectivo</label>
+                            <label class="pa-medio-pago"><input class="form-check-input" type="radio" name="medio___ID__" value="TARJETA" data-medio-pago> Tarjeta</label>
+                            <label class="pa-medio-pago"><input class="form-check-input" type="radio" name="medio___ID__" value="TRANSFERENCIA" data-medio-pago> Transferencia</label>
+                        </div>
+                        <label class="form-label" for="monto-pago-__ID__">Monto aplicado</label>
+                        <input class="form-control" type="number" name="monto___ID__" id="monto-pago-__ID__" min="1" step="1" inputmode="numeric" data-monto-pago>
+                    </div>
+                </template>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Volver</button>
                 <button class="btn btn-pa" type="submit" form="form-cobro"
-                    data-confirmar-cobro>Confirmar venta</button>
+                    data-confirmar-cobro>Cobrar</button>
             </div>
         </div>
     </div>

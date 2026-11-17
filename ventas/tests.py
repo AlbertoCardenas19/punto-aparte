@@ -267,7 +267,7 @@ class ConfirmarVentaTests(TestCase):
         datos = {
             "accion": "confirmar",
             "medio_pago": Venta.MedioPago.EFECTIVO,
-            "usar_efectivo": "on", "monto_efectivo": "2000", "efectivo_recibido": "2000",
+            "fila_pago": "0", "medio_0": "EFECTIVO", "monto_0": "2000", "efectivo_recibido": "2000",
             "clave_idempotencia": clave,
             "version_carrito": version,
         }
@@ -306,6 +306,7 @@ class ConfirmarVentaTests(TestCase):
         respuesta = self.client.post(reverse("ventas:caja"), {
             "accion": "confirmar",
             "medio_pago": Venta.MedioPago.EFECTIVO,
+            "fila_pago": "0", "medio_0": "EFECTIVO", "monto_0": "2000", "efectivo_recibido": "2000",
             "clave_idempotencia": clave,
             "version_carrito": version,
         })
@@ -313,6 +314,10 @@ class ConfirmarVentaTests(TestCase):
         self.assertEqual(respuesta.status_code, 200)
         self.assertContains(respuesta, "Uno o más precios cambiaron")
         self.assertContains(respuesta, "$2.400")
+        self.assertEqual(respuesta.context["filas_pago"], [
+            {"id": "0", "medio": "EFECTIVO", "monto": "2000"},
+        ])
+        self.assertEqual(respuesta.context["recibido_ingresado"], "2000")
         self.assertFalse(Venta.objects.exists())
         self.assertEqual(
             self.client.session[CLAVE_PRECIOS_CARRITO],
@@ -347,6 +352,7 @@ class ConfirmarVentaTests(TestCase):
         primera = self.client.post(reverse("ventas:caja"), {
             "accion": "confirmar",
             "medio_pago": Venta.MedioPago.EFECTIVO,
+            "fila_pago": "0", "medio_0": "EFECTIVO", "monto_0": "2000", "efectivo_recibido": "2000",
             "clave_idempotencia": clave,
             "version_carrito": version,
         })
@@ -370,7 +376,7 @@ class ConfirmarVentaTests(TestCase):
         segunda = self.client.post(reverse("ventas:caja"), {
             "accion": "confirmar",
             "medio_pago": Venta.MedioPago.EFECTIVO,
-            "usar_efectivo": "on", "monto_efectivo": "1500", "efectivo_recibido": "1500",
+            "fila_pago": "0", "medio_0": "EFECTIVO", "monto_0": "1500", "efectivo_recibido": "1500",
             "clave_idempotencia": clave,
             "version_carrito": sesion[CLAVE_VERSION_CARRITO],
         })
@@ -404,6 +410,7 @@ class ConfirmarVentaTests(TestCase):
         respuesta = self.client.post(reverse("ventas:caja"), {
             "accion": "confirmar",
             "medio_pago": Venta.MedioPago.EFECTIVO,
+            "fila_pago": "0", "medio_0": "EFECTIVO", "monto_0": "800", "efectivo_recibido": "800",
             "clave_idempotencia": clave,
             "version_carrito": version,
         })
@@ -440,6 +447,7 @@ class ConfirmarVentaTests(TestCase):
         respuesta = self.client.post(reverse("ventas:caja"), {
             "accion": "confirmar",
             "medio_pago": Venta.MedioPago.EFECTIVO,
+            "fila_pago": "0", "medio_0": "EFECTIVO", "monto_0": "2000", "efectivo_recibido": "2000",
             "clave_idempotencia": str(clave),
             "version_carrito": version,
         })
@@ -508,6 +516,7 @@ class ConfirmarVentaTests(TestCase):
         respuesta = self.client.post(reverse("ventas:caja"), {
             "accion": "confirmar",
             "medio_pago": Venta.MedioPago.EFECTIVO,
+            "fila_pago": "0", "medio_0": "EFECTIVO", "monto_0": "2000", "efectivo_recibido": "2000",
             "clave_idempotencia": clave,
             "version_carrito": str(uuid4()),
         })
@@ -1321,7 +1330,7 @@ class PantallaClienteTests(TestCase):
         response = self.client.post(reverse("ventas:caja"), {
             "accion": "confirmar",
             "medio_pago": Venta.MedioPago.EFECTIVO,
-            "usar_efectivo": "on", "monto_efectivo": "1500", "efectivo_recibido": "1500",
+            "fila_pago": "0", "medio_0": "EFECTIVO", "monto_0": "1500", "efectivo_recibido": "1500",
             "clave_idempotencia": sesion[CLAVE_IDEMPOTENCIA_VENTA],
             "version_carrito": sesion[CLAVE_VERSION_CARRITO],
         })
@@ -1490,3 +1499,84 @@ class OrdenCajaTests(TestCase):
         self.assertEqual(len(pagina_dos.context["pagina"].object_list), 3)
         stock = self.client.get(reverse("ventas:caja"), {"orden": "stock_desc"})
         self.assertEqual(stock.context["pagina"].object_list[0].stock, 1)
+
+
+class FlujoCobroNuevoTests(TestCase):
+    def setUp(self):
+        self.cajero = Usuario.objects.create_user(
+            username="ignorado", first_name="Caja", last_name="Pagos",
+            email="flujo-pagos@example.test", password="clave-segura",
+        )
+        self.producto = Producto.objects.create(nombre="Libro pagos", precio=7000, stock=20)
+        self.client.force_login(self.cajero)
+        self.url = reverse("ventas:caja")
+        self.client.get(self.url)
+
+    def preparar_carrito(self):
+        sesion = self.client.session
+        sesion[CLAVE_CARRITO] = {str(self.producto.pk): 1}
+        sesion[CLAVE_PRECIOS_CARRITO] = {str(self.producto.pk): 7000}
+        sesion[CLAVE_PRECIOS_NORMALES_CARRITO] = {str(self.producto.pk): 7000}
+        sesion[CLAVE_IDEMPOTENCIA_VENTA] = str(uuid4())
+        sesion[CLAVE_VERSION_CARRITO] = str(uuid4())
+        sesion.save()
+        return sesion
+
+    def datos(self, medios, montos, recibido=""):
+        sesion = self.preparar_carrito()
+        datos = {
+            "accion": "confirmar", "clave_idempotencia": sesion[CLAVE_IDEMPOTENCIA_VENTA],
+            "version_carrito": sesion[CLAVE_VERSION_CARRITO],
+            "fila_pago": [str(i) for i in range(len(medios))],
+            "efectivo_recibido": recibido,
+        }
+        for i, (medio, monto) in enumerate(zip(medios, montos)):
+            datos[f"medio_{i}"] = medio
+            datos[f"monto_{i}"] = monto
+        return datos
+
+    def test_unicos_dobles_y_triples_sin_casilla_adicional(self):
+        casos = [
+            (["EFECTIVO"], ["7000"], "10000", (7000, 0, 0, 3000)),
+            (["TARJETA"], ["7000"], "", (0, 7000, 0, None)),
+            (["TRANSFERENCIA"], ["7000"], "", (0, 0, 7000, None)),
+            (["EFECTIVO", "TARJETA"], ["2000", "5000"], "5000", (2000, 5000, 0, 3000)),
+            (["EFECTIVO", "TRANSFERENCIA"], ["2000", "5000"], "2000", (2000, 0, 5000, 0)),
+            (["TARJETA", "TRANSFERENCIA"], ["3000", "4000"], "", (0, 3000, 4000, None)),
+            (["EFECTIVO", "TARJETA", "TRANSFERENCIA"], ["1000", "2000", "4000"], "1500", (1000, 2000, 4000, 500)),
+        ]
+        for medios, montos, recibido, esperado in casos:
+            with self.subTest(medios=medios):
+                respuesta = self.client.post(self.url, self.datos(medios, montos, recibido))
+                self.assertEqual(respuesta.status_code, 302)
+                venta = Venta.objects.latest("pk")
+                self.assertEqual((venta.efectivo, venta.tarjeta, venta.transferencia, venta.vuelto), esperado)
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.stock, 13)
+        self.assertEqual(Venta.objects.count(), 7)
+
+    def test_incompletos_repetidos_y_montos_invalidos_conservan_formulario(self):
+        casos = [([""], ["7000"], ""), (["EFECTIVO", "EFECTIVO"], ["2000", "5000"], "7000"),
+                 (["TARJETA"], ["6999"], ""), (["TARJETA"], ["7001"], ""),
+                 (["TARJETA"], ["-1"], ""), (["TARJETA"], ["7000.5"], ""),
+                 (["EFECTIVO"], ["7000"], "6999")]
+        for medios, montos, recibido in casos:
+            with self.subTest(medios=medios, montos=montos):
+                respuesta = self.client.post(self.url, self.datos(medios, montos, recibido))
+                self.assertEqual(respuesta.status_code, 200)
+                self.assertEqual(respuesta.context["filas_pago"][0]["monto"], montos[0])
+                self.assertFalse(Venta.objects.exists())
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.stock, 20)
+
+    def test_detalle_imprimible_muestra_desglose_sin_recibido_ni_vuelto(self):
+        self.client.post(self.url, self.datos(["EFECTIVO", "TARJETA"], ["2000", "5000"], "5000"))
+        venta = Venta.objects.get()
+        pagina = self.client.get(reverse("ventas:detalle", args=[venta.pk]))
+        self.assertEqual(pagina.status_code, 200)
+        self.assertContains(pagina, "<tfoot>", html=False)
+        self.assertContains(pagina, "Efectivo")
+        self.assertContains(pagina, "Transferencia")
+        self.assertNotContains(pagina, "Efectivo recibido")
+        self.assertNotContains(pagina, "Vuelto")
+        self.assertNotContains(pagina, "Medio de pago:")

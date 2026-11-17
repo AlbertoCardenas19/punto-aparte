@@ -45,6 +45,9 @@ Estas son reglas aprobadas; consulta `estado-actual.md` para saber cuáles está
 - Una venta puede combinar efectivo, tarjeta y transferencia; los montos asignados deben sumar exactamente el total.
 - El efectivo recibido cubre la parte asignada a efectivo y el vuelto procede solo de esa diferencia.
 - Tarjeta y transferencia se confirman manualmente por el cajero; el sistema registra sus montos sin integrar el terminal.
+- El modal empieza sin medio seleccionado. Cada fila usa selección exclusiva; se agregan hasta tres medios diferentes solo cuando se necesitan. “Cobrar” confirma manualmente que el cajero recibió o verificó los pagos, sin otra casilla.
+- El efectivo recibido y el vuelto se muestran durante el cobro para ayudar a entregar el cambio. Se conservan en la venta, pero no aparecen en el detalle ni en su impresión. El detalle muestra siempre los tres montos aplicados en el pie de la tabla.
+- No se piden referencias, números de operación ni archivos de comprobantes.
 - El cajero confirma manualmente las transferencias.
 - El precio y nombre usados en una venta se guardan como datos históricos en el detalle.
 - La terminal disponible es Mercado Pago y el POS debe integrarse con ella; aún falta determinar modelo, mecanismo técnico y pruebas de integración.

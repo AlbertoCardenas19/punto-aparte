@@ -1,4 +1,5 @@
 from uuid import UUID, uuid4
+import re
 
 from django.conf import settings
 from django.contrib import messages
@@ -37,6 +38,49 @@ CLAVE_IDEMPOTENCIA_VENTA = "clave_idempotencia_venta"
 CLAVES_IDEMPOTENCIA_ANULACION = "claves_idempotencia_anulacion"
 COOKIE_PANTALLA_CLIENTE = "punto_aparte_pantalla_cliente"
 EDAD_COOKIE_PANTALLA = 60 * 60 * 24 * 365
+
+
+def _pagos_del_formulario(datos):
+    def monto_clp(texto):
+        if not re.fullmatch(r"[0-9]{1,10}", texto):
+            return None
+        monto = int(texto)
+        return monto if monto <= 2147483647 else None
+
+    ids = datos.getlist("fila_pago")
+    filas = []
+    pagos = {"efectivo": 0, "tarjeta": 0, "transferencia": 0}
+    error = None
+    if not 1 <= len(ids) <= 3 or len(ids) != len(set(ids)) or any(
+        not re.fullmatch(r"[0-9]{1,6}", identificador) for identificador in ids
+    ):
+        error = "Agrega entre uno y tres medios de pago diferentes."
+    else:
+        usados = set()
+        for identificador in ids:
+            medio = datos.get(f"medio_{identificador}", "")
+            monto_texto = datos.get(f"monto_{identificador}", "")
+            monto = monto_clp(monto_texto)
+            filas.append({"id": identificador, "medio": medio, "monto": monto_texto})
+            if medio not in {"EFECTIVO", "TARJETA", "TRANSFERENCIA"}:
+                error = "Selecciona un medio para cada fila."
+            elif medio in usados:
+                error = "No repitas un medio de pago."
+            else:
+                usados.add(medio)
+            if monto is None or monto <= 0:
+                error = error or "Cada monto aplicado debe ser un entero positivo en pesos."
+            elif medio in {"EFECTIVO", "TARJETA", "TRANSFERENCIA"}:
+                pagos[medio.lower()] += monto
+    recibido_texto = datos.get("efectivo_recibido", "")
+    recibido = monto_clp(recibido_texto)
+    if not error:
+        if pagos["efectivo"]:
+            if recibido is None or recibido < pagos["efectivo"]:
+                error = "El efectivo recibido debe cubrir el monto aplicado en efectivo."
+        elif recibido_texto:
+            error = "No corresponde efectivo recibido sin pago en efectivo."
+    return filas or [{"id": "0", "medio": "", "monto": ""}], pagos, recibido, error
 
 
 def _clave_idempotencia_anulacion(request, venta_id):
@@ -318,7 +362,8 @@ def caja(request):
     version_carrito = _version_carrito(request)
     codigo_estado = None
     error_cobro = None
-    medio_pago_seleccionado = Venta.MedioPago.EFECTIVO
+    filas_pago = [{"id": "0", "medio": "", "monto": ""}]
+    recibido_ingresado = ""
     solicitud_dinamica = (
         request.headers.get("X-Requested-With") == "XMLHttpRequest"
     )
@@ -498,24 +543,8 @@ def caja(request):
                 return responder(redirect("ventas:caja"))
 
         if accion == "confirmar":
-            medio_pago_seleccionado = request.POST.get("medio_pago", "")
-            pagos = {}
-            error_pagos = None
-            for nombre in ("efectivo", "tarjeta", "transferencia"):
-                seleccionado = request.POST.get(f"usar_{nombre}") == "on"
-                texto = request.POST.get(f"monto_{nombre}", "0")
-                if not texto.isdecimal():
-                    error_pagos = "Ingresa montos enteros no negativos."
-                    break
-                monto = int(texto)
-                if (seleccionado and monto <= 0) or (not seleccionado and monto):
-                    error_pagos = "Cada medio seleccionado requiere un monto positivo; los demás deben ser cero."
-                    break
-                pagos[nombre] = monto
-            recibido_texto = request.POST.get("efectivo_recibido", "")
-            recibido = int(recibido_texto) if recibido_texto.isdecimal() else None
-            if not error_pagos and not pagos["efectivo"] and recibido_texto:
-                error_pagos = "No corresponde efectivo recibido sin pago en efectivo."
+            filas_pago, pagos, recibido, error_pagos = _pagos_del_formulario(request.POST)
+            recibido_ingresado = request.POST.get("efectivo_recibido", "")
             clave_recibida = request.POST.get("clave_idempotencia", "")
             version_recibida = request.POST.get("version_carrito", "")
             try:
@@ -554,11 +583,6 @@ def caja(request):
                     "La compra cambió mientras se guardaba. "
                     "Revisa el estado más reciente y confirma nuevamente."
                 )
-            elif (
-                (pagos["tarjeta"] or pagos["transferencia"])
-                and request.POST.get("pago_confirmado") != "1"
-            ):
-                error_cobro = "Confirma que el pago fue aprobado o verificado."
             else:
                 try:
                     venta, _ = confirmar_venta(
@@ -643,7 +667,8 @@ def caja(request):
             "hay_carrito": bool(carrito),
             "carrito_abierto": request.GET.get("carrito") == "abierto",
             "medios_pago": Venta.MedioPago,
-            "medio_pago_seleccionado": medio_pago_seleccionado,
+            "filas_pago": filas_pago,
+            "recibido_ingresado": recibido_ingresado,
             "error_cobro": error_cobro,
             "clave_idempotencia": clave_idempotencia,
             "version_carrito": version_carrito,
