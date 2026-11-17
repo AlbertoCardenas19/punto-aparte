@@ -4,12 +4,12 @@
 {% block extra_css %}{% include "includes/datatables_css.html" %}{% endblock %}
 {% block extra_js %}{% include "includes/datatables_js.html" %}{% endblock %}
 
-{% block title %}Catálogo | Punto Aparte{% endblock %}
+{% block title %}Productos | Punto Aparte{% endblock %}
 
 {% block content %}
 <div class="pa-encabezado-pagina">
     <div>
-        <h1 class="h2 fw-bold mb-1">Catálogo de productos</h1>
+        <h1 class="h2 fw-bold mb-1">Productos</h1>
         <p class="text-secondary mb-0">Consulta los productos y sus precios.</p>
     </div>
 
@@ -56,11 +56,12 @@
                     <td class="all fw-semibold" data-search="{{ producto.nombre }} {{ producto.descripcion }} {{ producto.marca }} {{ producto.codigo_barras|default_if_none:'' }} {% for categoria in producto.categorias.all %}{{ categoria.nombre }} {% endfor %}">
                         {{ producto.nombre }}
                     </td>
-                    <td data-order="{{ producto.precio_venta }}">
-                        {{ producto.precio_venta|clp }}
+                    <td data-order="{{ producto.precio_venta }}" class="text-end">
+                        <span class="d-inline-flex align-items-center justify-content-end gap-2 w-100">
                         {% if producto.tiene_oferta_activa %}
-                        <span class="badge text-bg-primary ms-1">Oferta</span>
+                        <span class="badge text-bg-primary">Oferta</span>
                         {% endif %}
+                        <span>{{ producto.precio_venta|clp }}</span></span>
                     </td>
                     <td data-order="{{ producto.stock }}">
                         {% if producto.stock == 0 %}

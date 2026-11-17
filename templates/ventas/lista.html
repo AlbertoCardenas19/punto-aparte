@@ -4,11 +4,11 @@
 {% block extra_css %}{% include "includes/datatables_css.html" %}{% endblock %}
 {% block extra_js %}{% include "includes/datatables_js.html" %}{% endblock %}
 
-{% block title %}Ventas | Punto Aparte{% endblock %}
+{% block title %}Historial de ventas | Punto Aparte{% endblock %}
 
 {% block content %}
 <div class="mb-4">
-    <h1 class="h2 fw-bold mb-1">Ventas</h1>
+    <h1 class="h2 fw-bold mb-1">Historial de ventas</h1>
     <p class="text-secondary mb-0">
         {% if request.user.rol == "JEFE" %}Consulta todas las ventas registradas.{% else %}Consulta tus ventas registradas.{% endif %}
     </p>

@@ -23,13 +23,13 @@
     <div class="col-12 col-md-6 col-xl-4">
         <div class="card h-100">
             <div class="card-body pa-card-con-accion">
-                <h2 class="h5 card-title">Catálogo</h2>
+                <h2 class="h5 card-title">Productos</h2>
                 <p class="card-text text-secondary">
                     Consulta los productos disponibles.
                 </p>
                 <div class="pa-tarjeta-acciones">
                     <a class="btn btn-pa" href="{% url 'catalogo:lista_productos' %}">
-                        Abrir catálogo
+                        Ver productos
                     </a>
                 </div>
             </div>
@@ -39,12 +39,12 @@
     <div class="col-12 col-md-6 col-xl-4">
         <div class="card h-100">
             <div class="card-body pa-card-con-accion">
-                <h2 class="h5 card-title">Ventas</h2>
+                <h2 class="h5 card-title">Historial de ventas</h2>
                 <p class="card-text text-secondary">
                     {% if request.user.rol == "JEFE" %}Consulta las ventas registradas.{% else %}Consulta tus ventas registradas.{% endif %}
                 </p>
                 <div class="pa-tarjeta-acciones">
-                    <a class="btn btn-pa" href="{% url 'ventas:lista' %}">Consultar ventas</a>
+                    <a class="btn btn-pa" href="{% url 'ventas:lista' %}">Ver historial de ventas</a>
                 </div>
             </div>
         </div>
@@ -54,10 +54,10 @@
     <div class="col-12 col-md-6 col-xl-4">
         <div class="card h-100">
             <div class="card-body pa-card-con-accion">
-                <h2 class="h5 card-title">Inventario</h2>
+                <h2 class="h5 card-title">Historial de stock</h2>
                 <p class="card-text text-secondary">Registra ingresos, ajustes y consulta movimientos.</p>
                 <div class="pa-tarjeta-acciones">
-                    <a class="btn btn-pa" href="{% url 'catalogo:inventario' %}">Gestionar inventario</a>
+                    <a class="btn btn-pa" href="{% url 'catalogo:historial_stock' %}">Ver historial de stock</a>
                 </div>
             </div>
         </div>
