@@ -1236,6 +1236,7 @@ class PantallaClienteTests(TestCase):
         )
 
     def test_carrusel_respeta_orden_y_omite_imagenes_ocultas(self):
+        from catalogo.models import ConfiguracionPantalla
         ImagenPantalla.objects.create(imagen="pantalla/ultima.png", orden=9)
         ImagenPantalla.objects.create(imagen="pantalla/primera.png", orden=1)
         ImagenPantalla.objects.create(imagen="pantalla/oculta.png", orden=0, activa=False)
@@ -1244,6 +1245,29 @@ class PantallaClienteTests(TestCase):
         self.assertEqual(respuesta.status_code, 200)
         self.assertEqual([url.rsplit("/", 1)[-1] for url in respuesta.json()["imagenes"]],
                          ["primera.png", "ultima.png"])
+        self.assertEqual(respuesta.json()["tiempo_por_imagen"], 8)
+        configuracion = ConfiguracionPantalla.unica()
+        configuracion.tiempo_por_imagen = 2
+        configuracion.save(update_fields=["tiempo_por_imagen"])
+        self.assertEqual(self._consultar_estado(self.client, estado).json()["tiempo_por_imagen"], 2)
+
+    def test_eliminar_imagen_visible_y_ultima_deja_bienvenida(self):
+        primera = ImagenPantalla.objects.create(imagen="pantalla/visible-1.png", orden=0)
+        segunda = ImagenPantalla.objects.create(imagen="pantalla/visible-2.png", orden=1)
+        estado, _ = self._abrir_pantalla()
+        jefe = Usuario.objects.create_user(
+            username="ignorado", first_name="Jefe", last_name="Pantalla",
+            email="jefe-pantalla@example.test", password="clave-segura", rol=Usuario.Rol.JEFE,
+        )
+        administrador = Client()
+        administrador.force_login(jefe)
+        url = reverse("catalogo:contenido_pantalla")
+        with self.captureOnCommitCallbacks(execute=True):
+            administrador.post(url, {"accion": "eliminar", "imagen_id": primera.pk})
+        self.assertEqual(len(self._consultar_estado(self.client, estado).json()["imagenes"]), 1)
+        with self.captureOnCommitCallbacks(execute=True):
+            administrador.post(url, {"accion": "eliminar", "imagen_id": segunda.pk})
+        self.assertEqual(self._consultar_estado(self.client, estado).json()["imagenes"], [])
 
     def test_apertura_exige_login_pero_pantalla_autorizada_es_independiente(self):
         anonimo = Client()

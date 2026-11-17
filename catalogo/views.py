@@ -20,7 +20,7 @@ from .forms import (
     ProductoForm,
 )
 
-from .models import Categoria, ImagenPantalla, MovimientoStock, Producto
+from .models import Categoria, ConfiguracionPantalla, ImagenPantalla, MovimientoStock, Producto
 from .services import (
     MovimientoNoValido,
     registrar_movimiento_stock as registrar_stock,
@@ -43,8 +43,34 @@ class ImagenPantallaForm(forms.ModelForm):
 @jefe_required
 def contenido_pantalla(request):
     form = ImagenPantallaForm(request.POST or None, request.FILES or None)
+    configuracion = ConfiguracionPantalla.unica()
     if request.method == "POST":
         accion = request.POST.get("accion")
+        if accion == "tiempo":
+            texto = request.POST.get("tiempo_por_imagen", "")
+            if not texto.isascii() or not texto.isdecimal() or len(texto) > 10 or not 1 <= int(texto) <= 2147483647:
+                return JsonResponse({"error": "Ingresa segundos enteros desde 1."}, status=400)
+            configuracion.tiempo_por_imagen = int(texto)
+            configuracion.save(update_fields=["tiempo_por_imagen"])
+            return JsonResponse({"tiempo_por_imagen": configuracion.tiempo_por_imagen})
+        if accion == "eliminar":
+            try:
+                imagen_id = int(request.POST.get("imagen_id", ""))
+            except ValueError:
+                return JsonResponse({"error": "Imagen no válida."}, status=400)
+            with transaction.atomic():
+                imagen = get_object_or_404(ImagenPantalla.objects.select_for_update(), pk=imagen_id)
+                nombre_archivo = imagen.imagen.name
+                almacenamiento = imagen.imagen.storage
+                imagen.delete()
+                for posicion, item in enumerate(ImagenPantalla.objects.select_for_update()):
+                    if item.orden != posicion:
+                        ImagenPantalla.objects.filter(pk=item.pk).update(orden=posicion)
+                def borrar_archivo_sin_referencias():
+                    if not ImagenPantalla.objects.filter(imagen=nombre_archivo).exists():
+                        almacenamiento.delete(nombre_archivo)
+                transaction.on_commit(borrar_archivo_sin_referencias)
+            return JsonResponse({"imagen_id": imagen_id})
         if accion == "ordenar":
             ids = request.POST.getlist("imagen_id")
             with transaction.atomic():
@@ -77,7 +103,8 @@ def contenido_pantalla(request):
             imagen.save()
             return redirect("catalogo:contenido_pantalla")
     return render(request, "catalogo/contenido_pantalla.html",
-                  {"form": form, "imagenes": ImagenPantalla.objects.all()})
+                  {"form": form, "imagenes": ImagenPantalla.objects.all(),
+                   "configuracion": configuracion})
 
 
 def _clave_operacion_stock(request):

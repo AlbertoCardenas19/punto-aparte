@@ -753,7 +753,7 @@ def estado_pantalla_cliente(request):
         estado.precios,
         estado.precios_normales,
     )
-    from catalogo.models import ImagenPantalla
+    from catalogo.models import ConfiguracionPantalla, ImagenPantalla
     return JsonResponse({
         "productos": [
             {
@@ -770,6 +770,7 @@ def estado_pantalla_cliente(request):
         "ultima_venta_id": estado.ultima_venta_id or "",
         "imagenes": [request.build_absolute_uri(item.imagen.url)
                      for item in ImagenPantalla.objects.filter(activa=True)],
+        "tiempo_por_imagen": ConfiguracionPantalla.unica().tiempo_por_imagen,
     })
 
 

@@ -23,6 +23,15 @@ class ImagenPantalla(models.Model):
         ordering = ("orden", "pk")
 
 
+class ConfiguracionPantalla(models.Model):
+    tiempo_por_imagen = models.PositiveIntegerField(default=8, validators=[MinValueValidator(1)])
+
+    @classmethod
+    def unica(cls):
+        configuracion, _ = cls.objects.get_or_create(pk=1)
+        return configuracion
+
+
 def normalizar_mayuscula_inicial(valor):
     """Limpia espacios exteriores y pone en mayúscula el primer carácter."""
     valor = (valor or "").strip()

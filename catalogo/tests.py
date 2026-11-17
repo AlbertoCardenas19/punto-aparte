@@ -444,6 +444,53 @@ class ExportacionesCatalogoTests(TestCase):
 
 
 class ContenidoPantallaPermisosTests(TestCase):
+    def test_tiempo_global_valida_y_solo_jefe_guarda(self):
+        from .models import ConfiguracionPantalla
+        url = reverse("catalogo:contenido_pantalla")
+        cajero = Usuario.objects.create_user(
+            username="ignorado", first_name="Caja", last_name="Tiempo",
+            email="caja-tiempo@example.test", password="clave-segura",
+        )
+        self.client.force_login(cajero)
+        self.assertEqual(self.client.post(url, {"accion": "tiempo", "tiempo_por_imagen": "3"}).status_code, 403)
+        jefe = Usuario.objects.create_user(
+            username="ignorado", first_name="Jefe", last_name="Tiempo",
+            email="jefe-tiempo@example.test", password="clave-segura", rol=Usuario.Rol.JEFE,
+        )
+        self.client.force_login(jefe)
+        self.assertEqual(ConfiguracionPantalla.unica().tiempo_por_imagen, 8)
+        for invalido in ("0", "1.5", "-1", "", "abc"):
+            self.assertEqual(self.client.post(url, {"accion": "tiempo", "tiempo_por_imagen": invalido}).status_code, 400)
+        self.assertEqual(ConfiguracionPantalla.unica().tiempo_por_imagen, 8)
+        self.assertEqual(self.client.post(url, {"accion": "tiempo", "tiempo_por_imagen": "3"}).status_code, 200)
+        self.assertEqual(ConfiguracionPantalla.unica().tiempo_por_imagen, 3)
+        self.assertContains(self.client.get(url), 'value="3"')
+
+    def test_eliminar_respeta_referencias_y_reordena(self):
+        from unittest.mock import patch
+        from django.test import Client
+        from .models import ImagenPantalla
+        url = reverse("catalogo:contenido_pantalla")
+        jefe = Usuario.objects.create_user(
+            username="ignorado", first_name="Jefe", last_name="Borrar",
+            email="jefe-borrar@example.test", password="clave-segura", rol=Usuario.Rol.JEFE,
+        )
+        self.client.force_login(jefe)
+        primera = ImagenPantalla.objects.create(imagen="pantalla/compartida.png", orden=0)
+        segunda = ImagenPantalla.objects.create(imagen="pantalla/compartida.png", orden=4)
+        ultima = ImagenPantalla.objects.create(imagen="pantalla/ultima.png", orden=7)
+        sin_csrf = Client(enforce_csrf_checks=True)
+        sin_csrf.force_login(jefe)
+        self.assertEqual(sin_csrf.post(url, {"accion": "eliminar", "imagen_id": ultima.pk}).status_code, 403)
+        with patch.object(primera.imagen.storage, "delete") as borrar:
+            with self.captureOnCommitCallbacks(execute=True):
+                self.assertEqual(self.client.post(url, {"accion": "eliminar", "imagen_id": primera.pk}).status_code, 200)
+            borrar.assert_not_called()
+            with self.captureOnCommitCallbacks(execute=True):
+                self.assertEqual(self.client.post(url, {"accion": "eliminar", "imagen_id": segunda.pk}).status_code, 200)
+            borrar.assert_called_once_with("pantalla/compartida.png")
+        self.assertEqual(list(ImagenPantalla.objects.values_list("pk", "orden")), [(ultima.pk, 0)])
+
     def test_solo_jefe_puede_administrar(self):
         cajero = Usuario.objects.create_user(
             username="ignorado", first_name="Caja", last_name="Prueba",

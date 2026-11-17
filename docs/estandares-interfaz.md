@@ -26,6 +26,7 @@ Lee este documento antes de modificar pantallas. Define requisitos aprobados; su
 - Usa ventanas modales solo para tareas breves con comportamiento real, como confirmar un cobro en efectivo. No presentes integraciones pendientes como si estuvieran disponibles.
 - En el modal de cobro, muestra el total arriba, una sola fila sin medio elegido al abrir y filas adicionales bajo demanda. El botón Cobrar se habilita únicamente con una distribución válida y la verificación manual se explica junto a la acción.
 - En Contenido de pantalla, muestra las imágenes como miniaturas ordenables por arrastre con ratón o tacto y mediante controles de teclado. El interruptor indica si cada imagen aparece en el carrusel; conserva visibles las desactivadas en la galería. Si no se puede guardar, restaura el estado anterior y muestra un error junto a la galería.
+- Usa miniaturas compactas que conserven la proporción y permitan ampliar cada imagen. El tiempo por imagen se configura una vez para todo el carrusel; la eliminación exige confirmación con vista previa. El agradecimiento conserva sus cinco segundos independientes.
 
 ## Idioma, mensajes y errores
 

@@ -76,6 +76,8 @@ function actualizarPantalla(datos) {
         }, 5000);
     }
     const imagenes = datos.imagenes || [];
+    const duracionImagen = Math.max(1, Number(datos.tiempo_por_imagen) || 8) * 1000;
+    if (tieneProductos) ultimoCambioImagen = 0;
     if (imagenes.length) {
         const clave = JSON.stringify(imagenes);
         if (clave !== claveImagenes) {
@@ -83,7 +85,7 @@ function actualizarPantalla(datos) {
             indiceImagen = 0;
             ultimoCambioImagen = 0;
         }
-        if (Date.now() - ultimoCambioImagen >= 8000) {
+        if (!tieneProductos && Date.now() - ultimoCambioImagen >= duracionImagen) {
             if (ultimoCambioImagen) indiceImagen = (indiceImagen + 1) % imagenes.length;
             ultimoCambioImagen = Date.now();
         }

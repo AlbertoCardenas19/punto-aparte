@@ -33,9 +33,11 @@ El modal de cobro muestra el total y comienza con una fila sin medio elegido. Ca
 
 ## Pantalla y navegación
 
-El Jefe carga JPG, PNG y WebP de hasta 5 MB en Contenido de pantalla, define su orden y las activa o desactiva. Django sirve `media/` solo en desarrollo; un despliegue debe configurar el servidor de archivos. La pantalla del cliente usa el canal local existente: carrusel cada ocho segundos con carrito vacío, compra al agregar productos y agradecimiento durante cinco segundos al cerrar una venta. Si no hay imágenes activas, muestra bienvenida. El descarte del carrito limpia también ese canal.
+El Jefe carga JPG, PNG y WebP de hasta 5 MB en Contenido de pantalla, define su orden y las activa o desactiva. Django sirve `media/` solo en desarrollo; un despliegue debe configurar el servidor de archivos. La pantalla del cliente usa el canal local existente: carrusel con tiempo global configurable (8 segundos inicialmente) y carrito vacío, compra al agregar productos y agradecimiento durante cinco segundos al cerrar una venta. Si no hay imágenes activas, muestra bienvenida. El descarte del carrito limpia también ese canal.
 
 La administración usa una galería de miniaturas: arrastrar o usar los botones de movimiento guarda el orden sin recargar, y cada imagen tiene un interruptor para mostrarla u ocultarla del carrusel. Las imágenes ocultas permanecen en la galería. El orden sigue guardado internamente en `orden`; el campo numérico ya no aparece.
+
+La miniatura abre una vista ampliada. El Jefe puede eliminar una imagen tras confirmarla con una vista previa; se retira del carrusel y se borra el archivo mediante el almacenamiento configurado después de confirmar la transacción, siempre que otro registro no lo use. El tiempo por imagen es un entero global desde un segundo, persistente y visible solo en la administración de Jefe. El límite de cantidad de imágenes sigue pendiente de definición.
 
 Al agregar un producto, la respuesta AJAX distingue un agregado aceptado de un rechazo y conserva la versión del carrito. Si se pierde la respuesta o falla la actualización visual, la caja consulta el estado autorizado mediante GET; nunca repite el POST de agregado. El cajero revisa la cantidad antes de volver a agregar.
 

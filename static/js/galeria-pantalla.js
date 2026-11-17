@@ -105,4 +105,70 @@ if (galeria) {
             interruptor.disabled = false;
         }
     });
+
+    const modalAmpliar = document.querySelector('#modal-ampliar-imagen');
+    const modalEliminar = document.querySelector('#modal-eliminar-imagen');
+    let imagenPorEliminar = null;
+    lista.addEventListener('click', event => {
+        const ampliar = event.target.closest('[data-ampliar-imagen]');
+        if (ampliar && !arrastre) {
+            const origen = ampliar.querySelector('img');
+            const destino = modalAmpliar.querySelector('[data-imagen-ampliada]');
+            destino.src = origen.src;
+            destino.alt = origen.alt;
+            bootstrap.Modal.getOrCreateInstance(modalAmpliar).show();
+        }
+        const eliminar = event.target.closest('[data-eliminar-imagen]');
+        if (eliminar) {
+            imagenPorEliminar = eliminar.closest('[data-imagen-id]');
+            modalEliminar.querySelector('[data-imagen-eliminar]').src = imagenPorEliminar.querySelector('img').src;
+            bootstrap.Modal.getOrCreateInstance(modalEliminar).show();
+        }
+    });
+    modalEliminar.addEventListener('hidden.bs.modal', () => { imagenPorEliminar = null; });
+    modalEliminar.querySelector('[data-confirmar-eliminar]').addEventListener('click', async event => {
+        if (!imagenPorEliminar) return;
+        const boton = event.currentTarget;
+        boton.disabled = true;
+        const datos = new FormData();
+        datos.set('accion', 'eliminar');
+        datos.set('imagen_id', imagenPorEliminar.dataset.imagenId);
+        try {
+            const resultado = await enviar(datos);
+            if (String(resultado.imagen_id) !== imagenPorEliminar.dataset.imagenId) throw new Error('Imagen inesperada');
+            imagenPorEliminar.remove();
+            bootstrap.Modal.getOrCreateInstance(modalEliminar).hide();
+            mostrarError('');
+        } catch {
+            mostrarError('No se pudo eliminar la imagen. Intenta nuevamente.');
+            bootstrap.Modal.getOrCreateInstance(modalEliminar).hide();
+        } finally {
+            boton.disabled = false;
+        }
+    });
+
+    const formTiempo = document.querySelector('[data-tiempo-pantalla]');
+    const campoTiempo = formTiempo.querySelector('[name="tiempo_por_imagen"]');
+    const errorTiempo = formTiempo.querySelector('[data-tiempo-error]');
+    let tiempoGuardado = campoTiempo.value;
+    formTiempo.addEventListener('submit', async event => {
+        event.preventDefault();
+        if (!formTiempo.reportValidity()) return;
+        const texto = campoTiempo.value;
+        if (!/^[0-9]+$/.test(texto) || Number(texto) < 1 || !Number.isSafeInteger(Number(texto))) {
+            errorTiempo.textContent = 'Ingresa segundos enteros desde 1.';
+            errorTiempo.hidden = false;
+            return;
+        }
+        try {
+            const resultado = await enviar(new FormData(formTiempo));
+            if (resultado.tiempo_por_imagen !== Number(texto)) throw new Error('Tiempo inesperado');
+            tiempoGuardado = texto;
+            errorTiempo.hidden = true;
+        } catch {
+            campoTiempo.value = tiempoGuardado;
+            errorTiempo.textContent = 'No se pudo guardar el tiempo. Se restauró el valor anterior.';
+            errorTiempo.hidden = false;
+        }
+    });
 }

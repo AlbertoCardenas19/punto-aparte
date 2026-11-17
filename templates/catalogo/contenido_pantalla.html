@@ -5,17 +5,24 @@
 <div class="pa-encabezado-pagina"><h1 class="h2 fw-bold">Contenido de pantalla</h1></div>
 <p>Imágenes JPG, PNG o WebP de hasta 5 MB. Arrastra una miniatura o usa sus botones para cambiar el orden del carrusel.</p>
 <form method="post" enctype="multipart/form-data" class="card card-body mb-3">{% csrf_token %}{{ form.as_p }}<button class="btn btn-pa" type="submit">Cargar imagen</button></form>
+<form method="post" data-tiempo-pantalla data-url="{% url 'catalogo:contenido_pantalla' %}" class="card card-body mb-3">
+    {% csrf_token %}<input type="hidden" name="accion" value="tiempo">
+    <label class="form-label" for="tiempo-por-imagen">Tiempo por imagen (segundos)</label>
+    <div class="d-flex flex-wrap gap-2 align-items-center"><input class="form-control pa-tiempo-imagen" id="tiempo-por-imagen" name="tiempo_por_imagen" type="number" min="1" step="1" required value="{{ configuracion.tiempo_por_imagen }}"><button class="btn btn-pa" type="submit">Guardar tiempo</button></div>
+    <p class="pa-error-campo mb-0" data-tiempo-error role="alert" hidden></p>
+</form>
 <section data-galeria-pantalla data-url="{% url 'catalogo:contenido_pantalla' %}" aria-label="Imágenes de la pantalla del cliente">
     <p class="pa-error-campo" data-galeria-error role="alert" hidden></p>
     <div class="pa-galeria-pantalla" data-galeria-lista>
         {% for item in imagenes %}
         <article class="pa-galeria-item card" data-imagen-id="{{ item.pk }}">
-            <img src="{{ item.imagen.url }}" alt="Imagen {{ item.pk }} del carrusel" class="pa-galeria-miniatura">
+            <button class="pa-galeria-vista" type="button" data-ampliar-imagen aria-label="Ampliar imagen {{ item.pk }}"><img src="{{ item.imagen.url }}" alt="Imagen {{ item.pk }} del carrusel" class="pa-galeria-miniatura"></button>
             <div class="card-body">
                 <div class="d-flex align-items-center gap-2 mb-2">
                     <button type="button" class="btn btn-outline-secondary btn-sm pa-galeria-asa" data-arrastrar aria-label="Arrastrar imagen {{ item.pk }} para ordenar">Mover</button>
                     <button type="button" class="btn btn-outline-secondary btn-sm" data-mover="-1" aria-label="Mover imagen {{ item.pk }} antes">↑</button>
                     <button type="button" class="btn btn-outline-secondary btn-sm" data-mover="1" aria-label="Mover imagen {{ item.pk }} después">↓</button>
+                    <button type="button" class="btn btn-outline-danger btn-sm ms-auto" data-eliminar-imagen aria-label="Eliminar imagen {{ item.pk }}"><span aria-hidden="true">🗑</span></button>
                 </div>
                 <div class="form-check form-switch">
                     <input class="form-check-input" type="checkbox" role="switch" data-imagen-activa id="imagen-activa-{{ item.pk }}" {% if item.activa %}checked{% endif %} aria-label="Mostrar imagen {{ item.pk }} en la pantalla del cliente">
@@ -26,5 +33,7 @@
         {% empty %}<p class="text-secondary">Aún no hay imágenes.</p>{% endfor %}
     </div>
 </section>
+<div class="modal fade" id="modal-ampliar-imagen" tabindex="-1" aria-labelledby="titulo-ampliar-imagen"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content"><div class="modal-header"><h2 class="modal-title h5" id="titulo-ampliar-imagen">Vista ampliada</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div><div class="modal-body text-center"><img class="pa-galeria-ampliada" data-imagen-ampliada alt=""></div></div></div></div>
+<div class="modal fade" id="modal-eliminar-imagen" tabindex="-1" aria-labelledby="titulo-eliminar-imagen"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title h5" id="titulo-eliminar-imagen">Eliminar imagen</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div><div class="modal-body"><p>¿Eliminar esta imagen de la pantalla del cliente?</p><img class="pa-galeria-confirmacion" data-imagen-eliminar alt="Imagen que se eliminará"></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-outline-danger" data-confirmar-eliminar>Eliminar imagen</button></div></div></div></div>
 {% endblock %}
-{% block extra_js %}<script src="{% static 'js/galeria-pantalla.js' %}" defer></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'js/galeria-pantalla.js' %}?v=galeria-20261117-1" defer></script>{% endblock %}
