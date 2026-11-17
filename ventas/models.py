@@ -73,6 +73,7 @@ class EstadoPantallaCliente(models.Model):
     carrito = models.JSONField(default=dict, blank=True)
     precios = models.JSONField(default=dict, blank=True)
     precios_normales = models.JSONField(default=dict, blank=True)
+    version_descartada = models.CharField(max_length=36, blank=True)
     ultima_venta = models.ForeignKey(
         Venta,
         on_delete=models.SET_NULL,

@@ -7,6 +7,7 @@ app_name = "ventas"
 
 urlpatterns = [
     path("", views.caja, name="caja"),
+    path("descartar/", views.descartar_carrito, name="descartar_carrito"),
     path(
         "pantalla-cliente/",
         views.pantalla_cliente,

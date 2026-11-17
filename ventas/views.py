@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db.models import Q
+from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -188,9 +189,17 @@ def _estado_pantalla_de_caja(request):
 
     estado = None
     if token_uuid:
-        estado = EstadoPantallaCliente.objects.filter(token=token_uuid).first()
+        estado = EstadoPantallaCliente.objects.select_for_update().filter(token=token_uuid).first()
     if estado is None:
         estado = EstadoPantallaCliente.objects.create()
+
+    if (estado.version_descartada and
+            request.session.get(CLAVE_VERSION_CARRITO) == estado.version_descartada):
+        request.session.pop(CLAVE_CARRITO, None)
+        request.session.pop(CLAVE_PRECIOS_CARRITO, None)
+        request.session.pop(CLAVE_PRECIOS_NORMALES_CARRITO, None)
+        request.session[CLAVE_IDEMPOTENCIA_VENTA] = str(uuid4())
+        _rotar_version_carrito(request)
 
     if CLAVE_CARRITO not in request.session and estado.carrito:
         request.session[CLAVE_CARRITO] = dict(estado.carrito)
@@ -296,6 +305,7 @@ def lista_ventas(request):
 
 
 @login_required
+@transaction.atomic
 def caja(request):
     estado_pantalla = _estado_pantalla_de_caja(request)
     carrito = request.session.get(CLAVE_CARRITO, {})
@@ -644,8 +654,30 @@ def caja(request):
     return responder(respuesta)
 
 
+@login_required
+@transaction.atomic
+@require_http_methods(["POST"])
+def descartar_carrito(request):
+    estado = _estado_pantalla_de_caja(request)
+    version = request.POST.get("version_carrito", "")
+    if not version or version != _version_carrito(request):
+        return JsonResponse({"error": "La compra cambió"}, status=409)
+    request.session.pop(CLAVE_CARRITO, None)
+    request.session.pop(CLAVE_PRECIOS_CARRITO, None)
+    request.session.pop(CLAVE_PRECIOS_NORMALES_CARRITO, None)
+    request.session[CLAVE_IDEMPOTENCIA_VENTA] = str(uuid4())
+    estado.carrito = {}
+    estado.precios = {}
+    estado.precios_normales = {}
+    estado.version_descartada = version
+    estado.save(update_fields=["carrito", "precios", "precios_normales", "version_descartada", "actualizado"])
+    _rotar_version_carrito(request)
+    return _agregar_cookie_pantalla(JsonResponse({"ok": True}), estado)
+
+
 @never_cache
 @login_required
+@transaction.atomic
 def pantalla_cliente(request):
     estado = _estado_pantalla_de_caja(request)
     carrito = request.session.get(CLAVE_CARRITO, {})

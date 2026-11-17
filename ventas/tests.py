@@ -1438,3 +1438,33 @@ class PagoCombinadoTests(TestCase):
                             pagos={"efectivo": 2000, "tarjeta": 6000, "transferencia": 0},
                             efectivo_recibido=5000, clave_idempotencia=uuid4())
         self.assertFalse(Venta.objects.exists())
+
+
+class AbandonoCarritoTests(TestCase):
+    def test_descartar_limpia_canal_y_rechaza_respuesta_antigua(self):
+        cajero = Usuario.objects.create_user(
+            username="ignorado", first_name="Caja", last_name="Prueba",
+            email="abandono@example.test", password="clave-segura",
+        )
+        producto = Producto.objects.create(nombre="Libro", precio=1000, stock=2)
+        self.client.force_login(cajero)
+        self.client.get(reverse("ventas:caja"))
+        sesion = self.client.session
+        version = sesion[CLAVE_VERSION_CARRITO]
+        self.client.post(reverse("ventas:caja"), {
+            "accion": "agregar", "version_carrito": version,
+            "producto_id": producto.pk, "cantidad": 1,
+        })
+        version = self.client.session[CLAVE_VERSION_CARRITO]
+        self.assertTrue(self.client.session[CLAVE_CARRITO])
+        self.assertEqual(self.client.post(reverse("ventas:descartar_carrito"),
+                                          {"version_carrito": version}).status_code, 200)
+        self.assertNotIn(CLAVE_CARRITO, self.client.session)
+        respuesta = self.client.post(reverse("ventas:caja"), {
+            "accion": "agregar", "version_carrito": version,
+            "producto_id": producto.pk, "cantidad": 1,
+        })
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertNotIn(CLAVE_CARRITO, self.client.session)
+        estado = EstadoPantallaCliente.objects.get(token=self.client.cookies[COOKIE_PANTALLA_CLIENTE].value)
+        self.assertEqual(estado.carrito, {})

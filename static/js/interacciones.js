@@ -604,10 +604,13 @@ function actualizarVersionCarrito(doc) {
     const nextPanel = doc.querySelector('[data-carrito-panel]');
     if (currentPanel && nextPanel) {
         currentPanel.dataset.versionCarrito = nextPanel.dataset.versionCarrito;
+        currentPanel.dataset.hayCarrito = nextPanel.dataset.hayCarrito;
     }
 }
 
+let carritoDescartadoAlSalir = false;
 function aplicarActualizacionCarrito(doc) {
+    if (carritoDescartadoAlSalir) return;
     const nextPanel = doc.querySelector('[data-carrito-panel]');
     if (!nextPanel) throw new Error('Carrito no disponible');
     const controlActivo = document.activeElement?.closest(
@@ -881,3 +884,39 @@ window.addEventListener('pagehide', () => {
     const temporal = document.querySelector('#password-temporal');
     if (temporal) { temporal.value = ''; temporal.defaultValue = ''; }
 });
+
+async function confirmarSalidaDeVenta() {
+    const panel = document.querySelector('[data-carrito-panel]');
+    if (!panel || panel.dataset.hayCarrito !== 'true') return true;
+    if (!window.confirm('Hay productos en la venta. ¿Descartar la compra y salir?')) return false;
+    const token = panel.querySelector('[name="csrfmiddlewaretoken"]')?.value
+        || document.querySelector('[name="csrfmiddlewaretoken"]')?.value;
+    const datos = new FormData();
+    datos.append('version_carrito', panel.dataset.versionCarrito);
+    const respuesta = await fetch('/ventas/descartar/', {
+        method: 'POST', headers: {'X-CSRFToken': token}, body: datos,
+    });
+    if (!respuesta.ok) {
+        alert('La compra cambió. Revisa el carrito antes de salir.');
+        return false;
+    }
+    carritoDescartadoAlSalir = true;
+    return true;
+}
+
+document.addEventListener('click', async event => {
+    const enlace = event.target.closest('a[href]');
+    if (!enlace || !document.querySelector('[data-carrito-panel]') ||
+        enlace.target === '_blank' || enlace.hasAttribute('download')) return;
+    const destino = new URL(enlace.href, location.href);
+    if (destino.origin === location.origin && destino.pathname === location.pathname) return;
+    event.preventDefault();
+    if (await confirmarSalidaDeVenta()) location.assign(destino.href);
+});
+
+document.addEventListener('submit', async event => {
+    const form = event.target;
+    if (!document.querySelector('[data-carrito-panel]') || !form.action.includes('/logout/')) return;
+    event.preventDefault();
+    if (await confirmarSalidaDeVenta()) form.submit();
+}, true);
