@@ -1,4 +1,5 @@
 /* Menús fuera del contenedor desplazable, sin alterar acciones ni permisos. */
+window.PUNTO_APARTE_JS_VERSION = 'caja-20261117-3';
 const controlesMenu = [...document.querySelectorAll('[data-menu-principal]')];
 const menuMovil = document.querySelector('#menu-movil');
 const menuEscritorio = document.querySelector('#menu-escritorio');
@@ -442,20 +443,19 @@ for (const form of document.querySelectorAll('[data-busqueda-viva]')) {
         status.textContent = 'Buscando…';
         registrarOperacionCarrito();
         try {
-            const {doc, response} = await solicitarActualizacionCarrito(
-                form, datos, url
-            );
-            reemplazarResultadosBusqueda(doc, url);
-            const codigoEstado = response.headers.get('X-Codigo-Estado');
-            if (codigoEstado === 'agregado') {
-                aplicarActualizacionCarrito(doc);
-            }
-            const mensajesCodigo = {
-                no_encontrado: 'No se encontró un producto activo con ese código.',
-                sin_stock: 'Producto encontrado, pero está sin stock.',
-                limite_stock: 'Ya agregaste todo el stock disponible.',
-            };
-            status.textContent = mensajesCodigo[codigoEstado] || '';
+            await solicitarActualizacionCarrito(form, datos, url, ({doc, response}) => {
+                reemplazarResultadosBusqueda(doc, url);
+                const codigoEstado = response.headers.get('X-Codigo-Estado');
+                if (codigoEstado === 'agregado') {
+                    aplicarActualizacionCarrito(doc);
+                }
+                const mensajesCodigo = {
+                    no_encontrado: 'No se encontró un producto activo con ese código.',
+                    sin_stock: 'Producto encontrado, pero está sin stock.',
+                    limite_stock: 'Ya agregaste todo el stock disponible.',
+                };
+                status.textContent = mensajesCodigo[codigoEstado] || '';
+            });
         } catch (error) {
             let recuperado = false;
             try {
@@ -574,7 +574,7 @@ function finalizarOperacionCarrito() {
     actualizarBloqueoCobro();
 }
 
-function solicitarActualizacionCarrito(form, datos, urlSolicitada = null) {
+function solicitarActualizacionCarrito(form, datos, urlSolicitada = null, procesar = null) {
     const ejecutar = async () => {
         const version = document.querySelector('[data-carrito-panel]')
             ?.dataset.versionCarrito;
@@ -588,7 +588,8 @@ function solicitarActualizacionCarrito(form, datos, urlSolicitada = null) {
         const doc = new DOMParser().parseFromString(
             await response.text(), 'text/html'
         );
-        return {doc, response};
+        const resultado = {doc, response, versionEnviada: version};
+        return procesar ? procesar(resultado) : resultado;
     };
     const solicitud = colaActualizacionesCarrito.then(ejecutar, ejecutar);
     colaActualizacionesCarrito = solicitud.catch(() => {});
@@ -603,12 +604,14 @@ async function recuperarEstadoCarrito() {
     aplicarActualizacionCarrito(doc);
 }
 
-function informarResultadoIncierto(productoId, recuperado) {
+function informarResultadoIncierto(productoId, recuperado, agregadoConfirmado = false) {
     const estado = document.querySelector(
         `[data-producto-tarjeta][data-producto-id="${CSS.escape(String(productoId))}"] [data-agregar-estado]`
     ) || document.querySelector('[data-carrito-estado]');
     if (!estado) return;
-    estado.textContent = recuperado
+    estado.textContent = recuperado && agregadoConfirmado
+        ? 'El servidor agregó el producto. Se recuperó la compra tras un problema de interfaz.'
+        : recuperado
         ? 'Se recuperó la compra. Revisa la cantidad antes de agregar otra vez.'
         : 'No se pudo comprobar el resultado. Actualiza la compra y revisa la cantidad antes de agregar otra vez.';
     estado.classList.add('pa-estado-error');
@@ -861,9 +864,24 @@ document.addEventListener('click', event => {
     const agregar = event.target.closest('[data-agregar-pago]');
     if (!agregar) return;
     const modal = agregar.closest('#modal-cobro');
-    prepararFormularioCobro(modal);
-    modal.querySelector('[data-form-cobro]')?.agregarPago?.();
+    try {
+        prepararFormularioCobro(modal);
+        const form = modal.querySelector('[data-form-cobro]');
+        const anteriores = form.querySelectorAll('[data-fila-pago]').length;
+        form.agregarPago();
+        if (form.querySelectorAll('[data-fila-pago]').length !== anteriores + 1) {
+            throw new Error('El clic no añadió una fila de pago');
+        }
+    } catch (error) {
+        console.error(`[Punto Aparte caja ${window.PUNTO_APARTE_JS_VERSION}] Agregar medio`, error);
+        const estado = modal?.querySelector('[data-pago-error]');
+        if (estado) {
+            estado.textContent = 'No se pudo añadir el medio de pago. Recarga la página.';
+            estado.hidden = false;
+        }
+    }
 });
+window.PUNTO_APARTE_COBRO_LISTO = true;
 
 function prepararCarrito(panel = document) {
     prepararLimpiarCarrito(panel);
@@ -886,16 +904,17 @@ function prepararCarrito(panel = document) {
         status.textContent = '';
         status.classList.remove('pa-estado-error');
         try {
-            const {doc} = await solicitarActualizacionCarrito(form, datos);
-            trasladarErroresAlEstado(doc, '[data-carrito-estado]');
-            if (revisionEnviada === revisionLocal) {
-                aplicarActualizacionCarrito(doc);
-            } else {
-                actualizarVersionCarrito(doc);
-                if (operacionesCarritoPendientes <= 1) {
-                    form.removeAttribute('aria-busy');
+            await solicitarActualizacionCarrito(form, datos, null, ({doc}) => {
+                trasladarErroresAlEstado(doc, '[data-carrito-estado]');
+                if (revisionEnviada === revisionLocal) {
+                    aplicarActualizacionCarrito(doc);
+                } else {
+                    actualizarVersionCarrito(doc);
+                    if (operacionesCarritoPendientes <= 1) {
+                        form.removeAttribute('aria-busy');
+                    }
                 }
-            }
+            });
         } catch (error) {
             form.removeAttribute('aria-busy');
             status.textContent = 'No se pudo actualizar la compra. Intenta nuevamente.';
@@ -934,10 +953,9 @@ function prepararLimpiarCarrito(contenedor = document) {
         const boton = form.querySelector('button[type="submit"]');
         boton.disabled = true;
         try {
-            const {doc} = await solicitarActualizacionCarrito(
-                form, new FormData(form)
+            await solicitarActualizacionCarrito(
+                form, new FormData(form), null, ({doc}) => aplicarActualizacionCarrito(doc)
             );
-            aplicarActualizacionCarrito(doc);
         } catch {
             boton.disabled = false;
             const estado = document.querySelector('[data-carrito-estado]');
@@ -960,29 +978,35 @@ function prepararBotonesAgregar(contenedor = document) {
             event.preventDefault();
             registrarOperacionCarrito();
             const datos = new FormData(form);
-            const versionEnviada = document.querySelector('[data-carrito-panel]')?.dataset.versionCarrito;
             const button = form.querySelector('button[type="submit"]');
             form.setAttribute('aria-busy', 'true');
             status.textContent = '';
             status.classList.remove('pa-estado-error');
             button.disabled = true;
+            let agregadoConfirmado = false;
+            let etapa = 'petición';
             try {
                 const productoId = datos.get('producto_id');
-                const {doc, response} = await solicitarActualizacionCarrito(form, datos);
-                const codigo = response.headers.get('X-Codigo-Estado');
-                const versionRecibida = doc.querySelector('[data-carrito-panel]')?.dataset.versionCarrito;
-                if (!versionRecibida || !['agregado', 'rechazado', 'version_antigua'].includes(codigo)) {
-                    throw new Error('Respuesta de agregado incompleta');
-                }
-                if (codigo === 'agregado' && versionRecibida === versionEnviada) {
-                    throw new Error('El agregado no cambió la versión');
-                }
-                trasladarErroresAlEstado(
-                    doc,
-                    `[data-producto-tarjeta][data-producto-id="${productoId}"] [data-agregar-estado]`
-                );
-                aplicarActualizacionCarrito(doc);
+                await solicitarActualizacionCarrito(form, datos, null, ({doc, response, versionEnviada}) => {
+                    etapa = 'respuesta';
+                    const codigo = response.headers.get('X-Codigo-Estado');
+                    const versionRecibida = doc.querySelector('[data-carrito-panel]')?.dataset.versionCarrito;
+                    if (!versionRecibida || !['agregado', 'rechazado', 'version_antigua'].includes(codigo)) {
+                        throw new Error('Respuesta de agregado incompleta');
+                    }
+                    if (codigo === 'agregado' && versionRecibida === versionEnviada) {
+                        throw new Error('El agregado no cambió la versión');
+                    }
+                    agregadoConfirmado = codigo === 'agregado';
+                    trasladarErroresAlEstado(
+                        doc,
+                        `[data-producto-tarjeta][data-producto-id="${productoId}"] [data-agregar-estado]`
+                    );
+                    etapa = 'interfaz';
+                    aplicarActualizacionCarrito(doc);
+                });
             } catch (error) {
+                console.error(`[Punto Aparte caja ${window.PUNTO_APARTE_JS_VERSION}] Agregar: ${etapa}`, error);
                 form.removeAttribute('aria-busy');
                 button.disabled = false;
                 let recuperado = false;
@@ -992,7 +1016,7 @@ function prepararBotonesAgregar(contenedor = document) {
                 } catch {
                     // El resultado del POST sigue incierto; nunca se repite automáticamente.
                 }
-                informarResultadoIncierto(datos.get('producto_id'), recuperado);
+                informarResultadoIncierto(datos.get('producto_id'), recuperado, agregadoConfirmado);
             } finally {
                 finalizarOperacionCarrito();
             }

@@ -975,6 +975,7 @@ class EstadoCarritoTests(TestCase):
         agregada = self.client.post(url, datos, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
         self.assertEqual(agregada.headers["X-Codigo-Estado"], "agregado")
         self.assertEqual(self.client.session[CLAVE_CARRITO][str(self.producto.pk)], 1)
+
         recuperada = self.client.get(url)
         self.assertContains(recuperada, "En compra:")
         self.assertEqual(recuperada.context["version_carrito"], self.client.session[CLAVE_VERSION_CARRITO])
@@ -988,6 +989,13 @@ class EstadoCarritoTests(TestCase):
         rechazada = self.client.post(url, datos, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
         self.assertEqual(rechazada.headers["X-Codigo-Estado"], "rechazado")
         self.assertEqual(self.client.session[CLAVE_CARRITO][str(self.producto.pk)], 1)
+
+    def test_caja_publica_version_de_script_y_boton_no_envia_formulario(self):
+        self._guardar_carrito()
+        respuesta = self.client.get(reverse("ventas:caja"))
+        self.assertContains(respuesta, 'interacciones.js?v=caja-20261117-3')
+        self.assertContains(respuesta, 'data-caja-version="caja-20261117-3"')
+        self.assertContains(respuesta, 'type="button" data-agregar-pago')
 
     def test_producto_inactivo_permanece_visible_y_bloquea_cobro(self):
         self._guardar_carrito()
