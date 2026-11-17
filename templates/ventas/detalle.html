@@ -22,6 +22,16 @@
 
                 <p><strong>Cajero:</strong> {{ venta.cajero.get_full_name }}</p>
                 <p><strong>Medio de pago:</strong> {{ venta.get_medio_pago_display }}</p>
+                <div class="card card-body mb-3" aria-label="Desglose de pagos">
+                    <p class="mb-1"><strong>Efectivo:</strong> {{ venta.efectivo|clp }}</p>
+                    <p class="mb-1"><strong>Tarjeta:</strong> {{ venta.tarjeta|clp }}</p>
+                    <p class="mb-1"><strong>Transferencia:</strong> {{ venta.transferencia|clp }}</p>
+                    <p class="mb-1"><strong>Total:</strong> {{ venta.total|clp }}</p>
+                    {% if venta.efectivo %}
+                    <p class="mb-1"><strong>Efectivo recibido:</strong> {% if venta.efectivo_recibido is None %}No registrado{% else %}{{ venta.efectivo_recibido|clp }}{% endif %}</p>
+                    <p class="mb-0"><strong>Vuelto:</strong> {% if venta.vuelto is None %}No registrado{% else %}{{ venta.vuelto|clp }}{% endif %}</p>
+                    {% endif %}
+                </div>
 
                 {% if venta.estado == "ANULADA" %}
                 <section class="alert alert-danger" aria-labelledby="datos-anulacion">

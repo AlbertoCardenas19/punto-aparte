@@ -12,6 +12,7 @@ class Venta(models.Model):
         EFECTIVO = "EFECTIVO", "Efectivo"
         TARJETA = "TARJETA", "Tarjeta"
         TRANSFERENCIA = "TRANSFERENCIA", "Transferencia"
+        COMBINADO = "COMBINADO", "Combinado"
 
     class Estado(models.TextChoices):
         COMPLETADA = "COMPLETADA", "Completada"
@@ -31,6 +32,11 @@ class Venta(models.Model):
     )
     medio_pago = models.CharField(max_length=15, choices=MedioPago.choices)
     total = models.PositiveIntegerField(default=0)
+    efectivo = models.PositiveIntegerField(default=0)
+    tarjeta = models.PositiveIntegerField(default=0)
+    transferencia = models.PositiveIntegerField(default=0)
+    efectivo_recibido = models.PositiveIntegerField(null=True, blank=True)
+    vuelto = models.PositiveIntegerField(null=True, blank=True)
     estado = models.CharField(
         max_length=12,
         choices=Estado.choices,

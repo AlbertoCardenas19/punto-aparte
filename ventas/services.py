@@ -155,7 +155,8 @@ def anular_venta(
 
 
 @transaction.atomic
-def confirmar_venta(*, lineas, cajero, medio_pago, clave_idempotencia):
+def confirmar_venta(*, lineas, cajero, medio_pago=None, clave_idempotencia,
+                    pagos=None, efectivo_recibido=None):
     venta_existente = _buscar_venta_existente(
         clave_idempotencia=clave_idempotencia,
         cajero=cajero,
@@ -163,7 +164,10 @@ def confirmar_venta(*, lineas, cajero, medio_pago, clave_idempotencia):
     if venta_existente:
         return venta_existente, False
 
-    if medio_pago not in Venta.MedioPago.values:
+    if pagos is None and medio_pago not in (
+        Venta.MedioPago.EFECTIVO, Venta.MedioPago.TARJETA,
+        Venta.MedioPago.TRANSFERENCIA,
+    ):
         raise VentaNoValida("Selecciona un medio de pago válido.")
 
     cantidades = {}
@@ -259,12 +263,37 @@ def confirmar_venta(*, lineas, cajero, medio_pago, clave_idempotencia):
         for producto in productos
     )
 
+    if pagos is None:
+        # Compatibilidad con llamadas internas anteriores. La vista nueva
+        # siempre entrega el desglose explícito y efectivo recibido.
+        pagos = {"efectivo": 0, "tarjeta": 0, "transferencia": 0}
+        pagos[medio_pago.lower()] = total
+    else:
+        if set(pagos) != {"efectivo", "tarjeta", "transferencia"}:
+            raise VentaNoValida("Indica los tres montos de pago.")
+        if any(type(valor) is not int or valor < 0 for valor in pagos.values()):
+            raise VentaNoValida("Los montos deben ser pesos enteros no negativos.")
+        if sum(pagos.values()) != total:
+            raise VentaNoValida("Los montos asignados deben sumar exactamente el total.")
+        if pagos["efectivo"]:
+            if type(efectivo_recibido) is not int or efectivo_recibido < pagos["efectivo"]:
+                raise VentaNoValida("El efectivo recibido debe cubrir la parte en efectivo.")
+        elif efectivo_recibido is not None:
+            raise VentaNoValida("No corresponde efectivo recibido sin pago en efectivo.")
+        medios_usados = [medio for medio, monto in pagos.items() if monto > 0]
+        if not medios_usados:
+            raise VentaNoValida("Selecciona un medio con monto positivo.")
+        medio_pago = medios_usados[0].upper() if len(medios_usados) == 1 else Venta.MedioPago.COMBINADO
+
     try:
         with transaction.atomic():
             venta = Venta.objects.create(
                 cajero=cajero,
                 medio_pago=medio_pago,
                 total=total,
+                **pagos,
+                efectivo_recibido=efectivo_recibido,
+                vuelto=efectivo_recibido - pagos["efectivo"] if efectivo_recibido is not None else None,
                 clave_idempotencia=clave_idempotencia,
             )
     except IntegrityError:

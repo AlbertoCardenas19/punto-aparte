@@ -240,15 +240,17 @@
                     <input type="hidden" name="version_carrito" value="{{ version_carrito }}">
 
                     <fieldset>
-                        <legend class="h6 fw-bold">Medio de pago</legend>
-                        <div class="pa-medios-pago">
-                            {% for valor, etiqueta in medios_pago.choices %}
-                            <label class="pa-medio-pago">
-                                <input class="form-check-input" type="radio" name="medio_pago"
-                                    value="{{ valor }}" {% if medio_pago_seleccionado == valor %}checked{% endif %} required>
-                                <span>{{ etiqueta }}</span>
-                            </label>
-                            {% endfor %}
+                        <legend class="h6 fw-bold">Medios de pago</legend>
+                        <div data-pagos-total="{{ total_carrito }}">
+                            <label class="form-label d-block"><input type="checkbox" name="usar_efectivo" data-usar-pago checked> Efectivo</label>
+                            <input class="form-control mb-2" type="number" name="monto_efectivo" min="0" value="{{ total_carrito }}" aria-label="Monto efectivo" data-monto-pago>
+                            <label class="form-label d-block"><input type="checkbox" name="usar_tarjeta" data-usar-pago> Tarjeta</label>
+                            <input class="form-control mb-2" type="number" name="monto_tarjeta" min="0" value="0" aria-label="Monto tarjeta" data-monto-pago>
+                            <label class="form-label d-block"><input type="checkbox" name="usar_transferencia" data-usar-pago> Transferencia</label>
+                            <input class="form-control mb-2" type="number" name="monto_transferencia" min="0" value="0" aria-label="Monto transferencia" data-monto-pago>
+                            <label class="form-label" for="efectivo-recibido">Efectivo recibido</label>
+                            <input class="form-control" type="number" name="efectivo_recibido" id="efectivo-recibido" min="0" value="{{ total_carrito }}">
+                            <p class="pa-estado-breve mt-2" role="status" data-pago-faltante></p>
                         </div>
                     </fieldset>
 

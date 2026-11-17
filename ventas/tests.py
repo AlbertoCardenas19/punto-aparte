@@ -17,6 +17,7 @@ from .services import (
     PreciosCambiaron,
     anular_venta,
     confirmar_venta,
+    VentaNoValida,
 )
 from .views import (
     CLAVE_CARRITO,
@@ -266,6 +267,7 @@ class ConfirmarVentaTests(TestCase):
         datos = {
             "accion": "confirmar",
             "medio_pago": Venta.MedioPago.EFECTIVO,
+            "usar_efectivo": "on", "monto_efectivo": "2000", "efectivo_recibido": "2000",
             "clave_idempotencia": clave,
             "version_carrito": version,
         }
@@ -368,6 +370,7 @@ class ConfirmarVentaTests(TestCase):
         segunda = self.client.post(reverse("ventas:caja"), {
             "accion": "confirmar",
             "medio_pago": Venta.MedioPago.EFECTIVO,
+            "usar_efectivo": "on", "monto_efectivo": "1500", "efectivo_recibido": "1500",
             "clave_idempotencia": clave,
             "version_carrito": sesion[CLAVE_VERSION_CARRITO],
         })
@@ -1318,6 +1321,7 @@ class PantallaClienteTests(TestCase):
         response = self.client.post(reverse("ventas:caja"), {
             "accion": "confirmar",
             "medio_pago": Venta.MedioPago.EFECTIVO,
+            "usar_efectivo": "on", "monto_efectivo": "1500", "efectivo_recibido": "1500",
             "clave_idempotencia": sesion[CLAVE_IDEMPOTENCIA_VENTA],
             "version_carrito": sesion[CLAVE_VERSION_CARRITO],
         })
@@ -1403,3 +1407,34 @@ class ConfirmarVentaConcurrenciaTests(TransactionTestCase):
         self.assertEqual(self.producto.stock, 0)
         self.assertEqual(DetalleVenta.objects.count(), 1)
         self.assertEqual(MovimientoStock.objects.count(), 1)
+
+
+class PagoCombinadoTests(TestCase):
+    def setUp(self):
+        self.cajero = Usuario.objects.create_user(
+            username="ignorado", first_name="Ana", last_name="Pérez",
+            email="pagos@example.test", password="clave-segura",
+        )
+        self.producto = Producto.objects.create(nombre="Cuaderno", precio=7000, stock=2)
+        self.lineas = [{"producto_id": self.producto.pk, "cantidad": 1,
+                        "precio_unitario": 7000, "precio_normal": 7000}]
+
+    def test_combinado_con_vuelto_e_idempotencia(self):
+        datos = {"lineas": self.lineas, "cajero": self.cajero,
+                 "pagos": {"efectivo": 2000, "tarjeta": 5000, "transferencia": 0},
+                 "efectivo_recibido": 5000, "clave_idempotencia": uuid4()}
+        venta, creada = confirmar_venta(**datos)
+        repetida, creada_repetida = confirmar_venta(**datos)
+        self.assertTrue(creada)
+        self.assertFalse(creada_repetida)
+        self.assertEqual(venta.pk, repetida.pk)
+        self.assertEqual((venta.efectivo, venta.tarjeta, venta.vuelto), (2000, 5000, 3000))
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.stock, 1)
+
+    def test_suma_incorrecta_no_crea_venta(self):
+        with self.assertRaises(VentaNoValida):
+            confirmar_venta(lineas=self.lineas, cajero=self.cajero,
+                            pagos={"efectivo": 2000, "tarjeta": 6000, "transferencia": 0},
+                            efectivo_recibido=5000, clave_idempotencia=uuid4())
+        self.assertFalse(Venta.objects.exists())

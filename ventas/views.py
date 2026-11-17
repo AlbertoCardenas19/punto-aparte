@@ -489,6 +489,23 @@ def caja(request):
 
         if accion == "confirmar":
             medio_pago_seleccionado = request.POST.get("medio_pago", "")
+            pagos = {}
+            error_pagos = None
+            for nombre in ("efectivo", "tarjeta", "transferencia"):
+                seleccionado = request.POST.get(f"usar_{nombre}") == "on"
+                texto = request.POST.get(f"monto_{nombre}", "0")
+                if not texto.isdecimal():
+                    error_pagos = "Ingresa montos enteros no negativos."
+                    break
+                monto = int(texto)
+                if (seleccionado and monto <= 0) or (not seleccionado and monto):
+                    error_pagos = "Cada medio seleccionado requiere un monto positivo; los demás deben ser cero."
+                    break
+                pagos[nombre] = monto
+            recibido_texto = request.POST.get("efectivo_recibido", "")
+            recibido = int(recibido_texto) if recibido_texto.isdecimal() else None
+            if not error_pagos and not pagos["efectivo"] and recibido_texto:
+                error_pagos = "No corresponde efectivo recibido sin pago en efectivo."
             clave_recibida = request.POST.get("clave_idempotencia", "")
             version_recibida = request.POST.get("version_carrito", "")
             try:
@@ -516,7 +533,9 @@ def caja(request):
                 return responder(
                     redirect("ventas:detalle", venta_id=venta_repetida.pk)
                 )
-            if not clave_recibida_uuid or clave_recibida != clave_idempotencia:
+            if error_pagos:
+                error_cobro = error_pagos
+            elif not clave_recibida_uuid or clave_recibida != clave_idempotencia:
                 error_cobro = (
                     "La confirmación venció. Revisa la compra e intenta nuevamente."
                 )
@@ -526,10 +545,7 @@ def caja(request):
                     "Revisa el estado más reciente y confirma nuevamente."
                 )
             elif (
-                medio_pago_seleccionado in {
-                    Venta.MedioPago.TARJETA,
-                    Venta.MedioPago.TRANSFERENCIA,
-                }
+                (pagos["tarjeta"] or pagos["transferencia"])
                 and request.POST.get("pago_confirmado") != "1"
             ):
                 error_cobro = "Confirma que el pago fue aprobado o verificado."
@@ -538,7 +554,8 @@ def caja(request):
                     venta, _ = confirmar_venta(
                         lineas=lineas,
                         cajero=request.user,
-                        medio_pago=medio_pago_seleccionado,
+                        pagos=pagos,
+                        efectivo_recibido=recibido,
                         clave_idempotencia=clave_recibida_uuid,
                     )
                 except PreciosCambiaron as error:

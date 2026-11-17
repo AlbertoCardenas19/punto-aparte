@@ -696,27 +696,37 @@ function prepararFormularioCobro(contenedor = document) {
     const confirmacion = form.querySelector('[data-confirmacion-pago]');
     const confirmacionTexto = form.querySelector('[data-confirmacion-pago-texto]');
     const checkbox = form.querySelector('[name="pago_confirmado"]');
-    const textos = {
-        EFECTIVO: 'Recibe el efectivo antes de confirmar la venta.',
-        TARJETA: 'Realiza el cobro en el terminal externo. El sistema no está conectado al terminal.',
-        TRANSFERENCIA: 'Verifica manualmente que la transferencia fue recibida antes de confirmar.',
-    };
-
-    const actualizar = () => {
-        const medio = form.querySelector('[name="medio_pago"]:checked')?.value;
-        instruccion.textContent = textos[medio] || '';
-        const requiereConfirmacion = medio === 'TARJETA' || medio === 'TRANSFERENCIA';
+    const checks = [...form.querySelectorAll('[data-usar-pago]')];
+    const montos = [...form.querySelectorAll('[data-monto-pago]')];
+    const recibido = form.querySelector('[name="efectivo_recibido"]');
+    const total = Number(form.querySelector('[data-pagos-total]').dataset.pagosTotal);
+    const faltante = form.querySelector('[data-pago-faltante]');
+    const boton = document.querySelector(`[type="submit"][form="${form.id}"]`);
+    const actualizar = event => {
+        checks.forEach((check, indice) => {
+            montos[indice].disabled = !check.checked;
+            if (!check.checked) montos[indice].value = '0';
+        });
+        if (event?.target.matches('[data-usar-pago]') && checks.filter(c => c.checked).length === 1) {
+            montos[checks.findIndex(c => c.checked)].value = String(total);
+        }
+        recibido.disabled = !checks[0].checked;
+        if (!checks[0].checked) recibido.value = '';
+        const suma = montos.reduce((valor, campo) => valor + (Number(campo.value) || 0), 0);
+        const diferencia = total - suma;
+        faltante.textContent = diferencia > 0 ? `Faltan $${diferencia} por asignar.`
+            : diferencia < 0 ? `Sobran $${-diferencia}.` : 'Total asignado.';
+        const requiereConfirmacion = checks[1].checked || checks[2].checked;
         confirmacion.hidden = !requiereConfirmacion;
         checkbox.required = requiereConfirmacion;
         if (!requiereConfirmacion) checkbox.checked = false;
-        confirmacionTexto.textContent = medio === 'TARJETA'
-            ? 'Confirmo que el pago con tarjeta fue aprobado en el terminal.'
-            : 'Confirmo que recibí y verifiqué la transferencia.';
+        confirmacionTexto.textContent = 'Confirmo manualmente los pagos con tarjeta o transferencia seleccionados.';
+        instruccion.textContent = requiereConfirmacion ? 'Verifica los pagos externos antes de confirmar.' : 'Recibe el efectivo antes de confirmar.';
+        if (boton) boton.disabled = diferencia !== 0 ||
+            checks.some((c, i) => c.checked && Number(montos[i].value) <= 0) ||
+            (checks[0].checked && Number(recibido.value) < Number(montos[0].value));
     };
-
-    form.querySelectorAll('[name="medio_pago"]').forEach(radio => {
-        radio.addEventListener('change', actualizar);
-    });
+    [...checks, ...montos, recibido].forEach(campo => campo.addEventListener('input', actualizar));
     form.addEventListener('submit', event => {
         if (operacionesCarritoPendientes > 0) {
             event.preventDefault();
