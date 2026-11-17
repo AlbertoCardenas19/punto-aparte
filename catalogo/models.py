@@ -7,6 +7,22 @@ from django.db import models
 from django.db.models.functions import Lower
 
 
+def validar_imagen_pantalla(archivo):
+    if archivo.size > 5 * 1024 * 1024:
+        raise ValidationError("La imagen debe pesar como máximo 5 MB.")
+    if not archivo.name.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
+        raise ValidationError("Usa JPG, PNG o WebP.")
+
+
+class ImagenPantalla(models.Model):
+    imagen = models.ImageField(upload_to="pantalla/", validators=[validar_imagen_pantalla])
+    orden = models.PositiveIntegerField(default=0)
+    activa = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ("orden", "pk")
+
+
 def normalizar_mayuscula_inicial(valor):
     """Limpia espacios exteriores y pone en mayúscula el primer carácter."""
     valor = (valor or "").strip()

@@ -25,8 +25,8 @@
             </header>
 
             <section class="pa-cliente-espera" data-cliente-espera {% if lineas %}hidden{% endif %}>
-                <h1>Bienvenido</h1>
-                <p>Tu compra aparecerá aquí cuando comience la venta.</p>
+                <div data-cliente-bienvenida><h1>Bienvenido</h1><p>Tu compra aparecerá aquí cuando comience la venta.</p></div>
+                <img data-cliente-imagen alt="Contenido de Punto Aparte" hidden style="max-width:100%;max-height:65vh;object-fit:contain">
             </section>
 
             <section class="pa-cliente-compra" data-cliente-compra {% if not lineas %}hidden{% endif %}>

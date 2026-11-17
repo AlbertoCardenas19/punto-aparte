@@ -435,3 +435,19 @@ class ExportacionesCatalogoTests(TestCase):
         )
 
         self.assertIn(b"No hay productos para exportar.", response.content)
+
+
+class ContenidoPantallaPermisosTests(TestCase):
+    def test_solo_jefe_puede_administrar(self):
+        cajero = Usuario.objects.create_user(
+            username="ignorado", first_name="Caja", last_name="Prueba",
+            email="caja-contenido@example.test", password="clave-segura",
+        )
+        self.client.force_login(cajero)
+        self.assertEqual(self.client.get(reverse("catalogo:contenido_pantalla")).status_code, 403)
+        jefe = Usuario.objects.create_user(
+            username="ignorado", first_name="Jefe", last_name="Prueba",
+            email="jefe-contenido@example.test", password="clave-segura", rol=Usuario.Rol.JEFE,
+        )
+        self.client.force_login(jefe)
+        self.assertEqual(self.client.get(reverse("catalogo:contenido_pantalla")).status_code, 200)

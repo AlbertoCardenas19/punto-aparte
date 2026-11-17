@@ -36,6 +36,7 @@
 
     {% if request.user.rol == "JEFE" %}
     <p class="pa-menu-grupo">Administración</p>
+    <a class="pa-menu-enlace {% if request.resolver_match.url_name == 'contenido_pantalla' %}active{% endif %}" href="{% url 'catalogo:contenido_pantalla' %}">Contenido de pantalla</a>
     <a class="pa-menu-enlace {% if request.resolver_match.namespace == 'usuarios' %}active{% endif %}"
         href="{% url 'usuarios:lista' %}" {% if request.resolver_match.namespace == 'usuarios' %}aria-current="page"{% endif %}>
         Usuarios

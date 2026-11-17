@@ -9,6 +9,9 @@ const productos = document.querySelector('[data-cliente-productos]');
 const total = document.querySelector('[data-cliente-total]');
 const estado = document.querySelector('[data-cliente-estado]');
 const modalGracias = document.querySelector('[data-cliente-gracias]');
+const imagenEspera = document.querySelector('[data-cliente-imagen]');
+const bienvenida = document.querySelector('[data-cliente-bienvenida]');
+let indiceImagen = 0, ultimoCambioImagen = 0, claveImagenes = '';
 let ultimaVenta = pantallaCliente.dataset.ultimaVenta || '';
 let temporizadorGracias;
 const numeroClp = new Intl.NumberFormat('es-CL', {
@@ -18,6 +21,10 @@ const formatearClp = valor => `$${numeroClp.format(valor)}`;
 
 function actualizarPantalla(datos) {
     const tieneProductos = datos.productos.length > 0;
+    if (tieneProductos) {
+        clearTimeout(temporizadorGracias);
+        modalGracias.hidden = true;
+    }
     espera.hidden = tieneProductos;
     compra.hidden = !tieneProductos;
     productos.replaceChildren();
@@ -67,6 +74,25 @@ function actualizarPantalla(datos) {
         temporizadorGracias = setTimeout(() => {
             modalGracias.hidden = true;
         }, 5000);
+    }
+    const imagenes = datos.imagenes || [];
+    if (imagenes.length) {
+        const clave = JSON.stringify(imagenes);
+        if (clave !== claveImagenes) {
+            claveImagenes = clave;
+            indiceImagen = 0;
+            ultimoCambioImagen = 0;
+        }
+        if (Date.now() - ultimoCambioImagen >= 8000) {
+            if (ultimoCambioImagen) indiceImagen = (indiceImagen + 1) % imagenes.length;
+            ultimoCambioImagen = Date.now();
+        }
+        imagenEspera.src = imagenes[indiceImagen];
+        imagenEspera.hidden = false;
+        bienvenida.hidden = true;
+    } else {
+        imagenEspera.hidden = true;
+        bienvenida.hidden = false;
     }
 }
 

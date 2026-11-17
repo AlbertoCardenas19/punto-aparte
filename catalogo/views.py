@@ -2,6 +2,7 @@ import unicodedata
 from uuid import UUID, uuid4
 
 from django.contrib.auth.decorators import login_required
+from django import forms
 from django.db.models import Count, Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render, get_object_or_404
@@ -18,7 +19,7 @@ from .forms import (
     ProductoForm,
 )
 
-from .models import Categoria, MovimientoStock, Producto
+from .models import Categoria, ImagenPantalla, MovimientoStock, Producto
 from .services import (
     MovimientoNoValido,
     registrar_movimiento_stock as registrar_stock,
@@ -30,6 +31,38 @@ from .exportaciones import (
 
 
 CLAVE_OPERACION_STOCK = "clave_operacion_stock"
+
+
+class ImagenPantallaForm(forms.ModelForm):
+    class Meta:
+        model = ImagenPantalla
+        fields = ("imagen", "orden", "activa")
+
+
+@jefe_required
+def contenido_pantalla(request):
+    form = ImagenPantallaForm(request.POST or None, request.FILES or None)
+    if request.method == "POST":
+        accion = request.POST.get("accion")
+        if accion in {"estado", "orden"}:
+            imagen = get_object_or_404(ImagenPantalla, pk=request.POST.get("imagen_id"))
+            if accion == "estado":
+                imagen.activa = not imagen.activa
+                imagen.save(update_fields=["activa"])
+            else:
+                try:
+                    orden = int(request.POST.get("orden", ""))
+                except ValueError:
+                    orden = -1
+                if orden >= 0:
+                    imagen.orden = orden
+                    imagen.save(update_fields=["orden"])
+            return redirect("catalogo:contenido_pantalla")
+        if form.is_valid():
+            form.save()
+            return redirect("catalogo:contenido_pantalla")
+    return render(request, "catalogo/contenido_pantalla.html",
+                  {"form": form, "imagenes": ImagenPantalla.objects.all()})
 
 
 def _clave_operacion_stock(request):
