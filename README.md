@@ -115,6 +115,8 @@ Bootstrap, jQuery y DataTables se sirven desde `static/vendor/`; no se necesita 
 
 ## Documentos
 
+La implementación de importación, pagos y pantalla se resume en [`docs/entrega-importacion-pagos.md`](docs/entrega-importacion-pagos.md).
+
 - [`alcance-y-reglas.md`](docs/alcance-y-reglas.md): alcance, roles y reglas acordadas.
 - [`estandares-interfaz.md`](docs/estandares-interfaz.md): presentación, componentes, mensajes y referencias visuales.
 - [`arquitectura-actual.md`](docs/arquitectura-actual.md): aplicaciones, modelos y flujo de venta.

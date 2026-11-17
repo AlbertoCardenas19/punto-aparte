@@ -15,7 +15,9 @@ Confirma versiones contra `requirements.txt`, `package.json` y el entorno de eje
 | --- | --- | --- |
 | `usuarios` | `Usuario` | Cuenta personalizada, roles y administración de usuarios. |
 | `catalogo` | `Categoria`, `Producto`, `MovimientoStock` | Catálogo, existencia y auditoría de movimientos de inventario. |
-| `ventas` | `Venta`, `DetalleVenta`, `EstadoPantallaCliente` | Venta, cajero, medio de pago, detalle histórico y canal local de pantalla del cliente. |
+| `ventas` | `Venta`, `DetalleVenta`, `EstadoPantallaCliente` | Venta, cajero, desglose de pagos, detalle histórico y canal local de pantalla del cliente. |
+
+`ImagenPantalla` en Catálogo almacena referencias a archivos en `media/`, fuera de los estáticos versionados. El Jefe administra orden y activación.
 
 Relaciones relevantes:
 

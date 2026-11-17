@@ -42,8 +42,9 @@ Estas son reglas aprobadas; consulta `estado-actual.md` para saber cuáles está
 
 ## Ventas y pagos
 
-- Una venta puede usar un solo medio de pago: efectivo, tarjeta o transferencia. No se mezclan medios.
-- Sin internet, el sistema debe permitir únicamente efectivo.
+- Una venta puede combinar efectivo, tarjeta y transferencia; los montos asignados deben sumar exactamente el total.
+- El efectivo recibido cubre la parte asignada a efectivo y el vuelto procede solo de esa diferencia.
+- Tarjeta y transferencia se confirman manualmente por el cajero; el sistema registra sus montos sin integrar el terminal.
 - El cajero confirma manualmente las transferencias.
 - El precio y nombre usados en una venta se guardan como datos históricos en el detalle.
 - La terminal disponible es Mercado Pago y el POS debe integrarse con ella; aún falta determinar modelo, mecanismo técnico y pruebas de integración.

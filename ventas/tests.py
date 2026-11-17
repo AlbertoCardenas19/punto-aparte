@@ -1468,3 +1468,25 @@ class AbandonoCarritoTests(TestCase):
         self.assertNotIn(CLAVE_CARRITO, self.client.session)
         estado = EstadoPantallaCliente.objects.get(token=self.client.cookies[COOKIE_PANTALLA_CLIENTE].value)
         self.assertEqual(estado.carrito, {})
+
+
+class OrdenCajaTests(TestCase):
+    def test_oferta_y_stock_participan_del_orden_global(self):
+        cajero = Usuario.objects.create_user(
+            username="ignorado", first_name="Caja", last_name="Orden",
+            email="orden@example.test", password="clave-segura",
+        )
+        self.client.force_login(cajero)
+        for indice in range(8):
+            Producto.objects.create(nombre=f"Producto {indice}", precio=100 + indice, stock=1)
+        oferta = Producto.objects.create(
+            nombre="Z oferta", precio=5000, stock=0,
+            oferta_modalidad=Producto.ModalidadOferta.PRECIO_FINAL,
+            oferta_valor=1, oferta_activa=True,
+        )
+        respuesta = self.client.get(reverse("ventas:caja"), {"orden": "precio_asc"})
+        self.assertEqual(respuesta.context["pagina"].object_list[0].pk, oferta.pk)
+        pagina_dos = self.client.get(reverse("ventas:caja"), {"orden": "precio_asc", "page": 2})
+        self.assertEqual(len(pagina_dos.context["pagina"].object_list), 3)
+        stock = self.client.get(reverse("ventas:caja"), {"orden": "stock_desc"})
+        self.assertEqual(stock.context["pagina"].object_list[0].stock, 1)

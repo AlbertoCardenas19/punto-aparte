@@ -1,11 +1,16 @@
 from datetime import datetime
 from uuid import uuid4
 from zoneinfo import ZoneInfo
+from tempfile import TemporaryDirectory
+from pathlib import Path
+from io import StringIO
+from openpyxl import Workbook
 
 from django.contrib.admin.sites import AdminSite
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.urls import reverse
+from django.core.management import call_command
 
 from usuarios.models import Usuario
 
@@ -451,3 +456,29 @@ class ContenidoPantallaPermisosTests(TestCase):
         )
         self.client.force_login(jefe)
         self.assertEqual(self.client.get(reverse("catalogo:contenido_pantalla")).status_code, 200)
+
+
+class ImportacionProductosTests(TestCase):
+    def test_repetir_importacion_con_codigos_vacios_y_pendientes(self):
+        existente = Producto.objects.create(nombre="Existente", precio=900, stock=5, codigo_barras="999")
+        with TemporaryDirectory() as temporal:
+            archivo = Path(temporal) / "productos.xlsx"
+            libro = Workbook()
+            hoja = libro.active
+            hoja.append(["Id", "Ref.", "Título / Nombre", "Precio unitario total", "Código de barras"])
+            for fila in ((1, "A", "Sin código", 100, None),
+                         (2, "B", "Repetido A", 200, "123"),
+                         (3, "C", "Repetido B", 200, "123"),
+                         (4, "D", "Ya existe", 300, "999"),
+                         (5, "E", "DISE?O", 400, None)):
+                hoja.append(fila)
+            libro.save(archivo)
+            salida = StringIO()
+            call_command("importar_productos", archivo, stdout=salida)
+            self.assertIn("Creados: 1; omitidos: 1; pendientes: 3", salida.getvalue())
+            self.assertEqual(Producto.objects.count(), 1)
+            call_command("importar_productos", archivo, aplicar=True, stdout=StringIO())
+            call_command("importar_productos", archivo, aplicar=True, stdout=StringIO())
+            self.assertEqual(Producto.objects.count(), 2)
+            existente.refresh_from_db()
+            self.assertEqual((existente.precio, existente.stock), (900, 5))

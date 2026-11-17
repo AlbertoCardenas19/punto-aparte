@@ -12,7 +12,7 @@ Lee este documento antes de modificar pantallas. Define requisitos aprobados; su
 ## Componentes y adaptación
 
 - En escritorio, usa una barra superior compacta para identidad y sesión, y un menú lateral para las secciones. En móvil, ofrece el mismo menú mediante un control visible y accesible.
-- Agrupa Productos y Categorías bajo Catálogo; ingresos, ajustes e historial bajo Inventario; y Usuarios bajo Administración, visible solo para Jefe. No muestres enlaces hacia pantallas pendientes o vacías.
+- Agrupa Productos y Categorías bajo Catálogo; los historiales de ventas y stock deben ser fáciles de encontrar. Contenido de pantalla y Usuarios pertenecen a Administración, visible solo para Jefe.
 - Mantén tipografía, espaciado, botones, campos, tarjetas, tablas, estados y mensajes coherentes entre acceso, inicio, catálogo, stock, usuarios, caja y detalle de venta.
 - Centraliza estilos comunes en `static/css/punto-aparte.css`; limita los estilos de acceso y caja a sus variantes. Evita duplicar reglas o introducir excepciones de color y tamaño sin propósito.
 - Usa azul oscuro del banner para la acción primaria. Usa blanco o gris claro con borde discreto para acciones secundarias. Reserva el rojo exclusivamente para anular, desactivar o eliminar. Los controles deshabilitados se muestran en gris.
