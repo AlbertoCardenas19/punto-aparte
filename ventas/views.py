@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
-from django.db.models import Case, IntegerField, Q, Value, When
+from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -578,14 +578,19 @@ def caja(request):
             | Q(categorias__nombre__icontains=busqueda)
         ).distinct()
 
-    productos = productos.annotate(
-        sin_stock=Case(
-            When(stock=0, then=Value(1)),
-            default=Value(0),
-            output_field=IntegerField(),
-        )
-    ).order_by("sin_stock", "nombre")
-    pagina = Paginator(productos, 6).get_page(request.GET.get("page"))
+    orden = request.GET.get("orden", "nombre_asc")
+    claves = {
+        "nombre_asc": (lambda p: (p.nombre.casefold(), p.pk), False),
+        "nombre_desc": (lambda p: (p.nombre.casefold(), p.pk), True),
+        "precio_asc": (lambda p: (p.precio_venta, p.nombre.casefold(), p.pk), False),
+        "precio_desc": (lambda p: (p.precio_venta, p.nombre.casefold(), p.pk), True),
+        "stock_asc": (lambda p: (p.stock, p.nombre.casefold(), p.pk), False),
+        "stock_desc": (lambda p: (p.stock, p.nombre.casefold(), p.pk), True),
+    }
+    if orden not in claves:
+        orden = "nombre_asc"
+    clave, inverso = claves[orden]
+    pagina = Paginator(sorted(productos, key=clave, reverse=inverso), 6).get_page(request.GET.get("page"))
 
     for producto in pagina.object_list:
         producto.cantidad_carrito = int(
@@ -604,6 +609,7 @@ def caja(request):
         {
             "pagina": pagina,
             "busqueda": busqueda,
+            "orden": orden,
             "lineas_carrito": lineas_carrito,
             "total_carrito": total_carrito,
             "problemas_carrito": problemas_carrito,

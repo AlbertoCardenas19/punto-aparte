@@ -396,7 +396,7 @@ for (const form of document.querySelectorAll('[data-busqueda-viva]')) {
         timer = setTimeout(async () => {
             controller = new AbortController();
             const url = new URL(form.action || location.href);
-            url.search = new URLSearchParams({q: input.value}).toString();
+            url.search = new URLSearchParams({q: input.value, orden: form.querySelector('[name="orden"]')?.value || 'nombre_asc'}).toString();
             const results = document.querySelector('[data-resultados-busqueda]');
             results.setAttribute('aria-busy', 'true');
             status.textContent = 'Buscando…';
@@ -429,7 +429,7 @@ for (const form of document.querySelectorAll('[data-busqueda-viva]')) {
         controller?.abort();
         ++version;
         const url = new URL(form.action || location.href);
-        url.search = new URLSearchParams({q: input.value.trim()}).toString();
+        url.search = new URLSearchParams({q: input.value.trim(), orden: form.querySelector('[name="orden"]')?.value || 'nombre_asc'}).toString();
         const token = document.querySelector('[name="csrfmiddlewaretoken"]')?.value;
         if (!token) {
             location.assign(url);

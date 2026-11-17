@@ -24,6 +24,15 @@
                     placeholder="Nombre, marca, categoría, código o descripción">
                 <button class="btn btn-outline-secondary" type="submit">Buscar</button>
             </div>
+            <label for="orden" class="form-label mt-2">Ordenar</label>
+            <select class="form-select" id="orden" name="orden" onchange="this.form.requestSubmit()">
+                <option value="nombre_asc" {% if orden == "nombre_asc" %}selected{% endif %}>Nombre A–Z</option>
+                <option value="nombre_desc" {% if orden == "nombre_desc" %}selected{% endif %}>Nombre Z–A</option>
+                <option value="precio_asc" {% if orden == "precio_asc" %}selected{% endif %}>Precio menor a mayor</option>
+                <option value="precio_desc" {% if orden == "precio_desc" %}selected{% endif %}>Precio mayor a menor</option>
+                <option value="stock_asc" {% if orden == "stock_asc" %}selected{% endif %}>Stock menor a mayor</option>
+                <option value="stock_desc" {% if orden == "stock_desc" %}selected{% endif %}>Stock mayor a menor</option>
+            </select>
         </form>
 
         <div data-resultados-busqueda>
@@ -78,7 +87,7 @@
             <ul class="pagination justify-content-center">
                 {% if pagina.has_previous %}
                 <li class="page-item">
-                    <a class="page-link" href="?q={{ busqueda|urlencode }}&page={{ pagina.previous_page_number }}">
+                    <a class="page-link" href="?q={{ busqueda|urlencode }}&orden={{ orden }}&page={{ pagina.previous_page_number }}">
                         Anterior
                     </a>
                 </li>
@@ -90,7 +99,7 @@
                 </li>
                 {% if pagina.has_next %}
                 <li class="page-item">
-                    <a class="page-link" href="?q={{ busqueda|urlencode }}&page={{ pagina.next_page_number }}">
+                    <a class="page-link" href="?q={{ busqueda|urlencode }}&orden={{ orden }}&page={{ pagina.next_page_number }}">
                         Siguiente
                     </a>
                 </li>
