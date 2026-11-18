@@ -116,13 +116,12 @@ body > .dropdown-menu { z-index: 1080; border-color: var(--pa-border); border-ra
 @media (max-width: 575.98px) { .pa-app div.dt-container .dt-layout-row { align-items: stretch; } .pa-app div.dt-container .dt-search, .pa-app div.dt-container .dt-length { justify-content: space-between; } }
 .pa-galeria-pantalla {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, max(14.5rem, calc((100% - 2.25rem) / 4))), 1fr));
     gap: .75rem;
-    max-width: 820px;
 }
 .pa-galeria-miniatura {
     width: 100%;
-    height: 76px;
+    height: clamp(180px, 16vw, 220px);
     object-fit: contain;
     background: #f4f5f7;
 }
@@ -138,7 +137,13 @@ body > .dropdown-menu { z-index: 1080; border-color: var(--pa-border); border-ra
 .pa-galeria-asa { touch-action: none; cursor: grab; }
 .pa-galeria-arrastrando { opacity: .65; outline: 2px solid currentColor; }
 @media (max-width: 991.98px) {
-    .pa-galeria-pantalla { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .pa-galeria-pantalla { grid-template-columns: repeat(auto-fit, minmax(min(100%, max(14.5rem, calc((100% - .75rem) / 2))), 1fr)); }
+}
+.pa-app.pa-contenido-pantalla .pa-venta-flotante {
+    position: static;
+    display: table;
+    width: fit-content;
+    margin: 0 1.25rem calc(1.4rem + env(safe-area-inset-bottom)) auto;
 }
 @media (max-width: 1199.98px) {
     .pa-app .pa-venta-flotante {
