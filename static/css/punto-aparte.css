@@ -12,6 +12,7 @@
 .pa-app .pa-barra-superior { min-height: 4.5rem; background: var(--pa-navy); color: #fff; border-bottom: 3px solid var(--pa-red); display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .65rem clamp(1rem, 2.5vw, 2rem); position: sticky; top: 0; z-index: 1040; }
 .pa-app .pa-marca { color: #fff; display: inline-flex; align-items: center; gap: .75rem; margin-right: auto; font-size: 1.05rem; font-weight: 700; }
 .pa-app .pa-barra-superior .pa-logo { width: 100%; height: 100%; }
+.pa-app .pa-barra-superior .pa-logo-enlace .pa-logo { display: block; width: 2.75rem; height: 2.75rem; }
 .pa-app .pa-sesion { display: flex; align-items: center; gap: 1rem; font-size: .9rem; }
 .pa-app .pa-sesion-identidad { line-height: 1.3; }
 .pa-app .pa-menu-control { flex: 0 0 auto; display: inline-grid; place-items: center; border: 1px solid rgb(255 255 255 / 70%); border-radius: .7rem; background: transparent; color: #fff; width: 2.75rem; height: 2.75rem; padding: .5rem; }
