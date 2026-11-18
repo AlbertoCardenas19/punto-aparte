@@ -12,6 +12,8 @@ Lee este documento antes de modificar pantallas. Define requisitos aprobados; su
 ## Componentes y adaptación
 
 - En escritorio, usa una barra superior compacta para identidad y sesión, y un menú lateral para las secciones. En móvil, ofrece el mismo menú mediante un control visible y accesible.
+- El botón de menú junto al logo controla el sidebar en escritorio y el menú móvil. El logo enlaza a Inicio y respeta la confirmación de salida de una venta con productos. La acción universal se llama «+ Nueva venta».
+- En Nueva venta, la búsqueda actualiza resultados al escribir o pulsar Enter, sin agregar productos; el ordenamiento actualiza esos resultados. En escritorio, búsqueda y orden se alinean en una fila; en móvil se apilan.
 - Agrupa Productos y Categorías bajo Catálogo; Historiales contiene solo ventas y stock. Pantalla del cliente reúne Abrir pantalla y Contenido de pantalla (este último solo para Jefe). Usuarios pertenece a Administración.
 - Mantén tipografía, espaciado, botones, campos, tarjetas, tablas, estados y mensajes coherentes entre acceso, inicio, catálogo, stock, usuarios, caja y detalle de venta.
 - Centraliza estilos comunes en `static/css/punto-aparte.css`; limita los estilos de acceso y caja a sus variantes. Evita duplicar reglas o introducir excepciones de color y tamaño sin propósito.

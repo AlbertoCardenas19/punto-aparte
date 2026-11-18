@@ -3,7 +3,7 @@
 
 {% block title %}Caja | Punto Aparte{% endblock %}
 
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/caja.css' %}?v=interfaz-20261118-1">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/caja.css' %}?v=interfaz-20261118-2">{% endblock %}
 {% block body_class %}pa-caja{% endblock %}
 {% block main_class %}pa-caja-contenido{% endblock %}
 {% block content %}
@@ -18,14 +18,12 @@
     <section class="col-12 col-xxl-7">
         <div class="pa-caja-panel">
         <form data-busqueda-viva method="get" class="pa-busqueda-productos">
-            <label for="q" class="form-label">Buscar producto</label>
-            <div class="input-group">
+            <div class="pa-busqueda-campo"><label for="q" class="form-label">Buscar producto</label>
                 <input class="form-control" id="q" name="q" value="{{ busqueda }}"
                     placeholder="Nombre, marca, categoría, código o descripción">
-                <button class="btn btn-outline-secondary" type="submit">Buscar</button>
             </div>
-            <label for="orden" class="form-label mt-2">Ordenar</label>
-            <select class="form-select" id="orden" name="orden" onchange="this.form.requestSubmit()">
+            <div class="pa-busqueda-orden"><label for="orden" class="form-label">Ordenar</label>
+            <select class="form-select" id="orden" name="orden">
                 <option value="nombre_asc" {% if orden == "nombre_asc" %}selected{% endif %}>Nombre A–Z</option>
                 <option value="nombre_desc" {% if orden == "nombre_desc" %}selected{% endif %}>Nombre Z–A</option>
                 <option value="precio_asc" {% if orden == "precio_asc" %}selected{% endif %}>Precio menor a mayor</option>
@@ -33,6 +31,7 @@
                 <option value="stock_asc" {% if orden == "stock_asc" %}selected{% endif %}>Stock menor a mayor</option>
                 <option value="stock_desc" {% if orden == "stock_desc" %}selected{% endif %}>Stock mayor a menor</option>
             </select>
+            </div>
         </form>
 
         <div data-resultados-busqueda>

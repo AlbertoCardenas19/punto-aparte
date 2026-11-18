@@ -1,5 +1,5 @@
 /* Menús fuera del contenedor desplazable, sin alterar acciones ni permisos. */
-window.PUNTO_APARTE_JS_VERSION = 'caja-20261117-3';
+window.PUNTO_APARTE_JS_VERSION = 'interfaz-20261118-1';
 const controlesMenu = [...document.querySelectorAll('[data-menu-principal]')];
 const menuMovil = document.querySelector('#menu-movil');
 const menuEscritorio = document.querySelector('#menu-escritorio');
@@ -412,7 +412,7 @@ for (const form of document.querySelectorAll('[data-busqueda-viva]')) {
                 status.textContent = '';
             } catch (error) {
                 if (current === version && error.name !== 'AbortError') {
-                    status.textContent = 'No se pudo actualizar. Usa Buscar para intentarlo nuevamente.';
+                    status.textContent = 'No se pudo actualizar. Vuelve a escribir o cambia el orden para intentarlo nuevamente.';
                 }
             } finally {
                 if (current === version) {
@@ -423,54 +423,12 @@ for (const form of document.querySelectorAll('[data-busqueda-viva]')) {
         }, 300);
     });
 
-    input.addEventListener('keydown', async event => {
-        if (event.key !== 'Enter' || !input.value.trim()) return;
+    form.addEventListener('submit', event => {
         event.preventDefault();
-        clearTimeout(timer);
-        controller?.abort();
-        ++version;
-        const url = new URL(form.action || location.href);
-        url.search = new URLSearchParams({q: input.value.trim(), orden: form.querySelector('[name="orden"]')?.value || 'nombre_asc'}).toString();
-        const token = document.querySelector('[name="csrfmiddlewaretoken"]')?.value;
-        if (!token) {
-            location.assign(url);
-            return;
-        }
-        const datos = new FormData();
-        datos.append('csrfmiddlewaretoken', token);
-        datos.append('accion', 'escanear');
-        datos.append('codigo', input.value.trim());
-        status.textContent = 'Buscando…';
-        registrarOperacionCarrito();
-        try {
-            await solicitarActualizacionCarrito(form, datos, url, ({doc, response}) => {
-                reemplazarResultadosBusqueda(doc, url);
-                const codigoEstado = response.headers.get('X-Codigo-Estado');
-                if (codigoEstado === 'agregado') {
-                    aplicarActualizacionCarrito(doc);
-                }
-                const mensajesCodigo = {
-                    no_encontrado: 'No se encontró un producto activo con ese código.',
-                    sin_stock: 'Producto encontrado, pero está sin stock.',
-                    limite_stock: 'Ya agregaste todo el stock disponible.',
-                };
-                status.textContent = mensajesCodigo[codigoEstado] || '';
-            });
-        } catch (error) {
-            let recuperado = false;
-            try {
-                await recuperarEstadoCarrito();
-                recuperado = true;
-            } catch {
-                // El escaneo también puede haber agregado una unidad antes del fallo.
-            }
-            status.textContent = recuperado
-                ? 'Se recuperó la compra. Revisa la cantidad antes de volver a escanear.'
-                : 'No se pudo comprobar el resultado. Revisa la compra antes de volver a escanear.';
-            status.classList.add('pa-estado-error');
-        } finally {
-            finalizarOperacionCarrito();
-        }
+        input.dispatchEvent(new Event('input'));
+    });
+    form.querySelector('[name="orden"]').addEventListener('change', () => {
+        input.dispatchEvent(new Event('input'));
     });
 }
 

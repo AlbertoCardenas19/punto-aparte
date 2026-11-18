@@ -993,8 +993,8 @@ class EstadoCarritoTests(TestCase):
     def test_caja_publica_version_de_script_y_boton_no_envia_formulario(self):
         self._guardar_carrito()
         respuesta = self.client.get(reverse("ventas:caja"))
-        self.assertContains(respuesta, 'interacciones.js?v=caja-20261117-3')
-        self.assertContains(respuesta, 'data-caja-version="caja-20261117-3"')
+        self.assertContains(respuesta, 'interacciones.js?v=interfaz-20261118-1')
+        self.assertContains(respuesta, 'data-caja-version="interfaz-20261118-1"')
         self.assertContains(respuesta, 'type="button" data-agregar-pago')
 
     def test_producto_inactivo_permanece_visible_y_bloquea_cobro(self):

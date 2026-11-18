@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Punto Aparte{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'vendor/bootstrap/css/bootstrap.min.css' %}">
-    <link rel="stylesheet" href="{% static 'css/punto-aparte.css' %}?v=interfaz-20261118-2">
+    <link rel="stylesheet" href="{% static 'css/punto-aparte.css' %}?v=interfaz-20261118-3">
     {% block extra_css %}{% endblock %}
 </head>
 
@@ -18,9 +18,8 @@
         <div class="pa-marca">
             <button class="pa-menu-control" type="button" data-menu-principal
                 aria-controls="menu-escritorio" aria-expanded="true"
-                aria-label="Ocultar menú principal">
-                <img class="pa-logo" src="{% static 'img/logo_punto_aparte.jpg' %}" alt="">
-            </button>
+                aria-label="Ocultar menú principal"><span class="pa-menu-icono" aria-hidden="true"></span></button>
+            <a class="pa-logo-enlace" href="{% url 'inicio' %}" aria-label="Ir a Inicio"><img class="pa-logo" src="{% static 'img/logo_punto_aparte.jpg' %}" alt=""></a>
             <span>Punto Aparte</span>
         </div>
         <div class="pa-sesion">
@@ -38,9 +37,7 @@
             <div class="d-flex align-items-center gap-2">
                 <button class="pa-menu-control pa-menu-control-interno" type="button" data-menu-principal
                     aria-controls="menu-movil" aria-expanded="true"
-                    aria-label="Ocultar menú principal">
-                    <img class="pa-logo" src="{% static 'img/logo_punto_aparte.jpg' %}" alt="">
-                </button>
+                    aria-label="Ocultar menú principal"><span class="pa-menu-icono" aria-hidden="true"></span></button>
                 <h2 class="offcanvas-title h5 mb-0" id="menu-movil-titulo">Menú</h2>
             </div>
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar menú"></button>
@@ -105,7 +102,7 @@
     {% if request.user.is_authenticated and not request.user.debe_cambiar_password %}
     {% if request.user.rol == "JEFE" or request.user.rol == "CAJERO" %}
     {% if request.resolver_match.namespace != "ventas" or request.resolver_match.url_name != "caja" %}
-    <a class="pa-venta-flotante" href="{% url 'ventas:caja' %}">Nueva venta</a>
+    <a class="pa-venta-flotante" href="{% url 'ventas:caja' %}">+ Nueva venta</a>
     {% endif %}
     {% endif %}
     {% endif %}
@@ -113,7 +110,7 @@
 
     <script src="{% static 'vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
     {% block extra_js %}{% endblock %}
-    <script src="{% static 'js/interacciones.js' %}?v=caja-20261117-3" defer data-caja-version="caja-20261117-3"></script>
+    <script src="{% static 'js/interacciones.js' %}?v=interfaz-20261118-1" defer data-caja-version="interfaz-20261118-1"></script>
 </body>
 
 </html>
