@@ -35,7 +35,7 @@ class CajaNavegadorTests(StaticLiveServerTestCase):
             pagina.locator('[name="password"]').fill("Clave-prueba-123")
             pagina.locator('button[type="submit"]').click()
             pagina.goto(self.live_server_url + "/ventas/?q=Producto+navegador")
-            self.assertEqual(pagina.evaluate("window.PUNTO_APARTE_JS_VERSION"), "interfaz-20261118-1")
+            self.assertEqual(pagina.evaluate("window.PUNTO_APARTE_JS_VERSION"), "interfaz-20261118-2")
             self.assertTrue(pagina.evaluate("window.PUNTO_APARTE_COBRO_LISTO"))
             agregar = pagina.locator("[data-agregar-producto] button")
             agregar.click()

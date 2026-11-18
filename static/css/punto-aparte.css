@@ -11,21 +11,34 @@
 .pa-app .text-secondary { color: var(--pa-muted) !important; }
 .pa-app .pa-barra-superior { min-height: 4.5rem; background: var(--pa-navy); color: #fff; border-bottom: 3px solid var(--pa-red); display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .65rem clamp(1rem, 2.5vw, 2rem); position: sticky; top: 0; z-index: 1040; }
 .pa-app .pa-marca { color: #fff; display: inline-flex; align-items: center; gap: .75rem; margin-right: auto; font-size: 1.05rem; font-weight: 700; }
+.pa-app .pa-marca-movil { display: none; }
 .pa-app .pa-barra-superior .pa-logo { width: 100%; height: 100%; }
 .pa-app .pa-barra-superior .pa-logo-enlace .pa-logo { display: block; width: 2.75rem; height: 2.75rem; }
 .pa-app .pa-sesion { display: flex; align-items: center; gap: 1rem; font-size: .9rem; }
+.pa-app .pa-barra-superior .pa-sesion { margin-left: auto; }
 .pa-app .pa-sesion-identidad { line-height: 1.3; }
 .pa-app .pa-menu-control { flex: 0 0 auto; display: inline-grid; place-items: center; border: 1px solid rgb(255 255 255 / 70%); border-radius: .7rem; background: transparent; color: #fff; width: 2.75rem; height: 2.75rem; padding: .5rem; }
 .pa-app .pa-menu-control:hover { background: rgb(255 255 255 / 12%); }
 .pa-app .pa-menu-icono { display: block; width: 1.2rem; height: 1rem; border-top: 2px solid currentColor; border-bottom: 2px solid currentColor; position: relative; }
 .pa-app .pa-menu-icono::after { content: ''; position: absolute; top: calc(50% - 1px); left: 0; right: 0; border-top: 2px solid currentColor; }
 .pa-app .pa-logo-enlace { display: inline-flex; border-radius: 50%; }
-.pa-app .pa-menu-control-interno { border-color: var(--pa-border); color: var(--pa-navy); }
+.pa-app .pa-menu-control-interno { border-color: transparent; color: var(--pa-navy); }
+.pa-app .pa-menu-control-interno:hover { background: #edf2f7; }
 .pa-app .pa-estructura { display: grid; grid-template-columns: 16rem minmax(0, 1fr); min-height: calc(100vh - 4.5rem); min-height: calc(100dvh - 4.5rem); transition: grid-template-columns .2s ease; }
 .pa-app .pa-estructura-sin-menu { display: block; min-height: 100vh; min-height: 100dvh; }
-.pa-app .pa-menu-lateral { min-width: 0; overflow: hidden; background: #fff; border-right: 1px solid var(--pa-border); padding: 1.5rem 1rem; opacity: 1; transition: opacity .15s ease, padding .2s ease; }
-.pa-app.pa-menu-contraido .pa-estructura { grid-template-columns: 0 minmax(0, 1fr); }
-.pa-app.pa-menu-contraido .pa-menu-lateral { visibility: hidden; border-right: 0; padding-inline: 0; opacity: 0; }
+.pa-app .pa-menu-lateral { min-width: 0; overflow: hidden; background: #fff; border-right: 1px solid var(--pa-border); padding: 1rem; flex-direction: column; }
+.pa-app .pa-sidebar-cabecera { display: flex; align-items: center; gap: .5rem; min-width: 0; margin-bottom: 1rem; }
+.pa-app .pa-sidebar-cabecera .pa-logo { display: block; width: 2.75rem; height: 2.75rem; }
+.pa-app .pa-sidebar-nombre { white-space: nowrap; overflow: hidden; font-size: 1rem; }
+.pa-app .pa-sidebar-cabecera .pa-menu-control { margin-left: auto; }
+.pa-app .pa-sidebar-cabecera .pa-menu-icono { width: .8rem; height: .8rem; border: 0; border-left: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); }
+.pa-app .pa-sidebar-cabecera .pa-menu-icono::after { display: none; }
+.pa-app.pa-menu-contraido .pa-estructura { grid-template-columns: 4.5rem minmax(0, 1fr); }
+.pa-app.pa-menu-contraido .pa-menu-lateral { padding-inline: .75rem; }
+.pa-app.pa-menu-contraido .pa-sidebar-cabecera { flex-direction: column; }
+.pa-app.pa-menu-contraido .pa-sidebar-nombre, .pa-app.pa-menu-contraido .pa-menu { visibility: hidden; }
+.pa-app.pa-menu-contraido .pa-sidebar-cabecera .pa-menu-control { margin-left: 0; }
+.pa-app.pa-menu-contraido .pa-sidebar-cabecera .pa-menu-icono { transform: rotate(225deg); }
 .pa-app .pa-menu { display: flex; flex-direction: column; gap: .25rem; width: 100%; }
 .pa-app .pa-menu-grupo { border-top: 1px solid var(--pa-border); color: var(--pa-muted); font-size: .72rem; font-weight: 800; letter-spacing: .08em; margin: 1rem .75rem .35rem; padding-top: 1rem; text-transform: uppercase; }
 .pa-app .pa-menu-grupo:first-child { border-top: 0; margin-top: 0; padding-top: 0; }
@@ -105,7 +118,7 @@
 .pa-app .pa-producto-seleccionado { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border: 1px solid var(--pa-border); border-radius: .65rem; background: #f7f9fb; padding: .8rem 1rem; }
 .pa-app .pa-producto-seleccionado span { display: block; color: var(--pa-muted); font-size: .875rem; }
 .pa-app :is(a, button):focus-visible { outline: 3px solid #6f91b5; outline-offset: 3px; }
-@media (max-width: 991.98px) { .pa-app .pa-estructura, .pa-app.pa-menu-contraido .pa-estructura { display: block; min-height: calc(100vh - 4.5rem); min-height: calc(100dvh - 4.5rem); } }
+@media (max-width: 991.98px) { .pa-app .pa-marca-movil { display: inline-flex; } .pa-app .pa-estructura, .pa-app.pa-menu-contraido .pa-estructura { display: block; min-height: calc(100vh - 4.5rem); min-height: calc(100dvh - 4.5rem); } }
 @media (prefers-reduced-motion: reduce) { .pa-app .pa-estructura, .pa-app .pa-menu-lateral { transition: none; } }
 @media (max-width: 575.98px) { .pa-app .pa-marca span { display: none; } .pa-app .pa-barra-superior { flex-wrap: wrap; gap: .6rem; } .pa-app .pa-sesion { width: 100%; justify-content: space-between; } .pa-app .pa-sesion-identidad { font-size: .8rem; } .pa-app .table td, .pa-app .table th { padding: .75rem; } .pa-app .pa-form-acciones { margin-top: 1.5rem; } .pa-app .pa-form-acciones > :is(.btn, .dropdown), .pa-app .pa-tarjeta-acciones > :is(.btn, .dropdown) { width: 100%; } .pa-app .pa-form-acciones .dropdown > .btn, .pa-app .pa-tarjeta-acciones .dropdown > .btn { width: 100%; } .pa-app .pa-venta-flotante { right: 1.25rem; bottom: max(1.4rem, env(safe-area-inset-bottom)); padding: .85rem 1.05rem; font-size: .95rem; } .pa-app .pa-encabezado-acciones { width: 100%; justify-content: flex-start; margin-left: 0; } .pa-app .pa-encabezado-acciones > :is(.btn, .dropdown) { flex: 1 1 100%; width: 100%; } .pa-app .pa-encabezado-acciones .dropdown > .btn { width: 100%; } .pa-app .pa-producto-seleccionado { align-items: flex-start; flex-direction: column; } }
 /* Los menús trasladados al body quedan por encima de tablas y tarjetas. */

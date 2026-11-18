@@ -2,19 +2,19 @@
 
 El JavaScript de caja declara `window.PUNTO_APARTE_JS_VERSION`. La plantilla carga
 `interacciones.js` con una versión en la URL para renovar la copia del navegador
-cuando cambia el archivo. La versión de esta entrega es `interfaz-20261118-1`.
+cuando cambia el archivo. La versión de esta entrega es `interfaz-20261118-2`.
 
 Si en `http://127.0.0.1:8000/ventas/` reaparece «No se pudo agregar. Intenta
 nuevamente.» o el botón «Agregar otro medio» no actúa:
 
 1. Recarga la página y abre las herramientas de desarrollo. En Consola, ejecuta
-   `window.PUNTO_APARTE_JS_VERSION`. Debe devolver `interfaz-20261118-1`.
+   `window.PUNTO_APARTE_JS_VERSION`. Debe devolver `interfaz-20261118-2`.
 2. En Red, filtra `interacciones.js`. La URL debe terminar en
-   `?v=interfaz-20261118-1` y su respuesta debe ser HTTP 200. En el contenido de
+   `?v=interfaz-20261118-2` y su respuesta debe ser HTTP 200. En el contenido de
    esa respuesta, el texto «No se pudo agregar. Intenta nuevamente.» no debe
    aparecer. Esto distingue el código ejecutado del commit local.
 3. Si la versión coincide y falla un agregado, conserva el mensaje de Consola
-   que empieza con `[Punto Aparte caja interfaz-20261118-1] Agregar:` y su stack.
+   que empieza con `[Punto Aparte caja interfaz-20261118-2] Agregar:` y su stack.
    Revisa en Red el POST a `/ventas/`: estado HTTP, cabecera
    `X-Codigo-Estado` y presencia de `data-carrito-panel` en la respuesta.
    Comparte esos datos sin cookies, contraseñas ni tokens CSRF.

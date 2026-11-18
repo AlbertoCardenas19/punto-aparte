@@ -1,5 +1,5 @@
 /* Menús fuera del contenedor desplazable, sin alterar acciones ni permisos. */
-window.PUNTO_APARTE_JS_VERSION = 'interfaz-20261118-1';
+window.PUNTO_APARTE_JS_VERSION = 'interfaz-20261118-2';
 const controlesMenu = [...document.querySelectorAll('[data-menu-principal]')];
 const menuMovil = document.querySelector('#menu-movil');
 const menuEscritorio = document.querySelector('#menu-escritorio');
@@ -53,20 +53,23 @@ function actualizarControlMenu() {
         ? !document.body.classList.contains('pa-menu-contraido')
         : menuMovil?.classList.contains('show') || false;
     controlesMenu.forEach(control => {
-        control.setAttribute('aria-expanded', String(expandido));
+        const esControlEscritorio = control.closest('#menu-escritorio') !== null;
+        const activo = esControlEscritorio ? !document.body.classList.contains('pa-menu-contraido') : (menuMovil?.classList.contains('show') || false);
+        control.setAttribute('aria-expanded', String(activo));
         control.setAttribute(
             'aria-label',
-            expandido ? 'Ocultar menú principal' : 'Abrir menú principal'
+            activo ? 'Cerrar menú' : 'Abrir menú'
         );
         control.setAttribute(
             'aria-controls',
-            escritorio.matches ? 'menu-escritorio' : 'menu-movil'
+            esControlEscritorio ? 'menu-escritorio' : 'menu-movil'
         );
     });
-    menuEscritorio?.setAttribute(
+    menuEscritorio?.querySelector('.pa-menu')?.setAttribute(
         'aria-hidden',
         String(!escritorio.matches || !expandido)
     );
+    menuEscritorio.querySelector('.pa-menu').inert = !escritorio.matches || !expandido;
 }
 
 if (controlesMenu.length && menuMovil && menuEscritorio) {
@@ -76,7 +79,7 @@ if (controlesMenu.length && menuMovil && menuEscritorio) {
     );
     controlesMenu.forEach(control => {
         control.addEventListener('click', () => {
-            if (escritorio.matches) {
+            if (escritorio.matches && control.closest('#menu-escritorio')) {
                 const contraido = document.body.classList.toggle('pa-menu-contraido');
                 guardarPreferenciaMenu(contraido);
                 actualizarControlMenu();
@@ -92,9 +95,7 @@ if (controlesMenu.length && menuMovil && menuEscritorio) {
             'pa-menu-contraido',
             escritorio.matches && preferenciaMenuContraido()
         );
-        if (escritorio.matches) {
-            bootstrap.Offcanvas.getInstance(menuMovil)?.hide();
-        }
+        if (escritorio.matches) bootstrap.Offcanvas.getInstance(menuMovil)?.hide();
         actualizarControlMenu();
     };
     if (escritorio.addEventListener) {
