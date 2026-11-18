@@ -3,6 +3,7 @@
 .pa-caja .pa-caja-contenido { min-width: 0; width: 100%; max-width: 1760px; padding: 1.5rem clamp(1rem, 3vw, 3rem) 3rem; }
 .pa-caja .pa-caja-panel { background: #fff; border: 1px solid #d9e1eb; border-radius: 1.25rem; padding: clamp(1rem, 2vw, 2rem); height: 100%; }
 .pa-caja .pa-caja-productos { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: .9rem; }
+.pa-caja .pa-caja-productos > .pa-caja-producto:only-child { grid-column: 1 / -1; }
 .pa-caja .pa-caja-producto { border: 1px solid #d9e1eb; border-radius: .9rem; padding: 1rem; display: flex; flex-direction: column; overflow-wrap: anywhere; }
 .pa-caja .pa-caja-producto h2 { min-height: 2.5em; margin-bottom: .45rem; }
 .pa-caja .pa-busqueda-productos { margin: .25rem 0 1.5rem; padding: .25rem 0; }
