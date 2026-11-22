@@ -2,7 +2,25 @@
 
 **Base de esta revisión:** ZIP `punto-aparte.zip`, inspeccionado el 30-10-2026. Este documento es una fotografía; el repositorio y la base de código activa son la fuente para saber qué existe hoy.
 
-## Implementado en el código revisado
+## Actualización de la rama `work`
+
+Esta sección actualiza la fotografía del ZIP con la implementación vigente en `work`.
+
+- Las páginas autenticadas comparten una barra superior compacta y navegación lateral; un control visible contrae el menú en escritorio y abre el offcanvas en móvil. El logo enlaza a Inicio. La pantalla inicial ofrece accesos según rol y no incluye indicadores de dashboard.
+- Venta carga seis productos por página, consulta todo el catálogo activo al buscar, ordena productos sin stock al final y permite agregar una unidad desde cada tarjeta. «Compra actual» respeta el orden de incorporación, actualiza subtotal y total de inmediato, y ofrece «Limpiar» sin confirmación. El cobro espera la sincronización más reciente y registra efectivo, tarjeta o transferencia, con confirmación manual para los dos últimos.
+- El Jefe configura ofertas por producto como porcentaje o precio final y las activa manualmente. Nueva venta y la pantalla del cliente muestran precio normal y precio de oferta; el comprobante conserva precio normal, descuento unitario, precio final y subtotal históricos. Los cambios de precio u oferta con un carrito abierto requieren revisar y confirmar nuevamente.
+- Un código de barras exacto agrega una unidad cuando el producto está activo y tiene stock. La validación transaccional al confirmar la venta se mantiene en el servicio.
+- Productos muestra estado, exporta según la búsqueda visible a CSV, XLSX o PDF, abre sus detalles en una ventana modal y permite editar, activar o desactivar. Inventario entra directamente a «Movimientos de stock», exporta el historial en los mismos formatos y ofrece un único botón hacia el formulario separado. El formulario usa búsqueda predictiva de productos y conserva separados los ingresos y ajustes.
+- Categorías permite editar, desactivar y reactivar desde su tabla. Las categorías inactivas permanecen visibles y vinculadas a sus productos existentes, pero no se ofrecen al asignar categorías a productos nuevos.
+- Existe consulta de ventas con DataTables y filtros por fechas; el Cajero ve solo las propias y el Jefe puede ver todas y filtrar por cajero.
+- Un Jefe activo puede anular una venta completa desde su detalle, indicando motivo, confirmación y si los productos regresaron. La venta conserva importes y medio de pago, muestra auditoría, y la reposición opcional crea movimientos de stock transaccionales e idempotentes. No se implementaron devoluciones parciales ni reversas de pago.
+- Productos, categorías, inventario, movimientos, usuarios y ventas usan DataTables local con textos en español.
+- El alta desde la aplicación del Jefe genera y entrega una contraseña temporal una sola vez. Los reenvíos del mismo formulario no duplican la cuenta ni vuelven a mostrar la contraseña. `usuarios/0002_usuario_debe_cambiar_password.py` añade el indicador de cambio inicial con valor predeterminado `False`, compatible con cuentas existentes. El primer Jefe se crea mediante `inicializar_jefe`; `createsuperuser` está deshabilitado. Django Admin permite consultar cuentas, pero no crearlas, editarlas ni eliminarlas.
+- El acceso acepta nombre de usuario o correo; los correos se normalizan y cuentan con restricción sin distinguir mayúsculas. Nombres de personas, productos, marcas y categorías aplican las normalizaciones acordadas.
+- La pantalla del cliente es de solo lectura, puede abrirse desde la navegación en estado de espera y consulta un canal persistente aislado por caja. Continúa visible si el cajero cierra sesión o cambia de cuenta; al perder conexión muestra reconexión en español. Al confirmar una venta agradece durante cinco segundos antes de volver al estado de espera. No existen emisión tributaria, datos de factura, integración con terminal o banco ni caja diaria.
+- Las confirmaciones de venta y los movimientos manuales de stock son idempotentes. La venta vuelve a consultar su clave después de bloquear productos; el carrito usa una versión de sesión para coordinar cambios AJAX y cobro. Las salidas de inventario creadas por una venta quedan relacionadas con ella, y los productos inactivos o eliminados de un carrito abierto bloquean el cobro con una explicación contextual.
+
+## Implementado en la fotografía del ZIP
 
 - Configuración Django con PostgreSQL y variables de entorno.
 - Usuario personalizado con rol y nombre de usuario generado automáticamente.
@@ -16,17 +34,15 @@
 
 ## Incompleto o no observado
 
-- La pantalla de caja solo confirma efectivo, aunque el modelo enumera tarjeta y transferencia.
+- Tarjeta y transferencia dependen de confirmación manual; no hay integración automática con el terminal o el banco ni detección fiable de conectividad.
 - Integración real con terminal Mercado Pago.
 - Emisión de boleta, factura y nota de crédito.
 - Apertura, cierre y arqueo diario.
-- Descuentos con autorización y restricciones de uso.
-- Flujo de anulación/devolución con motivo y autorización.
-- Segunda pantalla viva para el cliente.
-- Historial o reporte de ventas, según se confirme en la rama actual.
-- Pruebas automáticas de reglas críticas; los archivos `tests.py` revisados eran los vacíos generados por Django.
+- Cupones y descuentos generales con autorización, vigencia y restricciones de uso. Las ofertas automáticas por producto ya están implementadas por separado.
+- Devoluciones parciales y su documentación asociada. La anulación completa ya está implementada por separado.
+- Falta repetir las pruebas contra una copia representativa de la base de producción antes de desplegar. La segunda revisión sí ejecutó la suite y las carreras automatizadas de venta y correo sobre un PostgreSQL 16 efímero.
 
-## Problemas conocidos de la copia revisada
+## Problemas históricos de la copia revisada (no asumir que siguen vigentes)
 
 1. `templates/ventas/caja.html` contiene expresiones `producto.stock==0` sin espacios alrededor de `==`. La sintaxis de comparación de Django requiere espacios, por ejemplo `producto.stock == 0`; la plantilla puede lanzar `TemplateSyntaxError` al abrir la caja.
 2. Un analizador estático puede reportar `Venta.cajero_id` y `BootstrapFormMixin.fields` como atributos desconocidos. Django genera el atributo de clave foránea y las clases de formulario definen `fields` en tiempo de ejecución; confirma si es un aviso del editor o un error real. En el primer caso, usa atributos que el analizador reconozca o tipado apropiado, sin ocultar fallas de ejecución.
@@ -42,3 +58,5 @@
 - `python manage.py check` informó cero problemas del sistema.
 
 No guardes contraseñas ni valores reales del `.env` en este archivo. Antes de ejecutar verificaciones, confirma que el entorno virtual y base de datos correctos están activos.
+
+El estado detallado de los hallazgos técnicos se mantiene en [revision-opencode.md](revision-opencode.md).

@@ -7,74 +7,111 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Punto Aparte{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'vendor/bootstrap/css/bootstrap.min.css' %}">
-    <style>
-        :root {
-            --pa-navy: #17324d;
-            --pa-red: #c93440;
-        }
-
-        body {
-            background: #f4f6f8;
-        }
-
-        .navbar-pa {
-            background: var(--pa-navy);
-        }
-
-        .btn-pa {
-            color: #fff;
-            background: var(--pa-red);
-            border-color: var(--pa-red);
-        }
-
-        .btn-pa:hover {
-            color: #fff;
-            background: #a92732;
-            border-color: #a92732;
-        }
-    </style>
+    <link rel="stylesheet" href="{% static 'css/punto-aparte.css' %}?v=interfaz-20261118-5">
+    {% block extra_css %}{% endblock %}
 </head>
 
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark navbar-pa">
-        <div class="container">
-            <a class="navbar-brand fw-semibold" href="{% url 'inicio' %}">Punto Aparte</a>
+<body class="pa-app {% block body_class %}{% endblock %}">
+    {% block navigation %}
+    {% if request.user.is_authenticated %}
+    <header class="pa-barra-superior">
+        <div class="pa-marca pa-marca-movil">
+            <button class="pa-menu-control" type="button" data-menu-principal
+                aria-controls="menu-movil" aria-expanded="false"
+                aria-label="Abrir menú"><span class="pa-menu-icono" aria-hidden="true"></span></button>
+            <a class="pa-logo-enlace" href="{% url 'inicio' %}" aria-label="Ir a Inicio"><img class="pa-logo" src="{% static 'img/logo_punto_aparte.jpg' %}" alt=""></a>
+            <span>Punto Aparte</span>
+        </div>
+        <div class="pa-sesion">
+            <span class="pa-sesion-identidad">{{ request.user.get_full_name|default:request.user.username }} · {{ request.user.get_rol_display }}</span>
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button class="btn btn-sm btn-outline-light" type="submit">Cerrar sesión</button>
+            </form>
+        </div>
+    </header>
 
-            {% if request.user.is_authenticated %}
-            <div class="d-flex align-items-center gap-3">
-                <a class="nav-link text-white" href="{% url 'catalogo:lista_productos' %}">
-                    Catálogo
-                </a>
+    <div class="offcanvas offcanvas-start pa-menu-lateral-movil" tabindex="-1" id="menu-movil"
+        aria-labelledby="menu-movil-titulo">
+        <div class="offcanvas-header">
+            <h2 class="offcanvas-title h5 mb-0" id="menu-movil-titulo">Menú</h2>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar menú"></button>
+        </div>
+        <div class="offcanvas-body">
+            {% include "includes/menu_principal.html" %}
+        </div>
+    </div>
+    {% endif %}
+    {% endblock %}
 
-                {% if request.user.rol == "JEFE" %}
-                <a class="nav-link text-white" href="{% url 'usuarios:lista' %}">
-                    Usuarios
-                </a>
-                {% endif %}
-
-                <form method="post" action="{% url 'logout' %}">
-                    {% csrf_token %}
-                    <button class="btn btn-sm btn-outline-light" type="submit">
-                        Cerrar sesión
-                    </button>
-                </form>
+    <div class="pa-estructura {% if not request.user.is_authenticated %}pa-estructura-sin-menu{% endif %}">
+        {% block sidebar %}
+        {% if request.user.is_authenticated %}
+        <aside class="pa-menu-lateral d-none d-lg-flex" id="menu-escritorio">
+            <div class="pa-sidebar-cabecera">
+                <a class="pa-logo-enlace" href="{% url 'inicio' %}" aria-label="Ir a Inicio"><img class="pa-logo" src="{% static 'img/logo_punto_aparte.jpg' %}" alt=""></a>
+                <strong class="pa-sidebar-nombre">Punto Aparte</strong>
+                <button class="pa-menu-control pa-menu-control-interno" type="button" data-menu-principal
+                    aria-controls="menu-escritorio" aria-expanded="true" aria-label="Cerrar menú"><span class="pa-menu-icono" aria-hidden="true"></span></button>
             </div>
-            {% endif %}
-        </div>
-    </nav>
+            {% include "includes/menu_principal.html" %}
+        </aside>
+        {% endif %}
+        {% endblock %}
 
-    <main class="container py-4">
-        {% for message in messages %}
-        <div
-            class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %}">
-            {{ message }}
-        </div>
-        {% endfor %}
+        <main class="{% block main_class %}pa-contenido{% endblock %}">
+            <div data-mensajes>
+                {% for message in messages %}
+                {% if 'success' not in message.tags %}
+                <p class="pa-error-global" role="alert">
+                    <span class="pa-icono-alerta" aria-hidden="true">!</span>
+                    {{ message }}
+                </p>
+                {% endif %}
+                {% endfor %}
+            </div>
 
-        {% block content %}{% endblock %}
-    </main>
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    {% if request.user.is_authenticated %}
+    <div class="modal fade" id="modal-confirmar-desactivacion" tabindex="-1"
+        aria-labelledby="modal-confirmar-desactivacion-titulo" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="modal-confirmar-desactivacion-titulo"
+                        data-desactivacion-titulo>Confirmar desactivación</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0" data-desactivacion-mensaje></p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button>
+                    <button class="btn btn-outline-danger" type="button" data-confirmar-desactivacion-submit>
+                        Desactivar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% block venta_flotante %}
+    {% if request.user.is_authenticated and not request.user.debe_cambiar_password %}
+    {% if request.user.rol == "JEFE" or request.user.rol == "CAJERO" %}
+    {% if request.resolver_match.namespace != "ventas" or request.resolver_match.url_name != "caja" %}
+    <a class="pa-venta-flotante" href="{% url 'ventas:caja' %}">+ Nueva venta</a>
+    {% endif %}
+    {% endif %}
+    {% endif %}
+    {% endblock %}
 
     <script src="{% static 'vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+    <script src="{% static 'js/interacciones.js' %}?v=interfaz-20261118-2" defer data-caja-version="interfaz-20261118-2"></script>
 </body>
 
 </html>

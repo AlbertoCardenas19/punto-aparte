@@ -9,11 +9,13 @@ Punto Aparte es un sistema de punto de venta (POS) para una librería en Talca, 
 1. Lee `README.md` y los documentos pertinentes de `docs/` antes de proponer o implementar una función.
 2. Inspecciona el código vigente, migraciones, `git status` y cambios locales. El código y las migraciones muestran lo implementado; la documentación de reglas describe lo acordado para el producto.
 3. Si código, documentación y requisitos del usuario se contradicen, explica la contradicción. No resuelvas por cuenta propia una decisión de negocio pendiente.
-4. Para solicitudes ambiguas que puedan cambiar el flujo de caja, pagos, inventario, documentos tributarios, autorizaciones o datos históricos, presenta primero las preguntas concretas.
+4. Si una decisión puede cambiar el flujo o las reglas del negocio y no está definida, consulta antes de modificar código. No cambies reglas de ventas, stock, permisos ni roles sin consultar al usuario.
 
 ## Reglas de colaboración
 
 - Comunícate en español y explica los cambios con pasos claros; el usuario está aprendiendo desarrollo.
+- Trabaja en la rama `work`; no mezcles cambios con `main` salvo solicitud explícita.
+- Conserva los cambios ajenos a la tarea, incluidos los que estén sin commit.
 - Atiende solo el alcance solicitado. No adelantes fases ni agregues funciones “por si acaso”.
 - Haz cambios acotados y fáciles de revisar. Antes de editar, resume archivos y comportamiento que planeas cambiar cuando el alcance no sea trivial.
 - No borres ni reinicies bases de datos, no descartes cambios locales y no alteres información real sin autorización explícita.
@@ -27,10 +29,10 @@ Punto Aparte es un sistema de punto de venta (POS) para una librería en Talca, 
 - Un producto puede pertenecer a varias categorías. Puede no tener código de barras.
 - No se puede vender más stock del disponible. El stock se descuenta al confirmar la venta y los movimientos deben conservar usuario, fecha, motivo y cantidades anterior/nueva.
 - La venta conserva nombre y precio unitario históricos en sus detalles, incluso si el producto cambia después.
-- Una venta acepta un solo medio de pago. Sin conexión a internet solo se permite efectivo. Las transferencias las confirma el cajero.
+- Una venta acepta efectivo, tarjeta y transferencia por separado o combinados; los montos aplicados suman exactamente el total. El efectivo recibido y el vuelto se calculan aparte. Los pagos externos los verifica manualmente el cajero.
 - Las anulaciones y devoluciones son procesos distintos y requieren motivo y autorización de Jefe según la regla acordada.
-- Los descuentos requieren autorización del dueño, tienen vigencia, se usan una vez por cliente y no se combinan. Su alcance (producto o total) debe respetar la decisión documentada antes de implementarse.
-- Mantén el foco en la caja POS. La emisión tributaria chilena, terminal Mercado Pago y segunda pantalla tienen decisiones e integración pendientes; no simules que ya están resueltas.
+- Las ofertas de producto las configura el Jefe, usan porcentaje o precio final, se activan manualmente y se aplican automáticamente sin fechas. Son distintas de los cupones o descuentos por cliente, que siguen pendientes, requieren autorización del dueño, tienen vigencia, se usan una vez por cliente y no se combinan.
+- Mantén el foco en la caja POS. La emisión tributaria chilena y la integración con terminal Mercado Pago siguen pendientes; no simules que ya están resueltas. La pantalla del cliente consulta únicamente el canal local de su caja y no depende de la sesión personal del cajero.
 
 ## Convenciones técnicas
 
@@ -44,10 +46,7 @@ Punto Aparte es un sistema de punto de venta (POS) para una librería en Talca, 
 
 ## Interfaz
 
-- Toma como referencia visual los mockups aprobados: estilo sobrio y claro, azul oscuro, acento rojo, logo circular azul con punto rojo, escritorio estándar y botones de caja grandes donde la tarea lo requiera.
-- Conserva una jerarquía coherente: acción principal, acciones secundarias y acciones destructivas claramente diferenciadas. Evita mezclar tamaños y colores de botones sin motivo.
-- Evita repetir acciones globales en cada fila de una tabla. Mantén las acciones de cada producto agrupadas y compactas.
-- Si el PDF de referencia no está en el repositorio, indícalo y solicita que se agregue a `docs/referencias/`; no inventes detalles visuales.
+Antes de modificar pantallas, lee [docs/estandares-interfaz.md](docs/estandares-interfaz.md), revisa las referencias visuales y reutiliza los componentes existentes. Las reglas de identidad y acceso se encuentran en [docs/alcance-y-reglas.md](docs/alcance-y-reglas.md#identidad-y-acceso).
 
 ## Verificación
 
@@ -59,6 +58,7 @@ Punto Aparte es un sistema de punto de venta (POS) para una librería en Talca, 
 ## Documentos de referencia
 
 - `docs/alcance-y-reglas.md`: reglas de negocio confirmadas y alcance.
+- `docs/estandares-interfaz.md`: estándares permanentes de presentación y mensajes.
 - `docs/arquitectura-actual.md`: estructura y flujo técnico actual.
 - `docs/estado-actual.md`: implementación confirmada y problemas conocidos; es una fotografía, no una garantía de que el código no haya cambiado.
 - `docs/decisiones-pendientes.md`: temas que requieren definición humana.

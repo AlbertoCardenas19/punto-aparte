@@ -1,102 +1,115 @@
 {% extends "base.html" %}
+{% load punto_aparte %}
 
-{% block title %}Catálogo | Punto Aparte{% endblock %}
+{% block extra_css %}{% include "includes/datatables_css.html" %}{% endblock %}
+{% block extra_js %}{% include "includes/datatables_js.html" %}{% endblock %}
+
+{% block title %}Productos | Punto Aparte{% endblock %}
 
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+<div class="pa-encabezado-pagina">
     <div>
-        <h1 class="h2 fw-bold mb-1">Catálogo de productos</h1>
+        <h1 class="h2 fw-bold mb-1">Productos</h1>
         <p class="text-secondary mb-0">Consulta los productos y sus precios.</p>
     </div>
 
-    {% if request.user.rol == "JEFE" %}
-    <div class="d-flex gap-2">
-        <a class="btn btn-outline-primary" href="{% url 'catalogo:crear_categoria' %}">
-            Agregar categoría
-        </a>
+    <div class="pa-encabezado-acciones">
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false">Exportar</button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" data-exportar-productos
+                    href="{% url 'catalogo:exportar_productos' 'csv' %}">CSV</a></li>
+                <li><a class="dropdown-item" data-exportar-productos
+                    href="{% url 'catalogo:exportar_productos' 'xlsx' %}">Excel (XLSX)</a></li>
+                <li><a class="dropdown-item" data-exportar-productos
+                    href="{% url 'catalogo:exportar_productos' 'pdf' %}">PDF</a></li>
+            </ul>
+        </div>
+        {% if request.user.rol == "JEFE" %}
         <a class="btn btn-pa" href="{% url 'catalogo:crear_producto' %}">
             Agregar producto
         </a>
+        {% endif %}
     </div>
-    {% endif %}
 </div>
 
-<form method="get" class="card card-body border-0 shadow-sm mb-4">
-    <div class="row g-2">
-        <div class="col">
-            <label class="visually-hidden" for="q">Buscar producto</label>
-            <input class="form-control" id="q" name="q" value="{{ busqueda }}"
-                placeholder="Buscar por nombre, marca, código o categoría">
-        </div>
-        <div class="col-auto">
-            <button class="btn btn-outline-primary" type="submit">Buscar</button>
-        </div>
-    </div>
-</form>
-
-<div class="card border-0 shadow-sm">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
+<div class="card">
+    <div class="card-body">
+        <table class="table table-hover align-middle mb-0" data-tabla-listado data-orden-columna="0"
+            data-busqueda-ayuda="Producto, marca, categoría, código o descripción">
             <thead class="table-light">
                 <tr>
-                    <th>Producto</th>
-                    <th>Marca</th>
-                    <th>Categorías</th>
-                    <th>Precio</th>
-                    <th>Stock</th>
-                    <th>Código de barras</th>
+                    <th class="all">Producto</th>
+                    <th data-no-buscar>Precio</th>
+                    <th data-no-buscar>Stock</th>
+                    <th data-no-buscar>Estado</th>
+                    <th class="all" data-no-orden data-no-buscar>Detalle</th>
                     {% if request.user.rol == "JEFE" %}
-                    <th>Estado</th>
-                    <th>Acciones</th>
+                    <th class="all" data-no-orden data-no-buscar>Acciones</th>
                     {% endif %}
                 </tr>
             </thead>
             <tbody>
-                {% for producto in pagina %}
+                {% for producto in productos %}
                 <tr>
-                    <td class="fw-semibold">{{ producto.nombre }}</td>
-                    <td>{{ producto.marca|default:"—" }}</td>
-                    <td>
-                        {% for categoria in producto.categorias.all %}
-                        {{ categoria.nombre }}{% if not forloop.last %}, {% endif %}
-                        {% empty %}
-                        —
-                        {% endfor %}
+                    <td class="all fw-semibold" data-search="{{ producto.nombre }} {{ producto.descripcion }} {{ producto.marca }} {{ producto.codigo_barras|default_if_none:'' }} {% for categoria in producto.categorias.all %}{{ categoria.nombre }} {% endfor %}">
+                        {{ producto.nombre }}
                     </td>
-                    <td>${{ producto.precio }}</td>
-                    <td>{{ producto.stock }}</td>
-                    <td>{{ producto.codigo_barras|default:"—" }}</td>
-
-                    {% if request.user.rol == "JEFE" %}
-                    <td>
-                        {% if producto.activo %}
-                        <span class="badge text-bg-success">Activo</span>
+                    <td data-order="{{ producto.precio_venta }}" class="text-end">
+                        <span class="d-inline-flex align-items-center justify-content-end gap-2 w-100">
+                        {% if producto.tiene_oferta_activa %}
+                        <span class="badge text-bg-primary">Oferta</span>
+                        {% endif %}
+                        <span>{{ producto.precio_venta|clp }}</span></span>
+                    </td>
+                    <td data-order="{{ producto.stock }}">
+                        {% if producto.stock == 0 %}
+                        {% include "includes/sin_stock.html" %}
                         {% else %}
-                        <span class="badge text-bg-secondary">Inactivo</span>
+                        {{ producto.stock }}
                         {% endif %}
                     </td>
                     <td>
-                        <a class="btn btn-sm btn-outline-primary"
-                            href="{% url 'catalogo:editar_producto' producto.id %}">
-                            Editar
-                        </a>
-                        <a class="btn btn-sm btn-outline-success" href="{% url 'catalogo:ingresar_stock' producto.id %}">
-                            Ingresar
-                        </a>
-                        <a class="btn btn-sm btn-outline-secondary" href="{% url 'catalogo:ajustar_stock' producto.id %}">
-                            Ajustar
-                        </a>
-                        <a class="btn btn-outline-secondary" href="{% url 'catalogo:historial_stock' %}">
-                            Historial de stock
-                        </a>
+                        {% if producto.activo %}<span class="badge text-bg-success">Activo</span>{% else %}<span class="badge text-bg-secondary">Inactivo</span>{% endif %}
+                    </td>
+                    <td class="all">
+                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal"
+                            data-bs-target="#modal-detalle-producto" data-producto-detalle
+                            data-producto-nombre="{{ producto.nombre|escape }}"
+                            data-producto-marca="{{ producto.marca|default:'—'|escape }}"
+                            data-producto-codigo="{{ producto.codigo_barras|default:'—'|escape }}"
+                            data-producto-descripcion="{{ producto.descripcion|default:'Sin descripción.'|escape }}"
+                            data-producto-categorias="{% for categoria in producto.categorias.all %}{{ categoria.nombre|escape }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}">
+                            Ver detalles
+                        </button>
+                    </td>
+                    {% if request.user.rol == "JEFE" %}
+                    <td class="all">
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
+                                data-bs-toggle="dropdown" aria-expanded="false"
+                                aria-label="Acciones de {{ producto.nombre }}">
+                                Acciones
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{% url 'catalogo:editar_producto' producto.id %}">Editar</a></li>
+                                <li>
+                                    <form method="post" action="{% url 'catalogo:cambiar_estado_producto' producto.pk %}">
+                                        {% csrf_token %}
+                                        {% if producto.activo %}
+                                        <button class="dropdown-item text-danger" type="button"
+                                            data-confirmar-desactivacion data-tipo="producto"
+                                            data-nombre="{{ producto.nombre|escape }}">Desactivar</button>
+                                        {% else %}
+                                        <button class="dropdown-item" type="submit">Activar</button>
+                                        {% endif %}
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
                     </td>
                     {% endif %}
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7" class="text-center text-secondary py-4">
-                        No hay productos para mostrar.
-                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -104,29 +117,26 @@
     </div>
 </div>
 
-{% if pagina.paginator.num_pages > 1 %}
-<nav class="mt-3" aria-label="Paginación del catálogo">
-    <ul class="pagination justify-content-center">
-        {% if pagina.has_previous %}
-        <li class="page-item">
-            <a class="page-link" href="?q={{ busqueda|urlencode }}&page={{ pagina.previous_page_number }}">
-                Anterior
-            </a>
-        </li>
-        {% endif %}
-        <li class="page-item disabled">
-            <span class="page-link">
-                Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}
-            </span>
-        </li>
-        {% if pagina.has_next %}
-        <li class="page-item">
-            <a class="page-link" href="?q={{ busqueda|urlencode }}&page={{ pagina.next_page_number }}">
-                Siguiente
-            </a>
-        </li>
-        {% endif %}
-    </ul>
-</nav>
-{% endif %}
+<div class="modal fade" id="modal-detalle-producto" tabindex="-1"
+    aria-labelledby="modal-detalle-producto-titulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="modal-detalle-producto-titulo" data-detalle-nombre></h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar detalles"></button>
+            </div>
+            <div class="modal-body">
+                <dl class="pa-detalle-producto">
+                    <div><dt>Marca</dt><dd data-detalle-marca></dd></div>
+                    <div><dt>Categorías</dt><dd data-detalle-categorias></dd></div>
+                    <div><dt>Código de barras</dt><dd data-detalle-codigo></dd></div>
+                    <div><dt>Descripción</dt><dd data-detalle-descripcion></dd></div>
+                </dl>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

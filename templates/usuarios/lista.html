@@ -1,27 +1,33 @@
 {% extends "base.html" %}
 
+{% block extra_css %}{% include "includes/datatables_css.html" %}{% endblock %}
+{% block extra_js %}{% include "includes/datatables_js.html" %}{% endblock %}
+
 {% block title %}Usuarios | Punto Aparte{% endblock %}
 
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+<div class="pa-encabezado-pagina">
     <div>
         <h1 class="h2 fw-bold mb-1">Usuarios</h1>
         <p class="text-secondary mb-0">Administra las cuentas, roles y estados.</p>
     </div>
-    <a class="btn btn-pa" href="{% url 'usuarios:crear' %}">Crear cuenta</a>
+    <div class="pa-encabezado-acciones">
+        <a class="btn btn-pa" href="{% url 'usuarios:crear' %}">Crear cuenta</a>
+    </div>
 </div>
 
-<div class="card border-0 shadow-sm">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
+<div class="card">
+    <div class="card-body">
+        <table class="table table-hover align-middle mb-0" data-tabla-listado data-orden-columna="0"
+            data-busqueda-ayuda="Nombre, apellido o correo">
             <thead class="table-light">
                 <tr>
                     <th>Nombre</th>
-                    <th>Usuario generado</th>
+                    <th data-no-buscar>Nombre de usuario</th>
                     <th>Correo</th>
-                    <th>Rol</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
+                    <th data-no-buscar>Rol</th>
+                    <th data-no-buscar>Estado</th>
+                    <th class="all" data-no-orden data-no-buscar>Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -38,29 +44,35 @@
                         <span class="badge text-bg-secondary">Desactivada</span>
                         {% endif %}
                     </td>
-                    <td>
-                        <div class="d-flex flex-wrap gap-2">
-                            <a class="btn btn-sm btn-outline-primary" href="{% url 'usuarios:editar' usuario.id %}">
-                                Editar
-                            </a>
-
-                            {% if usuario != request.user %}
-                            <form method="post" action="{% url 'usuarios:cambiar_estado' usuario.id %}">
-                                {% csrf_token %}
-                                <button
-                                    class="btn btn-sm {% if usuario.is_active %}btn-outline-danger{% else %}btn-outline-success{% endif %}"
-                                    type="submit">
-                                    {% if usuario.is_active %}Desactivar{% else %}Activar{% endif %}
-                                </button>
-                            </form>
-                            {% endif %}
+                    <td class="all">
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
+                                data-bs-toggle="dropdown" aria-expanded="false"
+                                aria-label="Acciones de {{ usuario.first_name }} {{ usuario.last_name }}">
+                                Acciones
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'usuarios:editar' usuario.id %}">Editar</a>
+                                </li>
+                                {% if usuario != request.user %}
+                                <li>
+                                    <form method="post" action="{% url 'usuarios:cambiar_estado' usuario.id %}">
+                                        {% csrf_token %}
+                                        {% if usuario.is_active %}
+                                        <button class="dropdown-item text-danger" type="button"
+                                            data-confirmar-desactivacion data-tipo="cuenta"
+                                            data-nombre="{{ usuario.get_full_name|default:usuario.username|escape }}">
+                                            Desactivar
+                                        </button>
+                                        {% else %}
+                                        <button class="dropdown-item" type="submit">Activar</button>
+                                        {% endif %}
+                                    </form>
+                                </li>
+                                {% endif %}
+                            </ul>
                         </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" class="text-center text-secondary py-4">
-                        No hay cuentas registradas.
                     </td>
                 </tr>
                 {% endfor %}

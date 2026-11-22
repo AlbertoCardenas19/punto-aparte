@@ -1,0 +1,1041 @@
+/* Menús fuera del contenedor desplazable, sin alterar acciones ni permisos. */
+window.PUNTO_APARTE_JS_VERSION = 'interfaz-20261118-2';
+const controlesMenu = [...document.querySelectorAll('[data-menu-principal]')];
+const menuMovil = document.querySelector('#menu-movil');
+const menuEscritorio = document.querySelector('#menu-escritorio');
+const escritorio = window.matchMedia('(min-width: 992px)');
+
+function prepararAyudaValorOferta() {
+    const modalidad = document.querySelector('[data-modalidad-oferta]');
+    const valor = document.querySelector('[data-valor-oferta]');
+    const ayuda = document.querySelector('#id_oferta_valor_helptext');
+    if (!modalidad || !valor || !ayuda) return;
+
+    const textos = {
+        PORCENTAJE: 'Porcentaje de descuento, por ejemplo «15».',
+        PRECIO_FINAL: 'Precio final, por ejemplo «4.990» (ingresa 4990).',
+    };
+    const ejemplos = {
+        PORCENTAJE: '15',
+        PRECIO_FINAL: '4990',
+    };
+    const actualizar = () => {
+        ayuda.textContent = textos[modalidad.value]
+            || 'Selecciona una modalidad para ver un ejemplo del valor.';
+        valor.placeholder = ejemplos[modalidad.value] || '';
+    };
+    ayuda.setAttribute('aria-live', 'polite');
+    modalidad.addEventListener('change', actualizar);
+    actualizar();
+}
+
+prepararAyudaValorOferta();
+
+function preferenciaMenuContraido() {
+    try {
+        return localStorage.getItem('punto-aparte-menu-contraido') === '1';
+    } catch {
+        return false;
+    }
+}
+
+function guardarPreferenciaMenu(contraido) {
+    try {
+        localStorage.setItem('punto-aparte-menu-contraido', contraido ? '1' : '0');
+    } catch {
+        // El menú sigue funcionando aunque el navegador bloquee localStorage.
+    }
+}
+
+function actualizarControlMenu() {
+    if (!controlesMenu.length) return;
+    const expandido = escritorio.matches
+        ? !document.body.classList.contains('pa-menu-contraido')
+        : menuMovil?.classList.contains('show') || false;
+    controlesMenu.forEach(control => {
+        const esControlEscritorio = control.closest('#menu-escritorio') !== null;
+        const activo = esControlEscritorio ? !document.body.classList.contains('pa-menu-contraido') : (menuMovil?.classList.contains('show') || false);
+        control.setAttribute('aria-expanded', String(activo));
+        control.setAttribute(
+            'aria-label',
+            activo ? 'Cerrar menú' : 'Abrir menú'
+        );
+        control.setAttribute(
+            'aria-controls',
+            esControlEscritorio ? 'menu-escritorio' : 'menu-movil'
+        );
+    });
+    menuEscritorio?.querySelector('.pa-menu')?.setAttribute(
+        'aria-hidden',
+        String(!escritorio.matches || !expandido)
+    );
+    menuEscritorio.querySelector('.pa-menu').inert = !escritorio.matches || !expandido;
+}
+
+if (controlesMenu.length && menuMovil && menuEscritorio) {
+    document.body.classList.toggle(
+        'pa-menu-contraido',
+        escritorio.matches && preferenciaMenuContraido()
+    );
+    controlesMenu.forEach(control => {
+        control.addEventListener('click', () => {
+            if (escritorio.matches && control.closest('#menu-escritorio')) {
+                const contraido = document.body.classList.toggle('pa-menu-contraido');
+                guardarPreferenciaMenu(contraido);
+                actualizarControlMenu();
+                return;
+            }
+            bootstrap.Offcanvas.getOrCreateInstance(menuMovil).toggle(control);
+        });
+    });
+    menuMovil.addEventListener('shown.bs.offcanvas', actualizarControlMenu);
+    menuMovil.addEventListener('hidden.bs.offcanvas', actualizarControlMenu);
+    const alCambiarAncho = () => {
+        document.body.classList.toggle(
+            'pa-menu-contraido',
+            escritorio.matches && preferenciaMenuContraido()
+        );
+        if (escritorio.matches) bootstrap.Offcanvas.getInstance(menuMovil)?.hide();
+        actualizarControlMenu();
+    };
+    if (escritorio.addEventListener) {
+        escritorio.addEventListener('change', alCambiarAncho);
+    } else {
+        escritorio.addListener(alCambiarAncho);
+    }
+    actualizarControlMenu();
+}
+
+const menus = new Map();
+let formularioDesactivacion = null;
+const modalDesactivacion = document.querySelector('#modal-confirmar-desactivacion');
+
+document.addEventListener('click', event => {
+    const trigger = event.target.closest('[data-confirmar-desactivacion]');
+    if (!trigger || !modalDesactivacion) return;
+    formularioDesactivacion = trigger.closest('form');
+    const tipo = trigger.dataset.tipo;
+    const nombre = trigger.dataset.nombre;
+    const articulo = tipo === 'producto' ? 'el' : 'la';
+    modalDesactivacion.querySelector('[data-desactivacion-titulo]').textContent =
+        `Desactivar ${tipo}`;
+    modalDesactivacion.querySelector('[data-desactivacion-mensaje]').textContent =
+        `¿Quieres desactivar ${articulo} ${tipo} «${nombre}»?`;
+    bootstrap.Modal.getOrCreateInstance(modalDesactivacion).show();
+});
+
+modalDesactivacion?.querySelector('[data-confirmar-desactivacion-submit]')
+    .addEventListener('click', event => {
+        if (!formularioDesactivacion) return;
+        event.currentTarget.disabled = true;
+        formularioDesactivacion.requestSubmit();
+    });
+
+modalDesactivacion?.addEventListener('hidden.bs.modal', () => {
+    formularioDesactivacion = null;
+    modalDesactivacion.querySelector('[data-confirmar-desactivacion-submit]').disabled = false;
+});
+
+document.addEventListener('show.bs.dropdown', event => {
+    const toggle = event.target;
+    const menu = toggle.parentElement.querySelector('.dropdown-menu');
+    if (!menu || !toggle.closest('[data-tabla-listado]')) return;
+    const marker = document.createComment('menu');
+    menu.before(marker);
+    menus.set(toggle, {menu, marker});
+    document.body.append(menu);
+});
+document.addEventListener('hidden.bs.dropdown', event => {
+    const entry = menus.get(event.target);
+    if (entry) { entry.marker.replaceWith(entry.menu); menus.delete(event.target); }
+});
+
+document.addEventListener('show.bs.modal', event => {
+    if (event.target.id !== 'modal-detalle-producto') return;
+    const trigger = event.relatedTarget;
+    if (!trigger?.matches('[data-producto-detalle]')) return;
+    const modal = event.target;
+    modal.querySelector('[data-detalle-nombre]').textContent = trigger.dataset.productoNombre;
+    modal.querySelector('[data-detalle-marca]').textContent = trigger.dataset.productoMarca;
+    modal.querySelector('[data-detalle-categorias]').textContent = trigger.dataset.productoCategorias;
+    modal.querySelector('[data-detalle-codigo]').textContent = trigger.dataset.productoCodigo;
+    modal.querySelector('[data-detalle-descripcion]').textContent = trigger.dataset.productoDescripcion;
+});
+
+for (const table of document.querySelectorAll('[data-tabla-listado]')) {
+    const noOrdenables = [...table.querySelectorAll('thead th')]
+        .map((th, index) => th.hasAttribute('data-no-orden') ? index : null)
+        .filter(index => index !== null);
+    const noBuscables = [...table.querySelectorAll('thead th')]
+        .map((th, index) => th.hasAttribute('data-no-buscar') ? index : null)
+        .filter(index => index !== null);
+    const ordenColumna = Number.parseInt(table.dataset.ordenColumna || '0', 10);
+    const ordenDireccion = table.dataset.ordenDireccion || 'asc';
+
+    const dataTable = new DataTable(table, {
+        responsive: true,
+        pageLength: 10,
+        lengthMenu: [10, 25, 50],
+        order: [[ordenColumna, ordenDireccion]],
+        search: {search: table.dataset.busquedaInicial || ''},
+        columnDefs: [
+            ...(noOrdenables.length ? [{
+                targets: noOrdenables,
+                orderable: false,
+            }] : []),
+            ...(noBuscables.length ? [{
+                targets: noBuscables,
+                searchable: false,
+            }] : []),
+        ],
+        language: {
+            emptyTable: 'No hay registros para mostrar.',
+            info: 'Mostrando _START_ a _END_ de _TOTAL_ registros',
+            infoEmpty: 'No hay registros para mostrar.',
+            infoFiltered: '(filtrados de _MAX_ registros)',
+            lengthMenu: 'Mostrar _MENU_ registros',
+            loadingRecords: 'Cargando…',
+            processing: 'Procesando…',
+            search: 'Buscar:',
+            searchPlaceholder: table.dataset.busquedaAyuda || '',
+            zeroRecords: 'No se encontraron coincidencias.',
+            paginate: {
+                first: 'Primera',
+                last: 'Última',
+                next: 'Siguiente',
+                previous: 'Anterior',
+            },
+        },
+    });
+
+    const exportLinks = [
+        ...document.querySelectorAll('[data-exportar-productos], [data-exportar-movimientos]'),
+    ];
+    if (exportLinks.length && table.closest('.card')) {
+        const actualizarExportacion = () => {
+            const busqueda = dataTable.search().trim();
+            for (const exportLink of exportLinks) {
+                const url = new URL(exportLink.href);
+                const filtros = new URLSearchParams(location.search);
+                url.search = filtros.toString();
+                if (busqueda) url.searchParams.set('q', busqueda);
+                else url.searchParams.delete('q');
+                exportLink.href = url;
+            }
+        };
+        dataTable.on('search', actualizarExportacion);
+        actualizarExportacion();
+    }
+}
+
+const movimientoStockForm = document.querySelector('[data-movimiento-stock-form]');
+if (movimientoStockForm) {
+    const tipo = movimientoStockForm.querySelector('[name="tipo"]');
+    const actualizarTipo = () => {
+        for (const campo of movimientoStockForm.querySelectorAll('[data-campo-tipo]')) {
+            const visible = campo.dataset.campoTipo === tipo.value;
+            campo.hidden = !visible;
+            const input = campo.querySelector('input');
+            input.disabled = !visible;
+            input.required = visible;
+        }
+    };
+    tipo.addEventListener('change', actualizarTipo);
+    actualizarTipo();
+
+    const buscar = movimientoStockForm.querySelector('[data-buscar-producto-stock]');
+    const productoId = movimientoStockForm.querySelector('[name="producto"]');
+    const estado = movimientoStockForm.querySelector('[data-producto-stock-estado]');
+    const sugerencias = movimientoStockForm.querySelector('[data-sugerencias-producto]');
+    const buscador = movimientoStockForm.querySelector('[data-producto-buscador]');
+    const seleccionado = movimientoStockForm.querySelector('[data-producto-seleccionado]');
+    const nombreSeleccionado = seleccionado.querySelector('[data-producto-seleccionado-nombre]');
+    const detalleSeleccionado = seleccionado.querySelector('[data-producto-seleccionado-detalle]');
+    const cambiar = seleccionado.querySelector('[data-cambiar-producto]');
+    let temporizador, controller;
+
+    const cerrarSugerencias = () => {
+        sugerencias.hidden = true;
+        sugerencias.replaceChildren();
+        buscar.setAttribute('aria-expanded', 'false');
+    };
+    const elegirProducto = producto => {
+        productoId.value = producto.id;
+        nombreSeleccionado.textContent = producto.nombre;
+        detalleSeleccionado.textContent = [
+            producto.marca,
+            producto.codigo,
+            `Stock actual: ${producto.stock}`,
+        ].filter(Boolean).join(' · ');
+        buscador.hidden = true;
+        seleccionado.hidden = false;
+        estado.textContent = '';
+        cerrarSugerencias();
+    };
+    const mostrarSugerencias = resultados => {
+        sugerencias.replaceChildren(...resultados.map(producto => {
+            const boton = document.createElement('button');
+            boton.type = 'button';
+            boton.className = 'pa-sugerencia-producto';
+            boton.setAttribute('role', 'option');
+            const informacion = document.createElement('span');
+            const nombre = document.createElement('strong');
+            const detalle = document.createElement('span');
+            const stock = document.createElement('span');
+            nombre.textContent = producto.nombre;
+            detalle.textContent = [producto.marca, producto.codigo]
+                .filter(Boolean).join(' · ');
+            stock.className = 'pa-sugerencia-stock';
+            stock.textContent = `Stock: ${producto.stock}`;
+            informacion.append(nombre, detalle);
+            boton.append(informacion, stock);
+            boton.addEventListener('click', () => elegirProducto(producto));
+            return boton;
+        }));
+        sugerencias.hidden = resultados.length === 0;
+        buscar.setAttribute('aria-expanded', String(resultados.length > 0));
+    };
+    const consultar = async () => {
+        const termino = buscar.value.trim();
+        controller?.abort();
+        if (!termino) {
+            estado.textContent = '';
+            cerrarSugerencias();
+            return;
+        }
+        controller = new AbortController();
+        const url = new URL(movimientoStockForm.dataset.sugerenciasUrl, location.origin);
+        url.searchParams.set('q', termino);
+        estado.textContent = 'Buscando…';
+        try {
+            const response = await fetch(url, {
+                signal: controller.signal,
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+            });
+            if (!response.ok) throw new Error('HTTP');
+            const {resultados} = await response.json();
+            mostrarSugerencias(resultados);
+            estado.textContent = resultados.length
+                ? ''
+                : 'No se encontraron productos.';
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                cerrarSugerencias();
+                estado.textContent = 'No se pudieron cargar las sugerencias.';
+            }
+        }
+    };
+
+    buscar.addEventListener('input', () => {
+        productoId.value = '';
+        clearTimeout(temporizador);
+        temporizador = setTimeout(consultar, 180);
+    });
+    buscar.addEventListener('keydown', event => {
+        const opciones = [...sugerencias.querySelectorAll('[role="option"]')];
+        if (event.key === 'ArrowDown' && opciones.length) {
+            event.preventDefault();
+            opciones[0].focus();
+        } else if (event.key === 'Escape') {
+            cerrarSugerencias();
+        }
+    });
+    sugerencias.addEventListener('keydown', event => {
+        const opciones = [...sugerencias.querySelectorAll('[role="option"]')];
+        const indice = opciones.indexOf(document.activeElement);
+        if (event.key === 'ArrowDown' && indice < opciones.length - 1) {
+            event.preventDefault();
+            opciones[indice + 1].focus();
+        } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            if (indice > 0) opciones[indice - 1].focus();
+            else buscar.focus();
+        } else if (event.key === 'Escape') {
+            cerrarSugerencias();
+            buscar.focus();
+        }
+    });
+    cambiar.addEventListener('click', () => {
+        productoId.value = '';
+        seleccionado.hidden = true;
+        buscador.hidden = false;
+        buscar.value = '';
+        buscar.focus();
+    });
+    document.addEventListener('click', event => {
+        if (!movimientoStockForm.querySelector('[data-producto-predictivo]').contains(event.target)) {
+            cerrarSugerencias();
+        }
+    });
+}
+
+function reemplazarResultadosBusqueda(doc, url) {
+    const results = document.querySelector('[data-resultados-busqueda]');
+    const next = doc.querySelector('[data-resultados-busqueda]');
+    if (!results || !next) throw new Error('Resultados no disponibles');
+    for (const [toggle, entry] of menus) {
+        bootstrap.Dropdown.getInstance(toggle)?.hide();
+        entry.menu.remove();
+        menus.delete(toggle);
+    }
+    results.replaceWith(next);
+    prepararBotonesAgregar(next);
+    history.replaceState(null, '', url);
+}
+
+for (const form of document.querySelectorAll('[data-busqueda-viva]')) {
+    const input = form.querySelector('[name="q"]');
+    const status = document.createElement('p');
+    status.className = 'pa-estado-breve';
+    status.setAttribute('role', 'status');
+    form.append(status);
+    let timer, controller, version = 0;
+
+    input.addEventListener('input', () => {
+        clearTimeout(timer);
+        controller?.abort();
+        const current = ++version;
+        timer = setTimeout(async () => {
+            controller = new AbortController();
+            const url = new URL(form.action || location.href);
+            url.search = new URLSearchParams({q: input.value, orden: form.querySelector('[name="orden"]')?.value || 'nombre_asc'}).toString();
+            const results = document.querySelector('[data-resultados-busqueda]');
+            results.setAttribute('aria-busy', 'true');
+            status.textContent = 'Buscando…';
+            try {
+                const response = await fetch(url, {signal: controller.signal});
+                if (!response.ok) throw new Error('HTTP');
+                const doc = new DOMParser().parseFromString(
+                    await response.text(), 'text/html'
+                );
+                if (current !== version) return;
+                reemplazarResultadosBusqueda(doc, url);
+                status.textContent = '';
+            } catch (error) {
+                if (current === version && error.name !== 'AbortError') {
+                    status.textContent = 'No se pudo actualizar. Vuelve a escribir o cambia el orden para intentarlo nuevamente.';
+                }
+            } finally {
+                if (current === version) {
+                    document.querySelector('[data-resultados-busqueda]')
+                        .removeAttribute('aria-busy');
+                }
+            }
+        }, 300);
+    });
+
+    form.addEventListener('submit', event => {
+        event.preventDefault();
+        input.dispatchEvent(new Event('input'));
+    });
+    form.querySelector('[name="orden"]').addEventListener('change', () => {
+        input.dispatchEvent(new Event('input'));
+    });
+}
+
+function ajustarBotonesCantidad(input) {
+    const control = input.closest('.pa-cantidad-control');
+    const cantidad = Number.parseInt(input.value || '0', 10);
+    const maximo = Number.parseInt(input.max, 10);
+    control.querySelector('[data-cantidad-restar]').disabled = cantidad <= 0;
+    control.querySelector('[data-cantidad-sumar]').disabled = cantidad >= maximo;
+}
+
+function normalizarCantidad(input) {
+    if (input.value === '') return null;
+    const maximo = Number.parseInt(input.max, 10);
+    let cantidad = Number.parseInt(input.value, 10);
+    if (!Number.isFinite(cantidad)) cantidad = 0;
+    cantidad = Math.max(0, Math.min(cantidad, maximo));
+    input.value = cantidad;
+    ajustarBotonesCantidad(input);
+    return cantidad;
+}
+
+function prepararControlCantidad(input, alCambiar) {
+    if (input.dataset.controlCantidadListo) return;
+    input.dataset.controlCantidadListo = 'true';
+    const control = input.closest('.pa-cantidad-control');
+    ajustarBotonesCantidad(input);
+
+    input.addEventListener('input', () => {
+        if (normalizarCantidad(input) !== null) alCambiar(350);
+    });
+    input.addEventListener('change', () => {
+        if (input.value !== '') return;
+        input.value = '0';
+        normalizarCantidad(input);
+        alCambiar(0);
+    });
+    control.querySelector('[data-cantidad-restar]').addEventListener('click', () => {
+        input.value = Math.max(0, Number.parseInt(input.value || '0', 10) - 1);
+        ajustarBotonesCantidad(input);
+        alCambiar(120);
+    });
+    control.querySelector('[data-cantidad-sumar]').addEventListener('click', () => {
+        const maximo = Number.parseInt(input.max, 10);
+        input.value = Math.min(maximo, Number.parseInt(input.value || '0', 10) + 1);
+        ajustarBotonesCantidad(input);
+        alCambiar(120);
+    });
+}
+
+const numeroClpCaja = new Intl.NumberFormat('es-CL', {
+    maximumFractionDigits: 0,
+});
+const formatearClpCaja = valor => `$${numeroClpCaja.format(valor)}`;
+
+function actualizarResumenCarrito(form) {
+    let total = 0;
+    let lineasActivas = 0;
+    for (const input of form.querySelectorAll('.pa-cantidad-valor')) {
+        const cantidad = Number.parseInt(input.value || '0', 10);
+        const precio = Number.parseInt(input.dataset.precioUnitario || '0', 10);
+        const subtotal = Math.max(0, cantidad) * precio;
+        total += subtotal;
+        if (cantidad > 0) lineasActivas += 1;
+        const celda = input.closest('tr')?.querySelector('[data-subtotal-linea]');
+        if (celda) celda.textContent = formatearClpCaja(subtotal);
+    }
+
+    for (const elemento of document.querySelectorAll(
+        '[data-total-carrito], [data-total-carrito-movil], '
+        + '[data-total-cobro], [data-total-cobro-boton]'
+    )) {
+        elemento.textContent = formatearClpCaja(total);
+    }
+    const contador = document.querySelector('[data-contador-carrito]');
+    if (contador) {
+        contador.textContent = `${lineasActivas} producto${lineasActivas === 1 ? '' : 's'}`;
+    }
+}
+
+let colaActualizacionesCarrito = Promise.resolve();
+let operacionesCarritoPendientes = 0;
+
+function actualizarBloqueoCobro() {
+    const bloqueado = operacionesCarritoPendientes > 0;
+    for (const control of document.querySelectorAll('[data-cobrar]')) {
+        control.disabled = bloqueado;
+    }
+    document.querySelector('[data-form-cobro]')?.actualizarPago?.();
+}
+
+function registrarOperacionCarrito() {
+    operacionesCarritoPendientes += 1;
+    actualizarBloqueoCobro();
+}
+
+function finalizarOperacionCarrito() {
+    operacionesCarritoPendientes = Math.max(
+        0, operacionesCarritoPendientes - 1
+    );
+    actualizarBloqueoCobro();
+}
+
+function solicitarActualizacionCarrito(form, datos, urlSolicitada = null, procesar = null) {
+    const ejecutar = async () => {
+        const version = document.querySelector('[data-carrito-panel]')
+            ?.dataset.versionCarrito;
+        if (version) datos.set('version_carrito', version);
+        const response = await fetch(urlSolicitada || form.action || location.href, {
+            method: 'POST',
+            body: datos,
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+        });
+        if (!response.ok) throw new Error('HTTP');
+        const doc = new DOMParser().parseFromString(
+            await response.text(), 'text/html'
+        );
+        const resultado = {doc, response, versionEnviada: version};
+        return procesar ? procesar(resultado) : resultado;
+    };
+    const solicitud = colaActualizacionesCarrito.then(ejecutar, ejecutar);
+    colaActualizacionesCarrito = solicitud.catch(() => {});
+    return solicitud;
+}
+
+async function recuperarEstadoCarrito() {
+    const response = await fetch(location.href, {cache: 'no-store'});
+    if (!response.ok) throw new Error('No se pudo recuperar la compra');
+    const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+    if (!doc.querySelector('[data-carrito-panel]')) throw new Error('Respuesta sin compra');
+    aplicarActualizacionCarrito(doc);
+}
+
+function informarResultadoIncierto(productoId, recuperado, agregadoConfirmado = false) {
+    const estado = document.querySelector(
+        `[data-producto-tarjeta][data-producto-id="${CSS.escape(String(productoId))}"] [data-agregar-estado]`
+    ) || document.querySelector('[data-carrito-estado]');
+    if (!estado) return;
+    estado.textContent = recuperado && agregadoConfirmado
+        ? 'El servidor agregó el producto. Se recuperó la compra tras un problema de interfaz.'
+        : recuperado
+        ? 'Se recuperó la compra. Revisa la cantidad antes de agregar otra vez.'
+        : 'No se pudo comprobar el resultado. Actualiza la compra y revisa la cantidad antes de agregar otra vez.';
+    estado.classList.add('pa-estado-error');
+}
+
+function trasladarErroresAlEstado(doc, selectorEstado) {
+    const errores = [...doc.querySelectorAll('[data-mensajes] [role="alert"]')]
+        .map(error => error.textContent.trim())
+        .filter(Boolean);
+    if (!errores.length) return;
+    const status = doc.querySelector(selectorEstado);
+    if (status) {
+        status.textContent = errores.join(' ');
+        status.classList.add('pa-estado-error');
+    }
+    doc.querySelector('[data-mensajes]')?.replaceChildren();
+}
+
+function actualizarVersionCarrito(doc) {
+    const currentPanel = document.querySelector('[data-carrito-panel]');
+    const nextPanel = doc.querySelector('[data-carrito-panel]');
+    if (currentPanel && nextPanel) {
+        currentPanel.dataset.versionCarrito = nextPanel.dataset.versionCarrito;
+        currentPanel.dataset.hayCarrito = nextPanel.dataset.hayCarrito;
+    }
+}
+
+let carritoDescartadoAlSalir = false;
+let actualizacionPendienteModal = null;
+function aplicarActualizacionCarrito(doc) {
+    if (carritoDescartadoAlSalir) return;
+    const modalCobroAbierto = document.querySelector('#modal-cobro.show');
+    if (modalCobroAbierto) {
+        const programarCierre = actualizacionPendienteModal === null;
+        actualizacionPendienteModal = doc;
+        if (programarCierre) modalCobroAbierto.addEventListener('hidden.bs.modal', () => {
+            const pendiente = actualizacionPendienteModal;
+            actualizacionPendienteModal = null;
+            aplicarActualizacionCarrito(pendiente);
+        }, {once: true});
+        bootstrap.Modal.getOrCreateInstance(modalCobroAbierto).hide();
+        return;
+    }
+    const nextPanel = doc.querySelector('[data-carrito-panel]');
+    if (!nextPanel) throw new Error('Carrito no disponible');
+    const controlActivo = document.activeElement?.closest(
+        '[data-carrito-panel] .pa-cantidad-valor'
+    );
+    const nombreControlActivo = controlActivo?.name;
+    const seleccionActiva = controlActivo ? [
+        controlActivo.selectionStart,
+        controlActivo.selectionEnd,
+    ] : null;
+
+    const currentMessages = document.querySelector('[data-mensajes]');
+    const nextMessages = doc.querySelector('[data-mensajes]');
+    if (currentMessages && nextMessages) currentMessages.replaceWith(nextMessages);
+
+    const formularioAnterior = document.querySelector('#modal-cobro [data-form-cobro]');
+    const formularioNuevo = doc.querySelector('#modal-cobro [data-form-cobro]');
+    if (formularioAnterior && formularioNuevo) {
+        const filasActuales = [...formularioAnterior.querySelectorAll('[data-fila-pago]')];
+        const copias = filasActuales.map(fila => {
+            const copia = fila.cloneNode(true);
+            const originales = fila.querySelectorAll('input');
+            const copiados = copia.querySelectorAll('input');
+            originales.forEach((entrada, indice) => {
+                copiados[indice].value = entrada.value;
+                if (entrada.type === 'radio') copiados[indice].checked = entrada.checked;
+            });
+            return copia;
+        });
+        formularioNuevo.querySelector('[data-filas-pago]').replaceChildren(...copias);
+        formularioNuevo.querySelector('[name="efectivo_recibido"]').value =
+            formularioAnterior.querySelector('[name="efectivo_recibido"]').value;
+    }
+    const modales = ['modal-cobro'].map(id => {
+        const modal = doc.querySelector(`#${id}`);
+        modal?.remove();
+        document.querySelector(`#${id}`)?.remove();
+        return modal;
+    });
+
+    const currentPanel = document.querySelector('[data-carrito-panel]');
+    const currentCobrar = currentPanel.querySelector('[data-cobrar]');
+    const nextCobrar = nextPanel.querySelector('[data-cobrar]');
+    const currentBody = currentPanel.querySelector('[data-carrito-cuerpo]');
+    const nextBody = nextPanel.querySelector('[data-carrito-cuerpo]');
+    const currentHeader = currentPanel.querySelector('.pa-caja-resumen');
+    const nextHeader = nextPanel.querySelector('.pa-caja-resumen');
+    let updatedPanel = nextPanel;
+    if (
+        currentCobrar && nextCobrar && currentBody && nextBody
+        && currentHeader && nextHeader
+    ) {
+        const currentTotal = currentCobrar.querySelector('[data-total-cobro-boton]');
+        const nextTotal = nextCobrar.querySelector('[data-total-cobro-boton]');
+        if (currentTotal && nextTotal) currentTotal.textContent = nextTotal.textContent;
+        currentPanel.dataset.versionCarrito = nextPanel.dataset.versionCarrito;
+        currentHeader.replaceWith(nextHeader);
+        currentBody.replaceWith(nextBody);
+        updatedPanel = currentPanel;
+    } else {
+        currentPanel.replaceWith(nextPanel);
+    }
+    prepararCarrito(updatedPanel);
+    if (nombreControlActivo) {
+        const siguienteControl = updatedPanel.querySelector(
+            `[name="${CSS.escape(nombreControlActivo)}"]`
+        );
+        if (siguienteControl) {
+            siguienteControl.focus({preventScroll: true});
+            if (seleccionActiva.every(valor => valor !== null)) {
+                siguienteControl.setSelectionRange(...seleccionActiva);
+            }
+        }
+    }
+    modales.forEach(modal => {
+        if (modal) {
+            document.body.append(modal);
+            prepararFormularioCobro(modal);
+        }
+    });
+    actualizarBloqueoCobro();
+
+    const currentMobileTotal = document.querySelector('[data-total-carrito-movil]');
+    const nextMobileTotal = doc.querySelector('[data-total-carrito-movil]');
+    if (currentMobileTotal && nextMobileTotal) {
+        currentMobileTotal.textContent = nextMobileTotal.textContent;
+    }
+
+    for (const card of [...document.querySelectorAll('[data-producto-tarjeta]')]) {
+        const nextCard = doc.querySelector(
+            `[data-producto-tarjeta][data-producto-id="${card.dataset.productoId}"]`
+        );
+        if (!nextCard) continue;
+        card.replaceWith(nextCard);
+        prepararBotonesAgregar(nextCard);
+    }
+}
+
+function prepararFormularioCobro(contenedor = document) {
+    const form = contenedor.querySelector('[data-form-cobro]');
+    if (!form || form.dataset.cobroListo) return;
+    form.dataset.cobroListo = 'true';
+    const filas = form.querySelector('[data-filas-pago]');
+    const plantilla = contenedor.querySelector('[data-plantilla-pago]');
+    const agregar = form.querySelector('[data-agregar-pago]');
+    const recibido = form.querySelector('[name="efectivo_recibido"]');
+    const total = Number(form.querySelector('[data-pagos-total]').dataset.pagosTotal);
+    const boton = contenedor.querySelector(`[type="submit"][form="${form.id}"]`);
+    const pesos = monto => `$${new Intl.NumberFormat('es-CL').format(monto)}`;
+    let siguienteId = Math.max(0, ...[...filas.querySelectorAll('[data-fila-pago]')]
+        .map(fila => Number(fila.dataset.filaId))) + 1;
+    const filasActuales = () => [...filas.querySelectorAll('[data-fila-pago]')];
+    const enteroPositivo = valor => /^[0-9]{1,10}$/.test(valor) && Number(valor) > 0
+        && Number(valor) <= 2147483647;
+
+    const actualizar = () => {
+        const actuales = filasActuales();
+        const medios = actuales.map(fila => fila.querySelector('[data-medio-pago]:checked')?.value || '');
+        const usados = medios.filter(Boolean);
+        const montos = actuales.map(fila => fila.querySelector('[data-monto-pago]').value.trim());
+        const asignado = montos.reduce((suma, monto) => suma + (enteroPositivo(monto) ? Number(monto) : 0), 0);
+        const falta = Math.max(0, total - asignado);
+        const exceso = Math.max(0, asignado - total);
+        const efectivo = actuales.reduce((suma, fila, indice) => suma +
+            (medios[indice] === 'EFECTIVO' && enteroPositivo(montos[indice]) ? Number(montos[indice]) : 0), 0);
+        const recibidoValido = /^[0-9]{1,10}$/.test(recibido.value)
+            && Number(recibido.value) <= 2147483647;
+        const vuelto = efectivo && recibidoValido ? Math.max(0, Number(recibido.value) - efectivo) : 0;
+        form.querySelector('[data-efectivo-recibido]').hidden = efectivo === 0;
+        recibido.disabled = efectivo === 0;
+        form.querySelector('[data-pago-asignado]').textContent = pesos(asignado);
+        form.querySelector('[data-pago-falta]').textContent = pesos(falta);
+        form.querySelector('[data-pago-vuelto]').textContent = pesos(vuelto);
+        const error = form.querySelector('[data-pago-error]');
+        error.textContent = exceso ? `Sobran ${pesos(exceso)} en los montos aplicados.` :
+            usados.length !== new Set(usados).size ? 'No repitas un medio de pago.' :
+            efectivo && (!recibidoValido || Number(recibido.value) < efectivo)
+                ? 'El efectivo recibido debe cubrir el monto aplicado.' : '';
+        error.hidden = !error.textContent;
+        actuales.forEach((fila, indice) => {
+            fila.querySelector('[data-quitar-pago]').hidden = indice === 0;
+            fila.querySelector('.fw-semibold').textContent = `Pago ${indice + 1}`;
+            fila.querySelectorAll('[data-medio-pago]').forEach(radio => {
+                radio.disabled = radio.value !== medios[indice] && usados.includes(radio.value);
+            });
+        });
+        agregar.disabled = actuales.length >= 3;
+        boton.disabled = operacionesCarritoPendientes > 0 || usados.length !== actuales.length ||
+            usados.length !== new Set(usados).size || montos.some(monto => !enteroPositivo(monto)) ||
+            asignado !== total || (efectivo > 0 && (!recibidoValido || Number(recibido.value) < efectivo));
+    };
+    form.actualizarPago = actualizar;
+    filas.addEventListener('change', event => {
+        if (event.target.matches('[data-medio-pago]')) {
+            const fila = event.target.closest('[data-fila-pago]');
+            const monto = fila.querySelector('[data-monto-pago]');
+            if (!monto.value) {
+                const otros = filasActuales().filter(otra => otra !== fila).reduce((suma, otra) =>
+                    suma + (enteroPositivo(otra.querySelector('[data-monto-pago]').value)
+                        ? Number(otra.querySelector('[data-monto-pago]').value) : 0), 0);
+                monto.value = String(Math.max(0, total - otros));
+            }
+        }
+        actualizar();
+    });
+    filas.addEventListener('input', actualizar);
+    filas.addEventListener('click', event => {
+        const quitar = event.target.closest('[data-quitar-pago]');
+        if (quitar) { quitar.closest('[data-fila-pago]').remove(); actualizar(); }
+    });
+    form.agregarPago = () => {
+        if (filasActuales().length >= 3) return;
+        const fragmento = plantilla.content.cloneNode(true);
+        const fila = fragmento.querySelector('[data-fila-pago]');
+        const id = String(siguienteId++);
+        fila.dataset.filaId = id;
+        fila.querySelector('[name="fila_pago"]').value = id;
+        fila.querySelectorAll('[data-medio-pago]').forEach(radio => radio.name = `medio_${id}`);
+        const monto = fila.querySelector('[data-monto-pago]');
+        monto.name = `monto_${id}`;
+        monto.id = `monto-pago-${id}`;
+        fila.querySelector('label[for]').htmlFor = monto.id;
+        filas.append(fragmento);
+        actualizar();
+    };
+    form.querySelector('[data-efectivo-exacto]').addEventListener('click', () => {
+        const fila = filasActuales().find(item => item.querySelector('[data-medio-pago]:checked')?.value === 'EFECTIVO');
+        if (fila) recibido.value = fila.querySelector('[data-monto-pago]').value;
+        actualizar();
+    });
+    recibido.addEventListener('input', actualizar);
+    form.addEventListener('submit', event => {
+        actualizar();
+        if (boton.disabled) {
+            event.preventDefault();
+            const estado = form.querySelector('[role="alert"]');
+            if (estado && operacionesCarritoPendientes > 0) estado.textContent = 'Espera a que termine de guardarse la compra.';
+            return;
+        }
+        boton.disabled = true;
+        form.setAttribute('aria-busy', 'true');
+    });
+    actualizar();
+}
+
+document.addEventListener('click', event => {
+    const agregar = event.target.closest('[data-agregar-pago]');
+    if (!agregar) return;
+    const modal = agregar.closest('#modal-cobro');
+    try {
+        prepararFormularioCobro(modal);
+        const form = modal.querySelector('[data-form-cobro]');
+        const anteriores = form.querySelectorAll('[data-fila-pago]').length;
+        form.agregarPago();
+        if (form.querySelectorAll('[data-fila-pago]').length !== anteriores + 1) {
+            throw new Error('El clic no añadió una fila de pago');
+        }
+    } catch (error) {
+        console.error(`[Punto Aparte caja ${window.PUNTO_APARTE_JS_VERSION}] Agregar medio`, error);
+        const estado = modal?.querySelector('[data-pago-error]');
+        if (estado) {
+            estado.textContent = 'No se pudo añadir el medio de pago. Recarga la página.';
+            estado.hidden = false;
+        }
+    }
+});
+window.PUNTO_APARTE_COBRO_LISTO = true;
+
+function prepararCarrito(panel = document) {
+    prepararLimpiarCarrito(panel);
+    const form = panel.querySelector('[data-carrito-form]');
+    if (!form) return;
+    const status = form.querySelector('[data-carrito-estado]');
+    let timer;
+    let revisionLocal = 0;
+    let cambioProgramado = false;
+
+    const sincronizar = async () => {
+        clearTimeout(timer);
+        if (!cambioProgramado) {
+            registrarOperacionCarrito();
+        }
+        cambioProgramado = false;
+        const revisionEnviada = revisionLocal;
+        const datos = new FormData(form);
+        form.setAttribute('aria-busy', 'true');
+        status.textContent = '';
+        status.classList.remove('pa-estado-error');
+        try {
+            await solicitarActualizacionCarrito(form, datos, null, ({doc}) => {
+                trasladarErroresAlEstado(doc, '[data-carrito-estado]');
+                if (revisionEnviada === revisionLocal) {
+                    aplicarActualizacionCarrito(doc);
+                } else {
+                    actualizarVersionCarrito(doc);
+                    if (operacionesCarritoPendientes <= 1) {
+                        form.removeAttribute('aria-busy');
+                    }
+                }
+            });
+        } catch (error) {
+            form.removeAttribute('aria-busy');
+            status.textContent = 'No se pudo actualizar la compra. Intenta nuevamente.';
+            status.classList.add('pa-estado-error');
+        } finally {
+            finalizarOperacionCarrito();
+        }
+    };
+
+    const programar = demora => {
+        clearTimeout(timer);
+        revisionLocal += 1;
+        actualizarResumenCarrito(form);
+        if (!cambioProgramado) {
+            cambioProgramado = true;
+            registrarOperacionCarrito();
+        }
+        timer = setTimeout(sincronizar, demora);
+    };
+    form.querySelectorAll('.pa-cantidad-valor').forEach(input => {
+        prepararControlCantidad(input, programar);
+    });
+    form.addEventListener('submit', event => {
+        event.preventDefault();
+        sincronizar();
+    });
+}
+
+function prepararLimpiarCarrito(contenedor = document) {
+    const form = contenedor.querySelector('[data-limpiar-carrito]');
+    if (!form || form.dataset.limpiarListo) return;
+    form.dataset.limpiarListo = 'true';
+    form.addEventListener('submit', async event => {
+        event.preventDefault();
+        registrarOperacionCarrito();
+        const boton = form.querySelector('button[type="submit"]');
+        boton.disabled = true;
+        try {
+            await solicitarActualizacionCarrito(
+                form, new FormData(form), null, ({doc}) => aplicarActualizacionCarrito(doc)
+            );
+        } catch {
+            boton.disabled = false;
+            const estado = document.querySelector('[data-carrito-estado]');
+            if (estado) {
+                estado.textContent = 'No se pudo limpiar la compra. Intenta nuevamente.';
+                estado.classList.add('pa-estado-error');
+            }
+        } finally {
+            finalizarOperacionCarrito();
+        }
+    });
+}
+
+function prepararBotonesAgregar(contenedor = document) {
+    for (const form of contenedor.querySelectorAll('[data-agregar-producto]')) {
+        if (form.dataset.agregarListo) continue;
+        form.dataset.agregarListo = 'true';
+        const status = form.querySelector('[data-agregar-estado]');
+        form.addEventListener('submit', async event => {
+            event.preventDefault();
+            registrarOperacionCarrito();
+            const datos = new FormData(form);
+            const button = form.querySelector('button[type="submit"]');
+            form.setAttribute('aria-busy', 'true');
+            status.textContent = '';
+            status.classList.remove('pa-estado-error');
+            button.disabled = true;
+            let agregadoConfirmado = false;
+            let etapa = 'petición';
+            try {
+                const productoId = datos.get('producto_id');
+                await solicitarActualizacionCarrito(form, datos, null, ({doc, response, versionEnviada}) => {
+                    etapa = 'respuesta';
+                    const codigo = response.headers.get('X-Codigo-Estado');
+                    const versionRecibida = doc.querySelector('[data-carrito-panel]')?.dataset.versionCarrito;
+                    if (!versionRecibida || !['agregado', 'rechazado', 'version_antigua'].includes(codigo)) {
+                        throw new Error('Respuesta de agregado incompleta');
+                    }
+                    if (codigo === 'agregado' && versionRecibida === versionEnviada) {
+                        throw new Error('El agregado no cambió la versión');
+                    }
+                    agregadoConfirmado = codigo === 'agregado';
+                    trasladarErroresAlEstado(
+                        doc,
+                        `[data-producto-tarjeta][data-producto-id="${productoId}"] [data-agregar-estado]`
+                    );
+                    etapa = 'interfaz';
+                    aplicarActualizacionCarrito(doc);
+                });
+            } catch (error) {
+                console.error(`[Punto Aparte caja ${window.PUNTO_APARTE_JS_VERSION}] Agregar: ${etapa}`, error);
+                form.removeAttribute('aria-busy');
+                button.disabled = false;
+                let recuperado = false;
+                try {
+                    await recuperarEstadoCarrito();
+                    recuperado = true;
+                } catch {
+                    // El resultado del POST sigue incierto; nunca se repite automáticamente.
+                }
+                informarResultadoIncierto(datos.get('producto_id'), recuperado, agregadoConfirmado);
+            } finally {
+                finalizarOperacionCarrito();
+            }
+        });
+    }
+}
+
+prepararCarrito();
+prepararBotonesAgregar();
+prepararFormularioCobro();
+const cobroConError = document.querySelector('#modal-cobro [role="alert"]');
+if (cobroConError) {
+    bootstrap.Modal.getOrCreateInstance(document.querySelector('#modal-cobro')).show();
+}
+const copy = document.querySelector('[data-copiar-password]');
+copy?.addEventListener('click', async () => {
+    const input = document.querySelector('#password-temporal');
+    const status = document.querySelector('[data-estado-copia]');
+    try { await navigator.clipboard.writeText(input.value); status.textContent = 'Contraseña copiada.'; }
+    catch { input.select(); status.textContent = 'Seleccionada. Copia con Ctrl+C o con la opción Copiar del dispositivo.'; }
+});
+
+// Evita recuperar la contraseña temporal desde el historial de navegación.
+window.addEventListener('pagehide', () => {
+    const temporal = document.querySelector('#password-temporal');
+    if (temporal) { temporal.value = ''; temporal.defaultValue = ''; }
+});
+
+async function confirmarSalidaDeVenta() {
+    const panel = document.querySelector('[data-carrito-panel]');
+    if (!panel || panel.dataset.hayCarrito !== 'true') return true;
+    if (!window.confirm('Hay productos en la venta. ¿Descartar la compra y salir?')) return false;
+    const token = panel.querySelector('[name="csrfmiddlewaretoken"]')?.value
+        || document.querySelector('[name="csrfmiddlewaretoken"]')?.value;
+    const datos = new FormData();
+    datos.append('version_carrito', panel.dataset.versionCarrito);
+    const respuesta = await fetch('/ventas/descartar/', {
+        method: 'POST', headers: {'X-CSRFToken': token}, body: datos,
+    });
+    if (!respuesta.ok) {
+        alert('La compra cambió. Revisa el carrito antes de salir.');
+        return false;
+    }
+    carritoDescartadoAlSalir = true;
+    return true;
+}
+
+document.addEventListener('click', async event => {
+    const enlace = event.target.closest('a[href]');
+    if (!enlace || !document.querySelector('[data-carrito-panel]') ||
+        enlace.target === '_blank' || enlace.hasAttribute('download')) return;
+    const destino = new URL(enlace.href, location.href);
+    if (destino.origin === location.origin && destino.pathname === location.pathname) return;
+    event.preventDefault();
+    if (await confirmarSalidaDeVenta()) location.assign(destino.href);
+});
+
+document.addEventListener('submit', async event => {
+    const form = event.target;
+    if (!document.querySelector('[data-carrito-panel]') || !form.action.includes('/logout/')) return;
+    event.preventDefault();
+    if (await confirmarSalidaDeVenta()) form.submit();
+}, true);

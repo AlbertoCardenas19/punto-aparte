@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% load punto_aparte %}
+
+{% block extra_css %}{% include "includes/datatables_css.html" %}{% endblock %}
+{% block extra_js %}{% include "includes/datatables_js.html" %}{% endblock %}
+
+{% block title %}Historial de ventas | Punto Aparte{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h1 class="h2 fw-bold mb-1">Historial de ventas</h1>
+    <p class="text-secondary mb-0">
+        {% if request.user.rol == "JEFE" %}Consulta todas las ventas registradas.{% else %}Consulta tus ventas registradas.{% endif %}
+    </p>
+</div>
+
+<form method="get" class="card card-body mb-4" aria-label="Filtros de ventas">
+    <div class="row g-3 align-items-end">
+        <div class="col-12 col-sm-6 col-xl-3">
+            <label for="desde" class="form-label">Desde</label>
+            <input class="form-control" type="date" id="desde" name="desde" value="{{ fecha_desde }}">
+        </div>
+        <div class="col-12 col-sm-6 col-xl-3">
+            <label for="hasta" class="form-label">Hasta</label>
+            <input class="form-control" type="date" id="hasta" name="hasta" value="{{ fecha_hasta }}">
+        </div>
+        {% if request.user.rol == "JEFE" %}
+        <div class="col-12 col-sm-6 col-xl-3">
+            <label for="cajero" class="form-label">Cajero</label>
+            <select class="form-select" id="cajero" name="cajero">
+                <option value="">Todos</option>
+                {% for cajero in cajeros %}
+                <option value="{{ cajero.pk }}" {% if cajero_seleccionado == cajero.pk|stringformat:"s" %}selected{% endif %}>{{ cajero.get_full_name|default:cajero.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+        <div class="col-12 col-sm-6 col-xl-3 d-flex flex-wrap gap-2">
+            <button class="btn btn-pa" type="submit">Aplicar filtros</button>
+            <a class="btn btn-outline-secondary" href="{% url 'ventas:lista' %}">Limpiar</a>
+        </div>
+    </div>
+</form>
+
+<div class="card">
+    <div class="card-body">
+        <table class="table table-hover align-middle mb-0" data-tabla-listado
+            data-orden-columna="1" data-orden-direccion="desc"
+            data-busqueda-ayuda="Número, fecha, cajero o medio de pago">
+            <thead class="table-light">
+                <tr>
+                    <th class="all">Venta</th>
+                    <th>Fecha</th>
+                    <th>Cajero</th>
+                    <th>Medio de pago</th>
+                    <th data-no-buscar>Total</th>
+                    <th data-no-buscar>Estado</th>
+                    <th class="all" data-no-orden data-no-buscar>Detalle</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for venta in ventas %}
+                <tr>
+                    <td class="all fw-semibold" data-order="{{ venta.pk }}">#{{ venta.pk }}</td>
+                    <td data-order="{{ venta.fecha|date:'Y-m-d H:i:s' }}">{{ venta.fecha|date:"d/m/Y H:i" }}</td>
+                    <td>{{ venta.cajero.get_full_name|default:venta.cajero.username }}</td>
+                    <td>{{ venta.get_medio_pago_display }}</td>
+                    <td data-order="{{ venta.total }}">{{ venta.total|clp }}</td>
+                    <td><span class="badge {% if venta.estado == 'COMPLETADA' %}text-bg-success{% elif venta.estado == 'ANULADA' %}text-bg-danger{% else %}text-bg-secondary{% endif %}">{{ venta.get_estado_display }}</span></td>
+                    <td class="all"><a class="btn btn-sm btn-outline-secondary" href="{% url 'ventas:detalle' venta.pk %}">Ver detalle</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

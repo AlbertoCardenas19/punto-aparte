@@ -5,47 +5,76 @@
 {% block content %}
 <div class="mb-4">
     <h1 class="h2 fw-bold mb-1">Hola, {{ request.user.first_name }}</h1>
-    <p class="text-secondary">
-        Sesión iniciada como
-        <span class="badge text-bg-primary">{{ request.user.get_rol_display }}</span>
-    </p>
 </div>
 
 <div class="row g-3">
     <div class="col-12 col-md-6 col-xl-4">
-        <div class="card h-100 border-0 shadow-sm">
-            <div class="card-body">
-                <h2 class="h5 card-title">Abrir caja</h2>
-                <a class="btn btn-pa" href="{% url 'ventas:caja' %}">Abrir caja</a>
+        <div class="card h-100">
+            <div class="card-body pa-card-con-accion">
+                <h2 class="h5 card-title">Nueva venta</h2>
+                <p class="card-text text-secondary">Busca productos y registra una venta con el medio de pago confirmado.</p>
+                <div class="pa-tarjeta-acciones">
+                    <a class="btn btn-pa" href="{% url 'ventas:caja' %}">Ir a Venta</a>
+                </div>
             </div>
         </div>
     </div>
 
     <div class="col-12 col-md-6 col-xl-4">
-        <div class="card h-100 border-0 shadow-sm">
-            <div class="card-body">
-                <h2 class="h5 card-title">Catálogo</h2>
+        <div class="card h-100">
+            <div class="card-body pa-card-con-accion">
+                <h2 class="h5 card-title">Productos</h2>
                 <p class="card-text text-secondary">
                     Consulta los productos disponibles.
                 </p>
-                <a class="btn btn-pa" href="{% url 'catalogo:lista_productos' %}">
-                    Abrir catálogo
-                </a>
+                <div class="pa-tarjeta-acciones">
+                    <a class="btn btn-pa" href="{% url 'catalogo:lista_productos' %}">
+                        Ver productos
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-6 col-xl-4">
+        <div class="card h-100">
+            <div class="card-body pa-card-con-accion">
+                <h2 class="h5 card-title">Historial de ventas</h2>
+                <p class="card-text text-secondary">
+                    {% if request.user.rol == "JEFE" %}Consulta las ventas registradas.{% else %}Consulta tus ventas registradas.{% endif %}
+                </p>
+                <div class="pa-tarjeta-acciones">
+                    <a class="btn btn-pa" href="{% url 'ventas:lista' %}">Ver historial de ventas</a>
+                </div>
             </div>
         </div>
     </div>
 
     {% if request.user.rol == "JEFE" %}
     <div class="col-12 col-md-6 col-xl-4">
-        <div class="card h-100 border-0 shadow-sm">
-            <div class="card-body">
+        <div class="card h-100">
+            <div class="card-body pa-card-con-accion">
+                <h2 class="h5 card-title">Historial de stock</h2>
+                <p class="card-text text-secondary">Registra ingresos, ajustes y consulta movimientos.</p>
+                <div class="pa-tarjeta-acciones">
+                    <a class="btn btn-pa" href="{% url 'catalogo:historial_stock' %}">Ver historial de stock</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-6 col-xl-4">
+        <div class="card h-100">
+            <div class="card-body pa-card-con-accion">
                 <h2 class="h5 card-title">Usuarios</h2>
                 <p class="card-text text-secondary">
                     Crea cuentas y administra sus estados y roles.
                 </p>
-                <a class="btn btn-outline-primary" href="{% url 'usuarios:lista' %}">
-                    Gestionar usuarios
-                </a>
+                <div class="pa-tarjeta-acciones">
+                    <a class="btn btn-pa" href="{% url 'usuarios:lista' %}">
+                        Gestionar usuarios
+                    </a>
+                </div>
             </div>
         </div>
     </div>

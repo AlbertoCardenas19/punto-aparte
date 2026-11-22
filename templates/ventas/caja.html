@@ -1,76 +1,84 @@
 {% extends "base.html" %}
+{% load static punto_aparte %}
 
 {% block title %}Caja | Punto Aparte{% endblock %}
 
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/caja.css' %}?v=interfaz-20261118-2">{% endblock %}
+{% block body_class %}pa-caja{% endblock %}
+{% block main_class %}pa-caja-contenido{% endblock %}
 {% block content %}
-<div class="mb-4">
-    <h1 class="h2 fw-bold mb-1">Caja</h1>
-    <p class="text-secondary">Busca productos y agrégalos a la venta.</p>
+<div class="pa-encabezado-pagina">
+    <div>
+        <h1 class="h2 fw-bold mb-1">Nueva venta</h1>
+        <p class="text-secondary mb-0">Busca y selecciona los productos.</p>
+    </div>
 </div>
 
 <div class="row g-4">
-    <section class="col-12 col-xl-7">
-        <form method="get" class="card card-body border-0 shadow-sm mb-3">
-            <label for="q" class="form-label">Buscar producto</label>
-            <div class="input-group">
+    <section class="col-12 col-xxl-7">
+        <div class="pa-caja-panel">
+        <form data-busqueda-viva method="get" class="pa-busqueda-productos">
+            <div class="pa-busqueda-campo"><label for="q" class="form-label">Buscar producto</label>
                 <input class="form-control" id="q" name="q" value="{{ busqueda }}"
-                    placeholder="Nombre, marca, código o categoría">
-                <button class="btn btn-outline-primary" type="submit">Buscar</button>
+                    placeholder="Nombre, marca, categoría, código o descripción">
+            </div>
+            <div class="pa-busqueda-orden"><label for="orden" class="form-label">Ordenar</label>
+            <select class="form-select" id="orden" name="orden">
+                <option value="nombre_asc" {% if orden == "nombre_asc" %}selected{% endif %}>Nombre A–Z</option>
+                <option value="nombre_desc" {% if orden == "nombre_desc" %}selected{% endif %}>Nombre Z–A</option>
+                <option value="precio_asc" {% if orden == "precio_asc" %}selected{% endif %}>Precio menor a mayor</option>
+                <option value="precio_desc" {% if orden == "precio_desc" %}selected{% endif %}>Precio mayor a menor</option>
+                <option value="stock_asc" {% if orden == "stock_asc" %}selected{% endif %}>Stock menor a mayor</option>
+                <option value="stock_desc" {% if orden == "stock_desc" %}selected{% endif %}>Stock mayor a menor</option>
+            </select>
             </div>
         </form>
 
-        <div class="card border-0 shadow-sm">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Producto</th>
-                            <th>Precio</th>
-                            <th>Stock</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for producto in pagina %}
-                        <tr>
-                            <td>
-                                <div class="fw-semibold">{{ producto.nombre }}</div>
-                                <small class="text-secondary">{{ producto.marca }}</small>
-                            </td>
-                            <td>${{ producto.precio }}</td>
-                            <td>
-                                {% if producto.stock > 0 %}
-                                {{ producto.stock }}
-                                {% else %}
-                                <span class="badge text-bg-secondary">Sin stock</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <form method="post" class="d-flex gap-2">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="accion" value="agregar">
-                                    <input type="hidden" name="producto_id" value="{{ producto.id }}">
-                                    <input class="form-control form-control-sm" type="number" name="cantidad" value="1"
-                                        min="1" max="{{ producto.stock }}"
-                                        aria-label="Cantidad de {{ producto.nombre }}" style="width: 78px" {% if
-                                        producto.stock==0 %}disabled{% endif %}>
-                                    <button class="btn btn-sm btn-pa" type="submit" {% if producto.stock==0 %}disabled{%
-                                        endif %}>
-                                        Agregar
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4" class="text-center text-secondary py-4">
-                                No se encontraron productos.
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+        <div data-resultados-busqueda>
+        <div class="pa-caja-productos">
+            {% for producto in pagina %}
+            <article class="pa-caja-producto" data-producto-tarjeta data-producto-id="{{ producto.pk }}"
+                data-codigo-barras="{{ producto.codigo_barras|default:'' }}">
+                <h2 class="h6 fw-bold">
+                    {{ producto.nombre }}{% if producto.marca %} · {{ producto.marca }}{% endif %}
+                </h2>
+                <p class="pa-caja-precio">
+                    {% if producto.tiene_oferta_activa %}
+                    <span class="pa-precio-normal"><del>{{ producto.precio|clp }}</del></span>
+                    <span class="pa-precio-oferta"><strong>{{ producto.precio_venta|clp }}</strong></span>
+                    {% else %}
+                    <span>{{ producto.precio|clp }}</span>
+                    {% endif %}
+                </p>
+                <div class="pa-caja-indicadores">
+                    <span class="pa-stock-disponible">Stock disponible: {{ producto.stock }}</span>
+                    {% if producto.stock == 0 %}{% include "includes/sin_stock.html" %}{% endif %}
+                    <span class="pa-en-compra" data-cantidad-en-carrito {% if producto.cantidad_carrito == 0 %}hidden{% endif %}>
+                        En compra: <strong>{{ producto.cantidad_carrito }}</strong>
+                    </span>
+                </div>
+                <form method="post" data-agregar-producto>
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="agregar">
+                    <input type="hidden" name="version_carrito" value="{{ version_carrito }}">
+                    <input type="hidden" name="producto_id" value="{{ producto.id }}">
+                    <input type="hidden" name="cantidad" value="1">
+                    <button class="btn btn-pa w-100" type="submit"
+                        {% if producto.stock == 0 or producto.cantidad_carrito >= producto.stock %}disabled{% endif %}>
+                        Agregar
+                    </button>
+                    <p class="pa-estado-breve" role="status" data-agregar-estado></p>
+                </form>
+            </article>
+            {% empty %}
+            <p class="text-secondary py-4">
+                {% if busqueda %}
+                No hay productos que coincidan con «{{ busqueda }}».
+                {% else %}
+                No hay productos disponibles.
+                {% endif %}
+            </p>
+            {% endfor %}
         </div>
 
         {% if pagina.paginator.num_pages > 1 %}
@@ -78,7 +86,7 @@
             <ul class="pagination justify-content-center">
                 {% if pagina.has_previous %}
                 <li class="page-item">
-                    <a class="page-link" href="?q={{ busqueda|urlencode }}&page={{ pagina.previous_page_number }}">
+                    <a class="page-link" href="?q={{ busqueda|urlencode }}&orden={{ orden }}&page={{ pagina.previous_page_number }}">
                         Anterior
                     </a>
                 </li>
@@ -90,7 +98,7 @@
                 </li>
                 {% if pagina.has_next %}
                 <li class="page-item">
-                    <a class="page-link" href="?q={{ busqueda|urlencode }}&page={{ pagina.next_page_number }}">
+                    <a class="page-link" href="?q={{ busqueda|urlencode }}&orden={{ orden }}&page={{ pagina.next_page_number }}">
                         Siguiente
                     </a>
                 </li>
@@ -98,77 +106,198 @@
             </ul>
         </nav>
         {% endif %}
+        </div>
+        </div>
     </section>
 
-    <section class="col-12 col-xl-5">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body">
-                <h2 class="h4 fw-bold mb-3">Venta actual</h2>
-
-                {% if lineas_carrito %}
-                <form method="post" class="mb-3">
-                    {% csrf_token %}
-                    <input type="hidden" name="accion" value="actualizar">
-
-                    <div class="table-responsive">
-                        <table class="table align-middle">
-                            <thead>
-                                <tr>
-                                    <th>Producto</th>
-                                    <th style="width: 90px">Unid.</th>
-                                    <th>Subtotal</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for linea in lineas_carrito %}
-                                <tr>
-                                    <td>
-                                        {{ linea.producto.nombre }}
-                                        <div class="small text-secondary">
-                                            ${{ linea.producto.precio }} c/u
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <input class="form-control form-control-sm" type="number"
-                                            name="cantidad_{{ linea.producto.pk }}" value="{{ linea.cantidad }}"
-                                            min="0">
-                                    </td>
-                                    <td>${{ linea.subtotal }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+    <section class="col-12 col-xxl-5 pa-carrito-columna">
+        <button class="pa-carrito-movil d-xxl-none" type="button" data-bs-toggle="collapse"
+            data-bs-target="#compra-actual" aria-expanded="{% if carrito_abierto %}true{% else %}false{% endif %}"
+            aria-controls="compra-actual">
+            <span>Compra actual</span>
+            <strong data-total-carrito-movil>{{ total_carrito|clp }}</strong>
+        </button>
+        <div class="collapse pa-carrito-contenido{% if carrito_abierto %} show{% endif %}" id="compra-actual">
+        <div class="pa-caja-panel" data-carrito-panel data-version-carrito="{{ version_carrito }}" data-hay-carrito="{{ hay_carrito|yesno:'true,false' }}">
+            <div class="pa-caja-compra">
+                <div class="d-flex justify-content-between align-items-center gap-3 pa-caja-resumen">
+                    <div class="pa-carrito-titulo">
+                        <h2 class="h4 fw-bold mb-0">Compra actual</h2>
+                        <span aria-hidden="true">·</span>
+                        <span class="small text-secondary" data-contador-carrito>{{ lineas_carrito|length }} producto{{ lineas_carrito|length|pluralize:"s" }}</span>
                     </div>
-
-                    <p class="small text-secondary">
-                        Ingresa 0 unidades para quitar un producto y luego actualiza.
-                    </p>
-                    <button class="btn btn-outline-primary" type="submit">
-                        Actualizar cantidades
-                    </button>
-                </form>
-
-                <hr>
-
-                <div class="d-flex justify-content-between fs-5 fw-bold mb-3">
-                    <span>Total</span>
-                    <span>${{ total_carrito }}</span>
+                    <form method="post" data-limpiar-carrito>
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="vaciar">
+                        <input type="hidden" name="version_carrito" value="{{ version_carrito }}">
+                        <button class="btn btn-sm btn-outline-secondary" type="submit"
+                            {% if not hay_carrito %}disabled{% endif %}>Limpiar</button>
+                    </form>
                 </div>
 
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="accion" value="confirmar">
-                    <button class="btn btn-pa btn-lg w-100" type="submit">
-                        Confirmar venta en efectivo
-                    </button>
-                </form>
-                {% else %}
-                <p class="text-secondary mb-0">
-                    Aún no hay productos en el carrito.
-                </p>
-                {% endif %}
+                <div data-carrito-cuerpo>
+                    {% if problemas_carrito %}
+                    <div class="alert alert-danger py-2 small" role="alert">
+                        {% for problema in problemas_carrito %}
+                        <p class="mb-0{% if not forloop.last %} mb-1{% endif %}">{{ problema }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    {% if lineas_carrito %}
+                    <form method="post" data-carrito-form>
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="actualizar">
+                        <input type="hidden" name="version_carrito" value="{{ version_carrito }}">
+
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th>Precio unitario</th>
+                                        <th>Unid.</th>
+                                        <th>Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for linea in lineas_carrito %}
+                                    <tr>
+                                        <td data-label="Producto">
+                                            {{ linea.producto.nombre }}
+                                        </td>
+                                        <td data-label="Precio unitario">
+                                            {{ linea.precio_unitario|clp }}
+                                        </td>
+                                        <td data-label="Unid.">
+                                            <div class="pa-cantidad-control">
+                                                <button class="pa-cantidad-boton" type="button" data-cantidad-restar
+                                                    aria-label="Restar una unidad de {{ linea.producto.nombre }}">−</button>
+                                                <input class="pa-cantidad-valor" type="number"
+                                                    aria-label="Cantidad de {{ linea.producto.nombre }}"
+                                                    name="cantidad_{{ linea.producto.pk }}" value="{{ linea.cantidad }}"
+                                                    data-precio-unitario="{{ linea.precio_unitario }}"
+                                                    min="0" max="{{ linea.producto.stock }}" step="1" inputmode="numeric">
+                                                <button class="pa-cantidad-boton" type="button" data-cantidad-sumar
+                                                    aria-label="Sumar una unidad de {{ linea.producto.nombre }}"
+                                                    {% if not linea.disponible or linea.cantidad >= linea.producto.stock %}disabled{% endif %}>+</button>
+                                            </div>
+                                            {% if not linea.disponible %}
+                                            <span class="small text-danger">Producto inactivo</span>
+                                            {% endif %}
+                                        </td>
+                                        <td data-label="Subtotal" data-subtotal-linea>{{ linea.subtotal|clp }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="pa-estado-breve" role="status" data-carrito-estado></p>
+                    </form>
+
+                    <hr>
+
+                    <div class="pa-caja-total d-flex justify-content-between fw-bold mb-3">
+                        <span>Total</span>
+                        <span data-total-carrito>{{ total_carrito|clp }}</span>
+                    </div>
+                    {% else %}
+                    <p class="text-secondary mb-0">
+                        Aún no hay productos en el carrito.
+                    </p>
+                    {% endif %}
+                </div>
+
+                <div data-cobro-accion>
+                    {% if lineas_carrito and not problemas_carrito %}
+                    <button class="btn pa-caja-cobrar btn-lg w-100" type="button" data-bs-toggle="modal"
+                        data-bs-target="#modal-cobro" data-cobrar>Cobrar <span data-total-cobro-boton>{{ total_carrito|clp }}</span></button>
+                    {% endif %}
+                </div>
             </div>
+        </div>
         </div>
     </section>
 </div>
+
+{% if hay_carrito %}
+{% if lineas_carrito %}
+{% if not problemas_carrito %}
+<div class="modal fade" id="modal-cobro" tabindex="-1" aria-labelledby="modal-cobro-titulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="modal-cobro-titulo">Confirmar cobro</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p>Se registrará una venta por <strong data-total-cobro>{{ total_carrito|clp }}</strong>.</p>
+                <form id="form-cobro" method="post" data-form-cobro>
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="confirmar">
+                    <input type="hidden" name="clave_idempotencia" value="{{ clave_idempotencia }}">
+                    <input type="hidden" name="version_carrito" value="{{ version_carrito }}">
+
+                    <fieldset>
+                        <legend class="h6 fw-bold">Medios de pago</legend>
+                        <div data-pagos-total="{{ total_carrito }}">
+                            <div data-filas-pago>
+                                {% for fila in filas_pago %}
+                                <div class="pa-fila-pago border rounded p-3 mb-2" data-fila-pago data-fila-id="{{ fila.id }}">
+                                    <input type="hidden" name="fila_pago" value="{{ fila.id }}">
+                                    <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                                        <span class="fw-semibold">Pago {{ forloop.counter }}</span>
+                                        <button class="btn btn-sm btn-outline-secondary" type="button" data-quitar-pago {% if forloop.first %}hidden{% endif %}>Quitar</button>
+                                    </div>
+                                    <div class="pa-medios-pago mb-2">
+                                        <label class="pa-medio-pago"><input class="form-check-input" type="radio" name="medio_{{ fila.id }}" value="EFECTIVO" {% if fila.medio == 'EFECTIVO' %}checked{% endif %} data-medio-pago> Efectivo</label>
+                                        <label class="pa-medio-pago"><input class="form-check-input" type="radio" name="medio_{{ fila.id }}" value="TARJETA" {% if fila.medio == 'TARJETA' %}checked{% endif %} data-medio-pago> Tarjeta</label>
+                                        <label class="pa-medio-pago"><input class="form-check-input" type="radio" name="medio_{{ fila.id }}" value="TRANSFERENCIA" {% if fila.medio == 'TRANSFERENCIA' %}checked{% endif %} data-medio-pago> Transferencia</label>
+                                    </div>
+                                    <label class="form-label" for="monto-pago-{{ fila.id }}">Monto aplicado</label>
+                                    <input class="form-control" type="number" name="monto_{{ fila.id }}" id="monto-pago-{{ fila.id }}" min="1" step="1" value="{{ fila.monto }}" inputmode="numeric" data-monto-pago>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <button class="btn btn-outline-secondary btn-sm" type="button" data-agregar-pago>+ Agregar otro medio</button>
+                            <div class="mt-3" data-efectivo-recibido hidden>
+                                <label class="form-label" for="efectivo-recibido">Efectivo recibido</label>
+                                <div class="input-group"><input class="form-control" type="number" name="efectivo_recibido" id="efectivo-recibido" min="0" step="1" value="{{ recibido_ingresado }}" inputmode="numeric"><button class="btn btn-outline-secondary" type="button" data-efectivo-exacto>Exacto</button></div>
+                            </div>
+                            <div class="pa-estado-breve mt-3" role="status" aria-live="polite">
+                                <div>Asignado: <strong data-pago-asignado>$0</strong></div>
+                                <div>Falta: <strong data-pago-falta>{{ total_carrito|clp }}</strong></div>
+                                <div>Vuelto: <strong data-pago-vuelto>$0</strong></div>
+                                <p class="pa-error-campo mb-0" data-pago-error hidden></p>
+                            </div>
+                        </div>
+                    </fieldset>
+                    <p class="small text-secondary mt-3 mb-0">Al cobrar, confirmas que recibiste y verificaste los pagos.</p>
+                    {% if error_cobro %}<p class="pa-error-campo" role="alert">{{ error_cobro }}</p>{% endif %}
+                </form>
+                <template data-plantilla-pago>
+                    <div class="pa-fila-pago border rounded p-3 mb-2" data-fila-pago data-fila-id="__ID__">
+                        <input type="hidden" name="fila_pago" value="__ID__">
+                        <div class="d-flex justify-content-between align-items-center gap-2 mb-2"><span class="fw-semibold" data-numero-pago></span><button class="btn btn-sm btn-outline-secondary" type="button" data-quitar-pago>Quitar</button></div>
+                        <div class="pa-medios-pago mb-2">
+                            <label class="pa-medio-pago"><input class="form-check-input" type="radio" name="medio___ID__" value="EFECTIVO" data-medio-pago> Efectivo</label>
+                            <label class="pa-medio-pago"><input class="form-check-input" type="radio" name="medio___ID__" value="TARJETA" data-medio-pago> Tarjeta</label>
+                            <label class="pa-medio-pago"><input class="form-check-input" type="radio" name="medio___ID__" value="TRANSFERENCIA" data-medio-pago> Transferencia</label>
+                        </div>
+                        <label class="form-label" for="monto-pago-__ID__">Monto aplicado</label>
+                        <input class="form-control" type="number" name="monto___ID__" id="monto-pago-__ID__" min="1" step="1" inputmode="numeric" data-monto-pago>
+                    </div>
+                </template>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Volver</button>
+                <button class="btn btn-pa" type="submit" form="form-cobro"
+                    data-confirmar-cobro>Cobrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endif %}
+{% endif %}
 {% endblock %}

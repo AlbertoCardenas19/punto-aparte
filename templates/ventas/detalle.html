@@ -1,11 +1,12 @@
 {% extends "base.html" %}
+{% load punto_aparte %}
 
 {% block title %}Venta #{{ venta.pk }} | Punto Aparte{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-12 col-lg-8">
-        <div class="card border-0 shadow-sm">
+        <div class="card">
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-start mb-4">
                     <div>
@@ -14,13 +15,25 @@
                             {{ venta.fecha|date:"d/m/Y H:i" }}
                         </p>
                     </div>
-                    <span class="badge text-bg-success">
+                    <span class="badge {% if venta.estado == 'COMPLETADA' %}text-bg-success{% elif venta.estado == 'ANULADA' %}text-bg-danger{% else %}text-bg-secondary{% endif %}">
                         {{ venta.get_estado_display }}
                     </span>
                 </div>
 
                 <p><strong>Cajero:</strong> {{ venta.cajero.get_full_name }}</p>
-                <p><strong>Medio de pago:</strong> {{ venta.get_medio_pago_display }}</p>
+
+                {% if venta.estado == "ANULADA" %}
+                <section class="alert alert-danger" aria-labelledby="datos-anulacion">
+                    <h2 class="h5" id="datos-anulacion">Datos de la anulación</h2>
+                    <p class="mb-1"><strong>Anulada por:</strong> {% if venta.anulado_por %}{{ venta.anulado_por.get_full_name|default:venta.anulado_por.username }}{% else %}No registrado en esta venta histórica{% endif %}</p>
+                    <p class="mb-1"><strong>Fecha:</strong> {% if venta.anulada_en %}{{ venta.anulada_en|date:"d/m/Y H:i" }}{% else %}No registrada{% endif %}</p>
+                    <p class="mb-1"><strong>Motivo:</strong> {{ venta.motivo_anulacion|default:"No registrado en esta venta histórica" }}</p>
+                    <p class="mb-0"><strong>Inventario:</strong> {% if not venta.clave_anulacion %}No registrado en esta venta histórica{% elif venta.stock_repuesto_al_anular %}Las unidades regresaron al stock.{% else %}El stock no fue modificado.{% endif %}</p>
+                </section>
+                <p class="text-secondary">
+                    La anulación no revierte el pago. Cualquier devolución de dinero se procesa por separado.
+                </p>
+                {% endif %}
 
                 <div class="table-responsive">
                     <table class="table">
@@ -28,7 +41,9 @@
                             <tr>
                                 <th>Producto</th>
                                 <th>Cantidad</th>
-                                <th>Precio unitario</th>
+                                <th>Precio normal</th>
+                                <th>Descuento unitario</th>
+                                <th>Precio unitario final</th>
                                 <th>Subtotal</th>
                             </tr>
                         </thead>
@@ -37,26 +52,38 @@
                             <tr>
                                 <td>{{ detalle.nombre_producto }}</td>
                                 <td>{{ detalle.cantidad }}</td>
-                                <td>${{ detalle.precio_unitario }}</td>
-                                <td>${{ detalle.subtotal }}</td>
+                                <td>{{ detalle.precio_normal|clp }}</td>
+                                <td>{% if detalle.descuento_unitario %}−{{ detalle.descuento_unitario|clp }}{% else %}{{ detalle.descuento_unitario|clp }}{% endif %}</td>
+                                <td>{{ detalle.precio_unitario|clp }}</td>
+                                <td>{{ detalle.subtotal|clp }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                         <tfoot>
-                            <tr class="fw-bold">
-                                <td colspan="3" class="text-end">Total</td>
-                                <td>${{ venta.total }}</td>
+                            <tr><td colspan="5" class="text-end">Efectivo</td><td>{{ venta.efectivo|clp }}</td></tr>
+                            <tr><td colspan="5" class="text-end">Tarjeta</td><td>{{ venta.tarjeta|clp }}</td></tr>
+                            <tr><td colspan="5" class="text-end">Transferencia</td><td>{{ venta.transferencia|clp }}</td></tr>
+                            <tr class="fw-bold pa-venta-total">
+                                <td colspan="5" class="text-end">Total</td>
+                                <td>{{ venta.total|clp }}</td>
                             </tr>
                         </tfoot>
                     </table>
                 </div>
 
-                <a class="btn btn-pa" href="{% url 'ventas:caja' %}">
-                    Nueva venta
-                </a>
-                <button class="btn btn-outline-secondary" onclick="window.print()">
-                    Imprimir
-                </button>
+                <div class="d-flex flex-wrap gap-3 pa-form-acciones">
+                    <button class="btn btn-outline-secondary" onclick="window.print()">
+                        Imprimir
+                    </button>
+                    <a class="btn btn-outline-secondary" href="{% url 'ventas:lista' %}">
+                        Volver
+                    </a>
+                    {% if request.user.is_active and request.user.rol == "JEFE" and venta.estado == "COMPLETADA" %}
+                    <a class="btn btn-outline-danger" href="{% url 'ventas:anular' venta.pk %}">
+                        Anular venta
+                    </a>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>

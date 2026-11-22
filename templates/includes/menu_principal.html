@@ -1,0 +1,46 @@
+<nav class="pa-menu" aria-label="Navegación principal">
+    <p class="pa-menu-grupo">General</p>
+    <a class="pa-menu-enlace {% if request.resolver_match.url_name == 'inicio' %}active{% endif %}"
+        href="{% url 'inicio' %}" {% if request.resolver_match.url_name == 'inicio' %}aria-current="page"{% endif %}>
+        Inicio
+    </a>
+
+    <p class="pa-menu-grupo">Catálogo</p>
+    <a class="pa-menu-enlace {% if request.resolver_match.url_name == 'lista_productos' or request.resolver_match.url_name == 'crear_producto' or request.resolver_match.url_name == 'editar_producto' or request.resolver_match.url_name == 'exportar_productos' %}active{% endif %}"
+        href="{% url 'catalogo:lista_productos' %}" {% if request.resolver_match.url_name == 'lista_productos' or request.resolver_match.url_name == 'crear_producto' or request.resolver_match.url_name == 'editar_producto' %}aria-current="page"{% endif %}>
+        Productos
+    </a>
+    <a class="pa-menu-enlace {% if request.resolver_match.url_name == 'lista_categorias' or request.resolver_match.url_name == 'crear_categoria' %}active{% endif %}"
+        href="{% url 'catalogo:lista_categorias' %}" {% if request.resolver_match.url_name == 'lista_categorias' or request.resolver_match.url_name == 'crear_categoria' %}aria-current="page"{% endif %}>
+        Categorías
+    </a>
+
+    <p class="pa-menu-grupo">Historiales</p>
+    <a class="pa-menu-enlace {% if request.resolver_match.namespace == 'ventas' and request.resolver_match.url_name != 'caja' %}active{% endif %}"
+        href="{% url 'ventas:lista' %}" {% if request.resolver_match.namespace == 'ventas' and request.resolver_match.url_name != 'caja' %}aria-current="page"{% endif %}>
+        Historial de ventas
+    </a>
+    {% if request.user.rol == "JEFE" %}
+    <a class="pa-menu-enlace {% if request.resolver_match.url_name == 'inventario' or request.resolver_match.url_name == 'registrar_movimiento_stock' or request.resolver_match.url_name == 'ingresar_stock' or request.resolver_match.url_name == 'ajustar_stock' or request.resolver_match.url_name == 'historial_stock' %}active{% endif %}"
+        href="{% url 'catalogo:historial_stock' %}" {% if request.resolver_match.url_name == 'historial_stock' %}aria-current="page"{% endif %}>
+        Historial de stock
+    </a>
+    {% endif %}
+    {% if request.user.rol == "JEFE" or request.user.rol == "CAJERO" %}
+    <p class="pa-menu-grupo">Pantalla del cliente</p>
+    <a class="pa-menu-enlace" href="{% url 'ventas:pantalla_cliente' %}" target="_blank" rel="noopener">
+        Abrir pantalla
+    </a>
+    {% endif %}
+    {% if request.user.rol == "JEFE" %}
+    <a class="pa-menu-enlace {% if request.resolver_match.url_name == 'contenido_pantalla' %}active{% endif %}" href="{% url 'catalogo:contenido_pantalla' %}" {% if request.resolver_match.url_name == 'contenido_pantalla' %}aria-current="page"{% endif %}>Contenido de pantalla</a>
+    {% endif %}
+
+    {% if request.user.rol == "JEFE" %}
+    <p class="pa-menu-grupo">Administración</p>
+    <a class="pa-menu-enlace {% if request.resolver_match.namespace == 'usuarios' %}active{% endif %}"
+        href="{% url 'usuarios:lista' %}" {% if request.resolver_match.namespace == 'usuarios' %}aria-current="page"{% endif %}>
+        Usuarios
+    </a>
+    {% endif %}
+</nav>

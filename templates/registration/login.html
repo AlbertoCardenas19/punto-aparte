@@ -1,46 +1,45 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Iniciar sesión | Punto Aparte{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/acceso.css' %}">
+{% endblock %}
+{% block body_class %}pa-acceso{% endblock %}
+{% block navigation %}{% endblock %}
+{% block main_class %}pa-acceso-marco{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center mt-4">
-    <div class="col-12 col-sm-10 col-md-7 col-lg-5">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body p-4 p-md-5">
-                <div class="text-center mb-4">
-                    <h1 class="h3 fw-bold">Punto Aparte</h1>
-                    <p class="text-secondary mb-0">Inicia sesión para continuar</p>
-                </div>
+<section class="pa-acceso-tarjeta" aria-labelledby="titulo-acceso">
+    <header class="pa-acceso-identidad">
+        <img class="pa-logo pa-logo-acceso" src="{% static 'img/logo_punto_aparte.jpg' %}" alt="Punto Aparte, librería">
+        <h1 id="titulo-acceso">Punto Aparte</h1>
+        <p>Acceso al sistema de caja</p>
+    </header>
 
-                {% if form.errors %}
-                <div class="alert alert-danger" role="alert">
-                    El nombre de usuario o la contraseña no son correctos.
-                </div>
-                {% endif %}
-
-                <form method="post">
-                    {% csrf_token %}
-
-                    <div class="mb-3">
-                        <label for="id_username" class="form-label">Nombre de usuario</label>
-                        <input id="id_username" class="form-control form-control-lg" type="text" name="username"
-                            autocomplete="username" required autofocus>
-                    </div>
-
-                    <div class="mb-4">
-                        <label for="id_password" class="form-label">Contraseña</label>
-                        <input id="id_password" class="form-control form-control-lg" type="password" name="password"
-                            autocomplete="current-password" required>
-                    </div>
-
-                    <input type="hidden" name="next" value="{{ next }}">
-
-                    <button class="btn btn-pa btn-lg w-100" type="submit">
-                        Ingresar
-                    </button>
-                </form>
-            </div>
-        </div>
+    {% if form.errors %}
+    <div class="alert alert-danger" role="alert">
+        El nombre de usuario, correo o contraseña no son correctos.
     </div>
-</div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="pa-acceso-campo">
+            <label for="id_username" class="form-label">Nombre de usuario o correo</label>
+            <input id="id_username" class="form-control" type="text" name="username"
+                value="{{ form.username.value|default_if_none:'' }}"
+                autocomplete="username" required autofocus>
+        </div>
+        <div class="pa-acceso-campo">
+            <label for="id_password" class="form-label">Contraseña</label>
+            <input id="id_password" class="form-control" type="password" name="password"
+                autocomplete="current-password" required>
+        </div>
+        <input type="hidden" name="next" value="{{ next }}">
+        <button class="btn pa-acceso-ingresar w-100" type="submit">Ingresar</button>
+    </form>
+
+    <p class="pa-acceso-ayuda">Si tienes problemas para ingresar,<br>solicita ayuda al dueño.</p>
+</section>
 {% endblock %}

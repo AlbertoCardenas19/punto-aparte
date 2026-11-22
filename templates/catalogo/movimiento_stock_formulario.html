@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Registrar movimiento de stock | Punto Aparte{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+        <section class="card">
+            <div class="card-body p-4">
+                <h1 class="h3 fw-bold mb-1">Registrar movimiento de stock</h1>
+                <p class="text-secondary mb-4">El ingreso suma unidades; el ajuste establece el conteo final.</p>
+
+                <form method="post" data-movimiento-stock-form
+                    data-sugerencias-url="{% url 'catalogo:sugerencias_productos_stock' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="clave_operacion" value="{{ clave_operacion }}">
+                    {% if form.non_field_errors %}
+                    <div class="pa-error-campo mb-3" role="alert">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <div class="mb-3 pa-producto-predictivo" data-producto-predictivo>
+                        <label class="form-label" for="buscar-producto-stock">Producto</label>
+                        {{ form.producto }}
+                        <div data-producto-seleccionado {% if not producto_seleccionado %}hidden{% endif %}
+                            class="pa-producto-seleccionado">
+                            <div>
+                                <strong data-producto-seleccionado-nombre>{{ producto_seleccionado.nombre }}</strong>
+                                <span data-producto-seleccionado-detalle>
+                                    {% if producto_seleccionado %}{% if producto_seleccionado.marca %}{{ producto_seleccionado.marca }} · {% endif %}{{ producto_seleccionado.codigo_barras|default:"Sin código" }} · Stock actual: {{ producto_seleccionado.stock }}{% endif %}
+                                </span>
+                            </div>
+                            <button class="btn btn-sm btn-outline-secondary" type="button"
+                                data-cambiar-producto>Cambiar</button>
+                        </div>
+                        <div data-producto-buscador {% if producto_seleccionado %}hidden{% endif %}>
+                            {{ form.producto_busqueda }}
+                            <div class="pa-sugerencias-producto" id="sugerencias-producto-stock"
+                                role="listbox" data-sugerencias-producto hidden></div>
+                            <p class="pa-estado-breve" role="status" data-producto-stock-estado></p>
+                        </div>
+                        {% for error in form.producto.errors %}<p class="pa-error-campo">{{ error }}</p>{% endfor %}
+                        {% for error in form.producto_busqueda.errors %}<p class="pa-error-campo">{{ error }}</p>{% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.tipo.label_tag }}
+                        {{ form.tipo }}
+                        {% for error in form.tipo.errors %}<p class="pa-error-campo">{{ error }}</p>{% endfor %}
+                    </div>
+
+                    <div class="mb-3" data-campo-tipo="INGRESO">
+                        {{ form.cantidad.label_tag }}
+                        {{ form.cantidad }}
+                        <span class="helptext">Cantidad recibida que se sumará al stock actual.</span>
+                        {% for error in form.cantidad.errors %}<p class="pa-error-campo">{{ error }}</p>{% endfor %}
+                    </div>
+
+                    <div class="mb-3" data-campo-tipo="AJUSTE">
+                        {{ form.stock_nuevo.label_tag }}
+                        {{ form.stock_nuevo }}
+                        <span class="helptext">Conteo final que reemplazará el stock registrado.</span>
+                        {% for error in form.stock_nuevo.errors %}<p class="pa-error-campo">{{ error }}</p>{% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.motivo.label_tag }}
+                        {{ form.motivo }}
+                        {% for error in form.motivo.errors %}<p class="pa-error-campo">{{ error }}</p>{% endfor %}
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2 pa-form-acciones">
+                        <button class="btn btn-pa" type="submit">Guardar movimiento</button>
+                        <a class="btn btn-outline-secondary" href="{% url 'catalogo:inventario' %}">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

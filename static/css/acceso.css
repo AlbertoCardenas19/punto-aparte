@@ -1,0 +1,97 @@
+/* Variante exclusiva del acceso; no cambia los estilos de otras páginas. */
+.pa-acceso {
+    background: #f1f4f8;
+    color: #1b2d48;
+    padding: clamp(1rem, 3vw, 3rem);
+}
+
+.pa-acceso .pa-acceso-marco {
+    min-height: calc(100vh - clamp(2rem, 6vw, 6rem));
+    min-height: calc(100dvh - clamp(2rem, 6vw, 6rem));
+    border: 1px solid #d9e1eb;
+    border-radius: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: clamp(1rem, 3vw, 3rem);
+}
+
+.pa-acceso .pa-acceso-tarjeta {
+    width: 100%;
+    max-width: 34rem;
+    background: #fff;
+    border: 1px solid #d9e1eb;
+    border-radius: 1.5rem;
+    padding: clamp(1.5rem, 4vw, 3.375rem);
+}
+
+.pa-acceso .pa-acceso-identidad {
+    text-align: center;
+    margin: 1rem 0 3.5rem;
+}
+
+.pa-acceso .pa-acceso-identidad h1 {
+    font-size: clamp(1.75rem, 4vw, 2rem);
+    font-weight: 700;
+    margin-bottom: .75rem;
+}
+
+.pa-acceso .pa-acceso-identidad p,
+.pa-acceso .pa-acceso-ayuda,
+.pa-acceso .form-label {
+    color: #60738e;
+}
+
+.pa-acceso .pa-acceso-identidad p {
+    font-size: 1.125rem;
+    margin: 0;
+}
+
+.pa-acceso .pa-acceso-campo {
+    margin-bottom: 1.5rem;
+}
+
+.pa-acceso .form-label {
+    font-size: .9375rem;
+    margin-bottom: .375rem;
+}
+
+.pa-acceso .form-control {
+    min-height: 3.25rem;
+    border-color: #d9e1eb;
+    border-radius: .75rem;
+    color: #1b2d48;
+    padding: .75rem 1.125rem;
+}
+
+.pa-acceso .form-control:focus {
+    border-color: #60738e;
+    box-shadow: 0 0 0 .25rem rgb(19 41 76 / 15%);
+}
+
+.pa-acceso .pa-acceso-ingresar {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: var(--pa-navy);
+    --bs-btn-border-color: var(--pa-navy);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #294e70;
+    --bs-btn-hover-border-color: #294e70;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: #0c1c35;
+    --bs-btn-active-border-color: #0c1c35;
+    --bs-btn-focus-shadow-rgb: 19, 41, 76;
+    min-height: 4.75rem;
+    border-radius: .75rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-top: .75rem;
+}
+
+.pa-acceso .pa-acceso-ayuda {
+    text-align: center;
+    font-size: .875rem;
+    line-height: 1.6;
+    margin: 2.25rem 0 1rem;
+}

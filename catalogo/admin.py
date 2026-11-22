@@ -1,16 +1,21 @@
 from django.contrib import admin
 
+from .forms import CategoriaForm, ProductoForm
 from .models import Categoria, Producto
 
 
 @admin.register(Categoria)
 class CategoriaAdmin(admin.ModelAdmin):
+    form = CategoriaForm
+    list_display = ("nombre", "activo")
+    list_filter = ("activo",)
     search_fields = ("nombre",)
     ordering = ("nombre",)
 
 
 @admin.register(Producto)
 class ProductoAdmin(admin.ModelAdmin):
+    form = ProductoForm
     list_display = ("nombre", "marca", "precio", "activo")
     list_filter = ("activo", "categorias")
     search_fields = ("nombre", "marca", "codigo_barras")

@@ -15,25 +15,36 @@ Confirma versiones contra `requirements.txt`, `package.json` y el entorno de eje
 | --- | --- | --- |
 | `usuarios` | `Usuario` | Cuenta personalizada, roles y administración de usuarios. |
 | `catalogo` | `Categoria`, `Producto`, `MovimientoStock` | Catálogo, existencia y auditoría de movimientos de inventario. |
-| `ventas` | `Venta`, `DetalleVenta` | Venta, cajero, medio de pago y detalle histórico de productos. |
+| `ventas` | `Venta`, `DetalleVenta`, `EstadoPantallaCliente` | Venta, cajero, desglose de pagos, detalle histórico y canal local de pantalla del cliente. |
+
+`ImagenPantalla` en Catálogo almacena referencias a archivos en `media/`, fuera de los estáticos versionados. El Jefe administra orden y activación.
 
 Relaciones relevantes:
 
-- `Producto` ↔ `Categoria`: muchos a muchos.
-- `Venta` → `Usuario` cajero: muchas ventas por usuario.
+- `Producto` ↔ `Categoria`: muchos a muchos. El producto puede guardar una oferta manual por porcentaje o precio final; el precio efectivo en CLP se calcula en el modelo con redondeo al peso.
+- `Categoria.activo`: controla si puede asignarse en altas y ediciones nuevas. Desactivarla conserva su nombre y todas sus asociaciones existentes.
+- `Venta` → `Usuario` cajero: muchas ventas por usuario. Una venta anulada conserva además el Jefe responsable, fecha, motivo, decisión de reposición y clave idempotente de la operación.
 - `DetalleVenta` → `Venta`: varios detalles por venta.
-- `DetalleVenta` → `Producto`: referencia al producto y, además, conserva nombre, precio unitario y subtotal de la operación.
-- `MovimientoStock` → `Producto` y `Usuario`: registra producto afectado y responsable.
+- `DetalleVenta` → `Producto`: referencia al producto y, además, conserva nombre, precio normal, descuento unitario, precio unitario final y subtotal de la operación.
+- `MovimientoStock` → `Producto` y `Usuario`: registra producto afectado y responsable. Las salidas creadas al confirmar una venta también se relacionan con `Venta`; el campo es nullable para conservar movimientos manuales e históricos sin asociación inequívoca.
+- `EstadoPantallaCliente` conserva carrito, precios normales y finales, y última venta de una caja local. Un UUID aleatorio separa cada caja y autoriza únicamente su pantalla de cliente.
 
 ## Flujo de una venta implementado
 
-1. La vista de caja mantiene una selección temporal en la sesión.
-2. La confirmación delega en `ventas/services.py`.
-3. El servicio valida el medio de pago, productos activos, cantidades y stock.
-4. Dentro de una transacción, bloquea las filas de producto, crea la venta y detalles, descuenta stock y registra movimientos de salida.
-5. La vista limpia el carrito y redirige al detalle interno de la venta.
+1. La vista de Venta mantiene una selección temporal en la sesión y la sincroniza con el canal persistente de la caja local. La búsqueda consulta el catálogo activo en el servidor y pagina los resultados; un código de barras exacto puede agregar una unidad. La pantalla del cliente consulta solo ese canal mediante un UUID aleatorio, por lo que continúa al cerrar sesión o cambiar de cajero. Puede abrirse con el carrito vacío; al confirmar una venta agradece durante cinco segundos y vuelve al estado de espera.
+2. El cajero selecciona efectivo, tarjeta o transferencia. Tarjeta y transferencia requieren confirmación manual; después, la confirmación delega en `ventas/services.py`.
+3. El servicio valida el medio de pago, productos activos, cantidades, stock y los precios normal/final vistos por el cajero. Una oferta activa se aplica automáticamente; si cambia cualquier importe, el carrito se actualiza y exige confirmar nuevamente.
+4. Dentro de una transacción, bloquea las filas de producto y vuelve a comprobar la clave idempotente antes de validar stock y precios. Si no existe, crea la venta y sus snapshots históricos, descuenta stock y registra movimientos de salida.
+5. La vista limpia el carrito incluso si el servicio devuelve una venta ya creada con la clave vigente, rota la clave y la versión del carrito, y redirige al detalle interno.
 
-La transacción y el bloqueo de productos protegen el stock ante confirmaciones concurrentes. No mover esas reglas críticas solamente al frontend.
+La transacción y el bloqueo de productos protegen el stock ante confirmaciones concurrentes. El frontend serializa las mutaciones AJAX y bloquea el cobro mientras guarda; el backend además exige la versión vigente del carrito. No mover esas reglas críticas solamente al frontend.
+
+## Anulación de una venta
+
+1. Solo un Jefe activo puede abrir la confirmación desde el detalle de una venta completada. Debe indicar un motivo, confirmar la anulación completa y decidir si los productos regresaron físicamente.
+2. El servicio bloquea la venta. Si otra petición ya la anuló, devuelve el estado existente sin repetir la operación.
+3. Si corresponde reponer, bloquea los productos en orden, suma todas las unidades vendidas y crea movimientos de ingreso vinculados a la venta y al Jefe. Las claves deterministas de esos movimientos impiden una reposición duplicada.
+4. La venta permanece en el historial como anulada y conserva cajero, fecha, medio de pago, total, precios y descuentos originales. La aplicación no registra una reversa de pago ni una devolución parcial.
 
 ## Organización observada
 
@@ -50,13 +61,38 @@ El detalle exacto debe confirmarse leyendo el árbol actual; no asumas que el ZI
 
 ## Interfaz
 
-Las plantillas extienden `templates/base.html`. Ese archivo concentra navegación, Bootstrap local y estilos comunes. Define ahí las reglas compartidas de color, tamaño y jerarquía de botones; evita copiar estilos inconsistentes entre páginas.
+Las plantillas extienden `templates/base.html`, que carga Bootstrap local y el sistema común de `static/css/punto-aparte.css`. Las páginas autenticadas comparten una barra superior compacta y un botón de menú visible: contrae el lateral en escritorio y abre un offcanvas en móvil. El logo conserva su enlace independiente a Inicio. Las variantes de acceso y Venta se encuentran en `static/css/acceso.css` y `static/css/caja.css`.
 
-El mockup original debe estar disponible para Codex como `docs/referencias/Mockups_Punto_Aparte.pdf` o como imágenes de sus pantallas. El ZIP revisado no lo incluía. La descripción textual no sustituye la inspección visual al hacer un rediseño.
+Las vistas actuales incluyen:
+
+- Venta con catálogo paginado, ofertas automáticas por producto, totales optimistas mientras se sincronizan cantidades, selección de medio de pago y pantalla del cliente de solo lectura aislada por caja.
+- Productos y movimientos de stock se exportan según la búsqueda y los filtros visibles a CSV, XLSX o PDF sin dependencias externas. Categorías conserva la administración de estado. «Movimientos de stock» abre directamente el historial y ofrece un único acceso al formulario separado; el formulario busca productos de forma predictiva y, sin JavaScript, resuelve una búsqueda textual única. Mantiene los ingresos y ajustes como operaciones internas distintas.
+- Consulta de ventas: el Cajero ve las propias y el Jefe ve todas, con filtros de fecha y cajero según permiso.
+- Usuarios para Jefe.
+
+## Inicialización y gestión de cuentas
+
+El primer Jefe se crea con el comando `inicializar_jefe`. El comando genera el
+nombre de usuario según la regla del proyecto, asigna rol Jefe y permisos de
+superusuario, entrega una contraseña temporal una sola vez y exige cambiarla al
+primer ingreso. Rechaza la operación si ya existe un Jefe activo. El comando
+estándar `createsuperuser` está deshabilitado para evitar que solicite un nombre
+de usuario manual.
+
+Las altas y modificaciones se realizan desde la interfaz de Punto Aparte.
+Django Admin permite consultar las cuentas, pero no crearlas, editarlas ni
+eliminarlas, porque su flujo estándar no puede entregar la contraseña temporal
+con las mismas garantías. Las operaciones que cambian rol o estado se serializan
+y nunca permiten dejar el sistema sin al menos un Jefe activo.
+
+DataTables se sirve localmente y se usa en los listados de productos, categorías, inventario, movimientos, usuarios y ventas. El detalle interno de venta y «Compra actual» no usan paginación.
 
 ## Límites
 
-- `Venta` incluye opciones de tarjeta y transferencia en el modelo, pero el servicio observado solo permite confirmar efectivo.
+- Tarjeta y transferencia se confirman manualmente. No existe conexión con el terminal Mercado Pago ni con el banco.
 - El detalle de una venta es un comprobante interno imprimible; no es integración tributaria.
-- Una segunda pantalla de cliente no se observó en las plantillas revisadas.
+- La pantalla del cliente se actualiza por consultas periódicas al servidor y solo expone el canal identificado por su UUID aleatorio. La apertura inicial exige una cuenta autorizada, pero la pantalla ya abierta y su endpoint no dependen después de la sesión personal. No constituye una integración externa.
+- La aplicación no dispone de una comprobación fiable de conectividad para imponer automáticamente efectivo cuando no hay internet; el cajero recibe esa indicación en el cobro. La selección de documento y los datos de factura dependen de la definición e integración tributaria pendiente.
+- No existe apertura, cierre ni arqueo de caja; la librería debe confirmar primero si ese flujo corresponde a su operación.
 - Confirma en el código actual si existe el flujo antes de tomar decisiones basadas en esta fotografía.
+- El backend de correo para producción, el dominio, la terminación HTTPS, HSTS y la confianza en encabezados de proxy dependen de decisiones de despliegue todavía pendientes.
