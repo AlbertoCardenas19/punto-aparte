@@ -158,24 +158,30 @@ body > .dropdown-menu { z-index: 1080; border-color: var(--pa-border); border-ra
     .pa-app .pa-barra-superior { margin-left: 16rem; transition: margin-left .2s ease; }
     .pa-app.pa-menu-contraido .pa-barra-superior { margin-left: 4.5rem; }
     .pa-app .pa-menu-lateral { position: relative; z-index: 1041; margin-top: -4.5rem; padding-top: 0; overflow: visible; }
-    .pa-app .pa-sidebar-cabecera { height: 4.5rem; margin: 0 0 1rem; padding: 0; border-bottom: 1px solid rgb(255 255 255 / 22%); }
+    .pa-app .pa-sidebar-cabecera { height: 4.5rem; margin: 0 0 1.5rem; padding: 0; }
     .pa-app.pa-menu-contraido .pa-sidebar-cabecera { height: 8rem; padding-top: 4.5rem; justify-content: center; }
-    .pa-app .pa-menu-control-borde { position: absolute; top: .875rem; right: -1.375rem; z-index: 1; width: 2.75rem; height: 2.75rem; border-color: #9aabba; background: #fff; color: var(--pa-navy); box-shadow: 0 2px 8px rgb(27 45 72 / 12%); }
-    .pa-app .pa-menu-control-borde:hover { background: #edf2f7; }
-    .pa-app .pa-menu-control-borde .pa-menu-icono { width: .7rem; height: .7rem; border: 0; border-left: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); }
+    .pa-app .pa-menu-control-borde { position: fixed; top: 50vh; top: 50dvh; left: calc(16rem - 1.375rem); transform: translateY(-50%); z-index: 1; width: 2.75rem; height: 2.75rem; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #fff; transition: left .2s ease; }
+    .pa-app.pa-menu-contraido .pa-menu-control-borde { left: calc(4.5rem - 1.375rem); }
+    .pa-app .pa-menu-control-borde::before { content: ''; position: absolute; inset: .5rem; border-radius: 50%; background: var(--pa-navy); }
+    .pa-app .pa-menu-control-borde:hover { background: transparent; }
+    .pa-app .pa-menu-control-borde:hover::before { background: #294e70; }
+    .pa-app .pa-menu-control-borde .pa-menu-icono { z-index: 1; width: .6rem; height: .6rem; border: 0; border-left: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); }
     .pa-app .pa-menu-control-borde .pa-menu-icono::after { display: none; }
     .pa-app.pa-menu-contraido .pa-menu-control-borde .pa-menu-icono { transform: rotate(225deg); }
 }
 @media (min-width: 992px) and (prefers-reduced-motion: reduce) {
-    .pa-app:has(.pa-menu-lateral)::before, .pa-app .pa-barra-superior { transition: none; }
+    .pa-app:has(.pa-menu-lateral)::before, .pa-app .pa-barra-superior, .pa-app .pa-menu-control-borde { transition: none; }
 }
 .pa-app .pa-barra-superior { background: #fff; color: var(--pa-ink); }
 .pa-app .pa-barra-superior .btn-outline-light { color: var(--pa-navy); border-color: #9aabba; }
 .pa-app .pa-barra-superior .pa-menu-control { color: var(--pa-navy); border-color: #9aabba; }
 .pa-app .pa-menu-lateral { background: var(--pa-navy); color: #fff; }
-.pa-app .pa-sidebar-nombre, .pa-app .pa-menu-grupo, .pa-app .pa-menu-enlace { color: #fff; }
-.pa-app .pa-menu-enlace:hover, .pa-app .pa-menu-enlace:focus-visible { background: #304b68; color: #fff; }
-.pa-app .pa-menu-enlace.active { background: #304b68; color: #fff; }
+.pa-app .pa-sidebar-nombre { color: #fff; }
+.pa-app #menu-escritorio .pa-menu { width: calc(100% - .375rem); }
+.pa-app #menu-escritorio .pa-menu-grupo { color: #dce7f2; border-color: rgb(255 255 255 / 22%); }
+.pa-app #menu-escritorio .pa-menu-enlace { color: #fff; }
+.pa-app #menu-escritorio .pa-menu-enlace:hover, .pa-app #menu-escritorio .pa-menu-enlace:focus-visible { background: #294e70; color: #fff; }
+.pa-app #menu-escritorio .pa-menu-enlace.active { background: #304b68; color: #fff; box-shadow: inset 3px 0 #dce7f2; }
 .pa-app .pa-venta-flotante { position: fixed; display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: 44px; min-height: 44px; margin: 0; right: max(1.25rem, env(safe-area-inset-right)); bottom: max(1.25rem, env(safe-area-inset-bottom)); padding: .75rem 1.1rem; font-size: 1rem; }
 .pa-app div.dt-container .dt-search { flex: 1 1 25rem; min-width: 0; }
 .pa-app div.dt-container .dt-search input { width: min(100%, 33rem); min-width: 0; flex: 1 1 24rem; }
