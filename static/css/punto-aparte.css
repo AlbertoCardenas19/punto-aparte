@@ -120,7 +120,7 @@
 .pa-app :is(a, button):focus-visible { outline: 3px solid #6f91b5; outline-offset: 3px; }
 @media (max-width: 991.98px) { .pa-app .pa-marca-movil { display: inline-flex; } .pa-app .pa-estructura, .pa-app.pa-menu-contraido .pa-estructura { display: block; min-height: calc(100vh - 4.5rem); min-height: calc(100dvh - 4.5rem); } }
 @media (prefers-reduced-motion: reduce) { .pa-app .pa-estructura, .pa-app .pa-menu-lateral { transition: none; } }
-@media (max-width: 575.98px) { .pa-app .pa-marca span { display: none; } .pa-app .pa-barra-superior { flex-wrap: wrap; gap: .6rem; } .pa-app .pa-sesion { width: 100%; justify-content: space-between; } .pa-app .pa-sesion-identidad { font-size: .8rem; } .pa-app .table td, .pa-app .table th { padding: .75rem; } .pa-app .pa-form-acciones { margin-top: 1.5rem; } .pa-app .pa-form-acciones > :is(.btn, .dropdown), .pa-app .pa-tarjeta-acciones > :is(.btn, .dropdown) { width: 100%; } .pa-app .pa-form-acciones .dropdown > .btn, .pa-app .pa-tarjeta-acciones .dropdown > .btn { width: 100%; } .pa-app .pa-venta-flotante { right: 1.25rem; bottom: max(1.4rem, env(safe-area-inset-bottom)); padding: .85rem 1.05rem; font-size: .95rem; } .pa-app .pa-encabezado-acciones { width: 100%; justify-content: flex-start; margin-left: 0; } .pa-app .pa-encabezado-acciones > :is(.btn, .dropdown) { flex: 1 1 100%; width: 100%; } .pa-app .pa-encabezado-acciones .dropdown > .btn { width: 100%; } .pa-app .pa-producto-seleccionado { align-items: flex-start; flex-direction: column; } }
+@media (max-width: 575.98px) { .pa-app .pa-marca .pa-marca-texto { display: none; } .pa-app .pa-barra-superior { flex-wrap: wrap; gap: .6rem; } .pa-app .pa-sesion { width: 100%; justify-content: space-between; } .pa-app .pa-sesion-identidad { font-size: .8rem; } .pa-app .table td, .pa-app .table th { padding: .75rem; } .pa-app .pa-form-acciones { margin-top: 1.5rem; } .pa-app .pa-form-acciones > :is(.btn, .dropdown), .pa-app .pa-tarjeta-acciones > :is(.btn, .dropdown) { width: 100%; } .pa-app .pa-form-acciones .dropdown > .btn, .pa-app .pa-tarjeta-acciones .dropdown > .btn { width: 100%; } .pa-app .pa-venta-flotante { right: 1.25rem; bottom: max(1.4rem, env(safe-area-inset-bottom)); padding: .85rem 1.05rem; font-size: .95rem; } .pa-app .pa-encabezado-acciones { width: 100%; justify-content: flex-start; margin-left: 0; } .pa-app .pa-encabezado-acciones > :is(.btn, .dropdown) { flex: 1 1 100%; width: 100%; } .pa-app .pa-encabezado-acciones .dropdown > .btn { width: 100%; } .pa-app .pa-producto-seleccionado { align-items: flex-start; flex-direction: column; } }
 /* Los menús trasladados al body quedan por encima de tablas y tarjetas. */
 body > .dropdown-menu { z-index: 1080; border-color: var(--pa-border); border-radius: .75rem; padding: .5rem; }
 .pa-app div.dt-container .dt-layout-row { align-items: center; gap: .75rem; margin: 0 0 1rem; }
@@ -199,3 +199,32 @@ body > .dropdown-menu { z-index: 1080; border-color: var(--pa-border); border-ra
     .pa-app .pa-venta-flotante { max-width: calc(100vw - 2.5rem); }
 }
 .pa-oferta-recuadro { border: 1px solid var(--pa-border); border-radius: .8rem; padding: 1rem; }
+/* La acción universal ocupa una franja propia, fuera de los controles de página. */
+.pa-app .pa-venta-barra { position: fixed; right: max(1.25rem, env(safe-area-inset-right)); bottom: max(1.25rem, env(safe-area-inset-bottom)); z-index: 1025; }
+.pa-app .pa-venta-barra .pa-venta-flotante { position: static; display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: 44px; min-height: 44px; margin: 0; }
+.pa-app .pa-venta-signo { display: none; }
+@media (min-width: 1200px) {
+    .pa-app:has(.pa-venta-barra) .pa-estructura > main { padding-right: calc(clamp(1rem, 3vw, 3rem) + 14rem); }
+}
+@media (max-width: 1199.98px) {
+    .pa-app:has(.pa-venta-barra) { display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
+    .pa-app:has(.pa-venta-barra) .pa-barra-superior { flex: 0 0 auto; }
+    .pa-app:has(.pa-venta-barra) .pa-estructura { flex: 1 1 auto; min-height: 0; width: 100%; overflow-y: auto; }
+    .pa-app:has(.pa-venta-barra).modal-open .pa-estructura { overflow: hidden; }
+    .pa-app .pa-venta-barra { position: relative; inset: auto; flex: 0 0 auto; display: flex; justify-content: flex-end; align-items: center; min-height: 5rem; padding: .55rem max(1.25rem, env(safe-area-inset-right)) max(.55rem, env(safe-area-inset-bottom)); border-top: 1px solid var(--pa-border); background: #fff; }
+    .pa-app .pa-venta-barra .pa-venta-flotante { padding: .75rem 1.1rem; font-size: 1rem; }
+}
+@media (max-width: 575.98px) {
+    .pa-app .pa-venta-etiqueta { display: none; }
+    .pa-app .pa-venta-signo { display: block; line-height: 1; font-size: 1.6rem; }
+    .pa-app .pa-venta-barra .pa-venta-flotante { width: 3rem; height: 3rem; padding: 0; }
+}
+/* DataTables añade una columna auto que antes comprimía el campo aunque sobrara espacio. */
+.pa-app div.dt-container .dt-layout-end { flex: 1 1 28.5rem; min-width: min(100%, 28.5rem); width: auto; max-width: 100%; }
+.pa-app div.dt-container .dt-search { width: 100%; justify-content: flex-end; }
+.pa-app div.dt-container .dt-search input { flex: 1 1 23.5rem; min-width: min(100%, 23.5rem); max-width: 33rem; }
+@media (max-width: 575.98px) {
+    .pa-app div.dt-container .dt-layout-end { flex-basis: 100%; min-width: 0; width: 100%; }
+    .pa-app div.dt-container .dt-search { justify-content: flex-start; }
+    .pa-app div.dt-container .dt-search input { min-width: 0; max-width: 100%; }
+}

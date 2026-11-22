@@ -1,9 +1,10 @@
 /* Menús fuera del contenedor desplazable, sin alterar acciones ni permisos. */
-window.PUNTO_APARTE_JS_VERSION = 'interfaz-20261122-1';
+window.PUNTO_APARTE_JS_VERSION = 'interfaz-20261122-2';
 const controlesMenu = [...document.querySelectorAll('[data-menu-principal]')];
 const menuMovil = document.querySelector('#menu-movil');
 const menuEscritorio = document.querySelector('#menu-escritorio');
 const escritorio = window.matchMedia('(min-width: 992px)');
+let disparadorMenuMovil = null;
 
 function prepararAyudaValorOferta() {
     const activa = document.querySelector('#id_oferta_activa');
@@ -102,11 +103,20 @@ if (controlesMenu.length && menuMovil && menuEscritorio) {
                 actualizarControlMenu();
                 return;
             }
+            if (!menuMovil.classList.contains('show')) disparadorMenuMovil = control;
             bootstrap.Offcanvas.getOrCreateInstance(menuMovil).toggle(control);
         });
     });
     menuMovil.addEventListener('shown.bs.offcanvas', actualizarControlMenu);
-    menuMovil.addEventListener('hidden.bs.offcanvas', actualizarControlMenu);
+    menuMovil.addEventListener('hidden.bs.offcanvas', () => {
+        actualizarControlMenu();
+        const control = disparadorMenuMovil;
+        disparadorMenuMovil = null;
+        if (!escritorio.matches && document.visibilityState === 'visible' &&
+            control?.isConnected && !control.disabled && control.getClientRects().length) {
+            control.focus({preventScroll: true});
+        }
+    });
     const alCambiarAncho = () => {
         document.body.classList.toggle(
             'pa-menu-contraido',
@@ -1052,6 +1062,7 @@ copy?.addEventListener('click', async () => {
 
 // Evita recuperar la contraseña temporal desde el historial de navegación.
 window.addEventListener('pagehide', () => {
+    disparadorMenuMovil = null;
     const temporal = document.querySelector('#password-temporal');
     if (temporal) { temporal.value = ''; temporal.defaultValue = ''; }
 });

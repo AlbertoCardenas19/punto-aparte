@@ -13,6 +13,47 @@ from usuarios.models import Usuario
 @skipUnless(importlib.util.find_spec("playwright") and shutil.which("chromium"),
             "Se requiere Playwright y Chromium")
 class CajaNavegadorTests(StaticLiveServerTestCase):
+    def test_menu_movil_muestra_icono_y_restituye_foco_al_cerrar(self):
+        from playwright.sync_api import sync_playwright
+
+        usuario = Usuario.objects.create_user(
+            username="menu-movil", first_name="Menú", last_name="Móvil",
+            email="menu-movil@example.test", password="Clave-prueba-123",
+        )
+        with sync_playwright() as playwright:
+            navegador = playwright.chromium.launch(executable_path=shutil.which("chromium"), headless=True)
+            pagina = navegador.new_page(viewport={"width": 390, "height": 844})
+            pagina.goto(self.live_server_url + "/cuentas/login/")
+            pagina.locator('[name="username"]').fill(usuario.username)
+            pagina.locator('[name="password"]').fill("Clave-prueba-123")
+            pagina.locator('button[type="submit"]').click()
+            pagina.goto(self.live_server_url + "/catalogo/")
+            control = pagina.locator(".pa-marca-movil .pa-menu-control")
+            icono = control.locator(".pa-menu-icono")
+            self.assertTrue(icono.is_visible())
+            self.assertGreater(icono.bounding_box()["width"], 0)
+            self.assertEqual(control.get_attribute("aria-controls"), "menu-movil")
+            self.assertEqual(control.get_attribute("aria-expanded"), "false")
+            self.assertTrue(control.get_attribute("aria-label"))
+
+            for cierre in ("Escape", "botón", "backdrop"):
+                control.focus()
+                pagina.keyboard.press("Enter")
+                pagina.locator("#menu-movil.show").wait_for()
+                self.assertTrue(icono.is_visible())
+                self.assertEqual(control.get_attribute("aria-expanded"), "true")
+                self.assertTrue(pagina.evaluate('document.querySelector("#menu-movil").contains(document.activeElement)'))
+                if cierre == "Escape":
+                    pagina.keyboard.press("Escape")
+                elif cierre == "botón":
+                    pagina.locator('#menu-movil [data-bs-dismiss="offcanvas"]').click()
+                else:
+                    pagina.mouse.click(380, 400)
+                pagina.locator("#menu-movil").wait_for(state="hidden")
+                self.assertTrue(control.evaluate("elemento => document.activeElement === elemento"))
+                self.assertEqual(control.get_attribute("aria-expanded"), "false")
+            navegador.close()
+
     def test_toggle_oferta_conserva_modalidad_y_valor_al_guardar(self):
         from playwright.sync_api import sync_playwright
 
@@ -185,7 +226,7 @@ class CajaNavegadorTests(StaticLiveServerTestCase):
             pagina.locator('[name="password"]').fill("Clave-prueba-123")
             pagina.locator('button[type="submit"]').click()
             pagina.goto(self.live_server_url + "/ventas/?q=Producto+navegador")
-            self.assertEqual(pagina.evaluate("window.PUNTO_APARTE_JS_VERSION"), "interfaz-20261122-1")
+            self.assertEqual(pagina.evaluate("window.PUNTO_APARTE_JS_VERSION"), "interfaz-20261122-2")
             self.assertTrue(pagina.evaluate("window.PUNTO_APARTE_COBRO_LISTO"))
             agregar = pagina.locator("[data-agregar-producto] button")
             agregar.click()
