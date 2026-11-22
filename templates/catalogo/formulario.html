@@ -11,7 +11,15 @@
 
                 <form method="post">
                     {% csrf_token %}
-                    {{ form.as_p }}
+                    {% for field in form %}
+                    {% if field.name == "oferta_activa" %}<fieldset class="pa-oferta-recuadro mb-3" data-oferta-recuadro><legend class="h5">Oferta</legend>{% endif %}
+                    <div class="mb-3 {% if field.name == 'oferta_activa' %}form-check form-switch{% endif %}">
+                        {% if field.name == 'oferta_activa' %}{{ field }}{{ field.label_tag }}{% else %}{{ field.label_tag }}{{ field }}{% endif %}
+                        {% if field.help_text %}<span class="helptext" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</span>{% endif %}
+                        {% for error in field.errors %}<p class="pa-error-campo">{{ error }}</p>{% endfor %}
+                    </div>
+                    {% if field.name == "oferta_valor" %}</fieldset>{% endif %}
+                    {% endfor %}
 
                     <div class="d-flex flex-wrap gap-2 pa-form-acciones">
                         <button class="btn btn-pa" type="submit">Guardar</button>

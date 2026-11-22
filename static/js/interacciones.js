@@ -1,15 +1,23 @@
 /* Menús fuera del contenedor desplazable, sin alterar acciones ni permisos. */
-window.PUNTO_APARTE_JS_VERSION = 'interfaz-20261118-2';
+window.PUNTO_APARTE_JS_VERSION = 'interfaz-20261122-1';
 const controlesMenu = [...document.querySelectorAll('[data-menu-principal]')];
 const menuMovil = document.querySelector('#menu-movil');
 const menuEscritorio = document.querySelector('#menu-escritorio');
 const escritorio = window.matchMedia('(min-width: 992px)');
 
 function prepararAyudaValorOferta() {
+    const activa = document.querySelector('#id_oferta_activa');
     const modalidad = document.querySelector('[data-modalidad-oferta]');
     const valor = document.querySelector('[data-valor-oferta]');
     const ayuda = document.querySelector('#id_oferta_valor_helptext');
-    if (!modalidad || !valor || !ayuda) return;
+    if (!activa || !modalidad || !valor || !ayuda) return;
+    const espejos = [modalidad, valor].map(campo => {
+        const espejo = document.createElement('input');
+        espejo.type = 'hidden';
+        espejo.name = campo.name;
+        campo.after(espejo);
+        return espejo;
+    });
 
     const textos = {
         PORCENTAJE: 'Porcentaje de descuento, por ejemplo «15».',
@@ -20,12 +28,21 @@ function prepararAyudaValorOferta() {
         PRECIO_FINAL: '4990',
     };
     const actualizar = () => {
+        [modalidad, valor].forEach((campo, indice) => {
+            espejos[indice].value = campo.value;
+            espejos[indice].disabled = activa.checked;
+            campo.disabled = !activa.checked;
+            const etiqueta = document.querySelector(`label[for="${campo.id}"]`);
+            if (etiqueta) etiqueta.textContent = etiqueta.textContent.replace(/ \(opcional\)$/, '') + (activa.checked ? '' : ' (opcional)');
+        });
         ayuda.textContent = textos[modalidad.value]
             || 'Selecciona una modalidad para ver un ejemplo del valor.';
         valor.placeholder = ejemplos[modalidad.value] || '';
     };
     ayuda.setAttribute('aria-live', 'polite');
     modalidad.addEventListener('change', actualizar);
+    valor.addEventListener('input', actualizar);
+    activa.addEventListener('change', actualizar);
     actualizar();
 }
 
@@ -207,6 +224,13 @@ for (const table of document.querySelectorAll('[data-tabla-listado]')) {
             },
         },
     });
+    if (table.hasAttribute('data-productos-listado')) {
+        dataTable.search.fixed('oferta-real', (searchStr, row, index) => {
+            const termino = dataTable.search().trim().toLocaleLowerCase('es-CL');
+            if (!termino.split(/\s+/).includes('oferta')) return true;
+            return dataTable.row(index).node()?.dataset.ofertaReal === 'true';
+        });
+    }
 
     const exportLinks = [
         ...document.querySelectorAll('[data-exportar-productos], [data-exportar-movimientos]'),
@@ -238,6 +262,8 @@ if (movimientoStockForm) {
             const input = campo.querySelector('input');
             input.disabled = !visible;
             input.required = visible;
+            const etiqueta = campo.querySelector('label');
+            if (etiqueta) etiqueta.textContent = etiqueta.textContent.replace(/ \(opcional\)$/, '') + (visible ? '' : ' (opcional)');
         }
     };
     tipo.addEventListener('change', actualizarTipo);
@@ -397,6 +423,7 @@ for (const form of document.querySelectorAll('[data-busqueda-viva]')) {
         const current = ++version;
         timer = setTimeout(async () => {
             controller = new AbortController();
+            const versionCarritoAlBuscar = document.querySelector('[data-carrito-panel]')?.dataset.versionCarrito;
             const url = new URL(form.action || location.href);
             url.search = new URLSearchParams({q: input.value, orden: form.querySelector('[name="orden"]')?.value || 'nombre_asc'}).toString();
             const results = document.querySelector('[data-resultados-busqueda]');
@@ -409,6 +436,10 @@ for (const form of document.querySelectorAll('[data-busqueda-viva]')) {
                     await response.text(), 'text/html'
                 );
                 if (current !== version) return;
+                if (versionCarritoAlBuscar !== document.querySelector('[data-carrito-panel]')?.dataset.versionCarrito) {
+                    input.dispatchEvent(new Event('input'));
+                    return;
+                }
                 reemplazarResultadosBusqueda(doc, url);
                 status.textContent = '';
             } catch (error) {
@@ -555,11 +586,14 @@ function solicitarActualizacionCarrito(form, datos, urlSolicitada = null, proces
     return solicitud;
 }
 
+let revisionLimpiezaCarrito = 0;
 async function recuperarEstadoCarrito() {
+    const revisionSolicitada = revisionLimpiezaCarrito;
     const response = await fetch(location.href, {cache: 'no-store'});
     if (!response.ok) throw new Error('No se pudo recuperar la compra');
     const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
     if (!doc.querySelector('[data-carrito-panel]')) throw new Error('Respuesta sin compra');
+    if (revisionSolicitada !== revisionLimpiezaCarrito) throw new Error('Respuesta anterior a la limpieza');
     aplicarActualizacionCarrito(doc);
 }
 
@@ -745,13 +779,20 @@ function prepararFormularioCobro(contenedor = document) {
         form.querySelector('[data-efectivo-recibido]').hidden = efectivo === 0;
         recibido.disabled = efectivo === 0;
         form.querySelector('[data-pago-asignado]').textContent = pesos(asignado);
-        form.querySelector('[data-pago-falta]').textContent = pesos(falta);
+        const faltaEfectivo = efectivo && recibidoValido
+            ? Math.max(0, efectivo - Number(recibido.value)) : 0;
+        form.querySelector('[data-pago-falta]').textContent = exceso
+            ? 'Revisa los montos aplicados'
+            : usados.length !== new Set(usados).size ? 'Revisa los medios de pago'
+            : falta
+            ? `Faltan ${pesos(falta)} por asignar`
+            : efectivo && !recibidoValido ? 'Ingresa el efectivo recibido'
+            : faltaEfectivo ? `Faltan ${pesos(faltaEfectivo)} en efectivo` : 'Monto cubierto';
         form.querySelector('[data-pago-vuelto]').textContent = pesos(vuelto);
         const error = form.querySelector('[data-pago-error]');
         error.textContent = exceso ? `Sobran ${pesos(exceso)} en los montos aplicados.` :
             usados.length !== new Set(usados).size ? 'No repitas un medio de pago.' :
-            efectivo && (!recibidoValido || Number(recibido.value) < efectivo)
-                ? 'El efectivo recibido debe cubrir el monto aplicado.' : '';
+            efectivo && !recibidoValido ? 'Ingresa el efectivo recibido.' : '';
         error.hidden = !error.textContent;
         actuales.forEach((fila, indice) => {
             fila.querySelector('[data-quitar-pago]').hidden = indice === 0;
@@ -912,15 +953,26 @@ function prepararLimpiarCarrito(contenedor = document) {
         const boton = form.querySelector('button[type="submit"]');
         boton.disabled = true;
         try {
-            await solicitarActualizacionCarrito(
-                form, new FormData(form), null, ({doc}) => aplicarActualizacionCarrito(doc)
-            );
+            await solicitarActualizacionCarrito(form, new FormData(form), null, ({doc, response, versionEnviada}) => {
+                const panel = doc.querySelector('[data-carrito-panel]');
+                if (response.headers.get('X-Codigo-Estado') !== 'vaciado' ||
+                    !panel || panel.dataset.hayCarrito !== 'false' ||
+                    panel.dataset.versionCarrito === versionEnviada) {
+                    throw new Error('Limpieza no confirmada');
+                }
+                revisionLimpiezaCarrito += 1;
+                aplicarActualizacionCarrito(doc);
+            });
         } catch {
-            boton.disabled = false;
+            try { await recuperarEstadoCarrito(); } catch { /* El estado del servidor sigue incierto. */ }
+            if (boton.isConnected && document.querySelector('[data-carrito-panel]')?.dataset.hayCarrito === 'true') boton.disabled = false;
             const estado = document.querySelector('[data-carrito-estado]');
             if (estado) {
-                estado.textContent = 'No se pudo limpiar la compra. Intenta nuevamente.';
-                estado.classList.add('pa-estado-error');
+                const vacio = document.querySelector('[data-carrito-panel]')?.dataset.hayCarrito === 'false';
+                estado.textContent = vacio
+                    ? 'La compra está vacía. Estado comprobado con el servidor.'
+                    : 'No se pudo confirmar la limpieza. Revisa la compra antes de intentarlo nuevamente.';
+                estado.classList.toggle('pa-estado-error', !vacio);
             }
         } finally {
             finalizarOperacionCarrito();

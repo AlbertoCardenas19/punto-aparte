@@ -37,9 +37,9 @@ class ProductoForm(BootstrapFormMixin, forms.ModelForm):
             "descripcion",
             "codigo_barras",
             "precio",
+            "oferta_activa",
             "oferta_modalidad",
             "oferta_valor",
-            "oferta_activa",
             "categorias",
         )
         widgets = {
@@ -65,6 +65,7 @@ class ProductoForm(BootstrapFormMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["precio"].help_text = "Para activar el producto, ingresa un precio mayor que $0"
         categorias = Categoria.objects.filter(activo=True)
         if self.instance.pk:
             categorias = Categoria.objects.filter(
@@ -83,6 +84,13 @@ class ProductoForm(BootstrapFormMixin, forms.ModelForm):
         self.fields["oferta_valor"].help_text = self.ayuda_valor_oferta(
             modalidad
         )
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("precio") == 0:
+            self.instance.activo = False
+            cleaned["oferta_activa"] = False
+        return cleaned
 
     @staticmethod
     def ayuda_valor_oferta(modalidad):

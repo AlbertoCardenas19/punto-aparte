@@ -990,11 +990,36 @@ class EstadoCarritoTests(TestCase):
         self.assertEqual(rechazada.headers["X-Codigo-Estado"], "rechazado")
         self.assertEqual(self.client.session[CLAVE_CARRITO][str(self.producto.pk)], 1)
 
+    def test_limpiar_ajax_devuelve_carrito_y_tarjetas_vacias_y_rechaza_version_vieja(self):
+        self._guardar_carrito()
+        version = self.client.session[CLAVE_VERSION_CARRITO]
+        url = reverse("ventas:caja") + "?q=Cuaderno&orden=stock_desc&page=1"
+        respuesta = self.client.post(
+            url, {"accion": "vaciar", "version_carrito": version},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(respuesta.headers["X-Codigo-Estado"], "vaciado")
+        self.assertFalse(respuesta.context["hay_carrito"])
+        self.assertEqual(respuesta.context["total_carrito"], 0)
+        self.assertEqual(respuesta.context["pagina"].object_list[0].cantidad_carrito, 0)
+        self.assertEqual(respuesta.context["busqueda"], "Cuaderno")
+        self.assertEqual(respuesta.context["orden"], "stock_desc")
+        self.assertNotIn(CLAVE_CARRITO, self.client.session)
+        self.assertEqual(self.producto.stock, 2)
+        estado = EstadoPantallaCliente.objects.get(token=self.client.cookies[COOKIE_PANTALLA_CLIENTE].value)
+        self.assertEqual(estado.carrito, {})
+        self.assertNotEqual(version, self.client.session[CLAVE_VERSION_CARRITO])
+        self.client.post(url, {
+            "accion": "agregar", "version_carrito": version,
+            "producto_id": self.producto.pk, "cantidad": 1,
+        })
+        self.assertNotIn(CLAVE_CARRITO, self.client.session)
+
     def test_caja_publica_version_de_script_y_boton_no_envia_formulario(self):
         self._guardar_carrito()
         respuesta = self.client.get(reverse("ventas:caja"))
-        self.assertContains(respuesta, 'interacciones.js?v=interfaz-20261118-2')
-        self.assertContains(respuesta, 'data-caja-version="interfaz-20261118-2"')
+        self.assertContains(respuesta, 'interacciones.js?v=interfaz-20261122-1')
+        self.assertContains(respuesta, 'data-caja-version="interfaz-20261122-1"')
         self.assertContains(respuesta, 'type="button" data-agregar-pago')
 
     def test_producto_inactivo_permanece_visible_y_bloquea_cobro(self):
@@ -1168,7 +1193,7 @@ class EstadoCarritoTests(TestCase):
         self.assertContains(response, 'aria-controls="menu-escritorio"')
         self.assertContains(response, 'aria-controls="menu-movil"')
         self.assertContains(response, 'id="menu-escritorio"')
-        self.assertContains(response, f'href="{reverse("inicio")}"', count=2)
+        self.assertContains(response, f'href="{reverse("inicio")}"', count=4)
 
     def test_encabezado_compra_usa_separador_y_contador_actualizable(self):
         self._guardar_carrito()
@@ -1544,6 +1569,26 @@ class AbandonoCarritoTests(TestCase):
 
 
 class OrdenCajaTests(TestCase):
+    def test_buscar_oferta_solo_devuelve_rebaja_activa_antes_de_paginar(self):
+        cajero = Usuario.objects.create_user(
+            username="ignorado", first_name="Caja", last_name="Oferta",
+            email="oferta-busqueda@example.test", password="clave-segura",
+        )
+        self.client.force_login(cajero)
+        for indice in range(7):
+            Producto.objects.create(
+                nombre=f"Sin rebaja {indice}", precio=1000, stock=1,
+                oferta_modalidad=Producto.ModalidadOferta.PRECIO_FINAL,
+                oferta_valor=700, oferta_activa=False,
+            )
+        activo = Producto.objects.create(
+            nombre="Con rebaja", precio=1000, stock=1,
+            oferta_modalidad=Producto.ModalidadOferta.PRECIO_FINAL,
+            oferta_valor=700, oferta_activa=True,
+        )
+        respuesta = self.client.get(reverse("ventas:caja"), {"q": "OFERTA"})
+        self.assertEqual([p.pk for p in respuesta.context["pagina"]], [activo.pk])
+
     def test_oferta_y_stock_participan_del_orden_global(self):
         cajero = Usuario.objects.create_user(
             username="ignorado", first_name="Caja", last_name="Orden",

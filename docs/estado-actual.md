@@ -1,5 +1,15 @@
 # Estado del proyecto
 
+## Ajustes de caja y catálogo (22-11-2026)
+
+- «Limpiar» rota la versión del carrito, descarta precios vistos y clave de cobro, actualiza la pantalla del cliente y devuelve el estado vacío también a solicitudes AJAX. Conserva búsqueda, orden y página. La interfaz solo acepta una limpieza confirmada y descarta resultados de búsqueda iniciados con otra versión.
+- Un producto con precio cero se guarda inactivo. La activación con precio cero se rechaza en la vista y en el modelo. Subir el precio no cambia el estado por sí solo.
+- La oferta conserva modalidad y valor al apagarse; esos campos siguen visibles, se deshabilitan y sus valores viajan en campos ocultos. El precio de venta y la búsqueda «oferta» consideran solo ofertas activas que reducen el precio.
+- La búsqueda «oferta» se aplica al catálogo exportado y al listado antes de la paginación de DataTables, respetando la visibilidad por rol. Los filtros normales siguen usando nombre, marca, categoría, código y descripción.
+- El cobro muestra el monto pendiente de asignar o de efectivo recibido, y conserva el bloqueo de confirmación y validación del servidor.
+- La navegación de escritorio usa sidebar azul oscuro y cabecera clara sobre el contenido. El acceso flotante a Nueva venta permanece fijado al viewport con margen y espacio al final del contenido.
+- La implementación actual de caja admite pagos mixtos, como ya establecen `AGENTS.md` y `docs/alcance-y-reglas.md`.
+
 **Base de esta revisión:** ZIP `punto-aparte.zip`, inspeccionado el 30-10-2026. Este documento es una fotografía; el repositorio y la base de código activa son la fuente para saber qué existe hoy.
 
 ## Actualización de la rama `work`

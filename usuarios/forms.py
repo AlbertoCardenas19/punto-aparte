@@ -61,5 +61,6 @@ class InicioSesionForm(AuthenticationForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.label_suffix = ""
         self.fields["username"].label = "Nombre de usuario o correo"
         self.fields["password"].label = "Contraseña"

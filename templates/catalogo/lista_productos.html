@@ -36,7 +36,7 @@
 
 <div class="card">
     <div class="card-body">
-        <table class="table table-hover align-middle mb-0" data-tabla-listado data-orden-columna="0"
+        <table class="table table-hover align-middle mb-0" data-tabla-listado data-productos-listado data-orden-columna="0"
             data-busqueda-ayuda="Producto, marca, categoría, código o descripción">
             <thead class="table-light">
                 <tr>
@@ -52,8 +52,8 @@
             </thead>
             <tbody>
                 {% for producto in productos %}
-                <tr>
-                    <td class="all fw-semibold" data-search="{{ producto.nombre }} {{ producto.descripcion }} {{ producto.marca }} {{ producto.codigo_barras|default_if_none:'' }} {% for categoria in producto.categorias.all %}{{ categoria.nombre }} {% endfor %}">
+                <tr data-oferta-real="{{ producto.tiene_oferta_activa|yesno:'true,false' }}">
+                    <td class="all fw-semibold" data-search="{{ producto.nombre }} {{ producto.descripcion }} {{ producto.marca }} {{ producto.codigo_barras|default_if_none:'' }} {% for categoria in producto.categorias.all %}{{ categoria.nombre }} {% endfor %} {% if producto.tiene_oferta_activa %}oferta{% endif %}">
                         {{ producto.nombre }}
                     </td>
                     <td data-order="{{ producto.precio_venta }}" class="text-end">

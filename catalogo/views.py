@@ -10,6 +10,7 @@ from django.shortcuts import redirect, render, get_object_or_404
 from django.urls import reverse
 from django.utils.dateparse import parse_date
 from django.utils import timezone
+from config.forms import BootstrapFormMixin
 
 from usuarios.decorators import jefe_required
 from usuarios.models import Usuario
@@ -34,7 +35,7 @@ from .exportaciones import (
 CLAVE_OPERACION_STOCK = "clave_operacion_stock"
 
 
-class ImagenPantallaForm(forms.ModelForm):
+class ImagenPantallaForm(BootstrapFormMixin, forms.ModelForm):
     class Meta:
         model = ImagenPantalla
         fields = ("imagen",)
@@ -145,13 +146,24 @@ def exportar_productos(request, formato):
     productos = _filtrar_productos_por_busqueda(productos, busqueda)
 
     return crear_exportacion_productos(
-        productos.order_by("nombre"),
+        sorted(productos, key=lambda producto: (producto.nombre.casefold(), producto.pk)),
         formato,
     )
 
 
 def _filtrar_productos_por_busqueda(productos, busqueda):
     for termino in busqueda.split():
+        if termino.casefold() == "oferta":
+            productos = [producto for producto in productos if producto.tiene_oferta_activa]
+            continue
+        if isinstance(productos, list):
+            productos = [producto for producto in productos if any(
+                termino.casefold() in str(valor).casefold() for valor in (
+                    producto.nombre, producto.marca, producto.descripcion,
+                    producto.codigo_barras or "", *(categoria.nombre for categoria in producto.categorias.all())
+                )
+            )]
+            continue
         productos = productos.filter(
             Q(nombre__icontains=termino)
             | Q(marca__icontains=termino)
@@ -159,7 +171,7 @@ def _filtrar_productos_por_busqueda(productos, busqueda):
             | Q(codigo_barras__icontains=termino)
             | Q(categorias__nombre__icontains=termino)
         )
-    return productos.distinct()
+    return productos if isinstance(productos, list) else productos.distinct()
 
 
 @login_required
@@ -361,8 +373,12 @@ def editar_producto(request, producto_id):
 def cambiar_estado_producto(request, producto_id):
     if request.method == "POST":
         producto = get_object_or_404(Producto, pk=producto_id)
-        producto.activo = not producto.activo
-        producto.save(update_fields=["activo"])
+        if not producto.activo and producto.precio == 0:
+            from django.contrib import messages
+            messages.error(request, "Para activar el producto, ingresa un precio mayor que $0.")
+        else:
+            producto.activo = not producto.activo
+            producto.save(update_fields=["activo"])
     return redirect("catalogo:lista_productos")
 
 

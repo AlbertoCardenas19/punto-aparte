@@ -11,6 +11,7 @@ from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.urls import reverse
 from django.core.management import call_command
+from django.core.exceptions import ValidationError
 
 from usuarios.models import Usuario
 
@@ -19,6 +20,79 @@ from .forms import CategoriaForm, MovimientoStockForm, ProductoForm
 from .models import Categoria, MovimientoStock, Producto
 from .services import registrar_movimiento_stock
 from .views import CLAVE_OPERACION_STOCK
+
+
+class PrecioCeroYOfertasTests(TestCase):
+    def setUp(self):
+        self.jefe = Usuario.objects.create_user(
+            username="jefe-cero", first_name="Jefe", last_name="Cero",
+            email="cero@example.test", password="clave-segura", rol=Usuario.Rol.JEFE,
+        )
+        self.client.force_login(self.jefe)
+
+    def test_crear_editar_y_bloquear_activacion_con_precio_cero(self):
+        datos = {"nombre": "Lápiz sin precio", "precio": 0}
+        respuesta = self.client.post(reverse("catalogo:crear_producto"), datos)
+        self.assertEqual(respuesta.status_code, 302)
+        producto = Producto.objects.get(nombre="Lápiz sin precio")
+        self.assertFalse(producto.activo)
+        self.client.post(reverse("catalogo:cambiar_estado_producto", args=[producto.pk]))
+        producto.refresh_from_db()
+        self.assertFalse(producto.activo)
+        with self.assertRaises(ValidationError):
+            producto.activo = True
+            producto.save(update_fields=["activo"])
+        producto.activo = False
+        producto.precio = 100
+        producto.save(update_fields=["precio"])
+        producto.refresh_from_db()
+        self.assertFalse(producto.activo)
+        self.client.post(reverse("catalogo:cambiar_estado_producto", args=[producto.pk]))
+        producto.refresh_from_db()
+        self.assertTrue(producto.activo)
+        respuesta = self.client.post(
+            reverse("catalogo:editar_producto", args=[producto.pk]), datos,
+        )
+        self.assertEqual(respuesta.status_code, 302)
+        producto.refresh_from_db()
+        self.assertEqual(producto.precio, 0)
+        self.assertFalse(producto.activo)
+        self.assertFalse(ProductoForm(data={"nombre": "Negativo", "precio": -1}).is_valid())
+
+    def test_oferta_inactiva_conserva_valores_y_busqueda_real(self):
+        producto = Producto.objects.create(
+            nombre="Cuaderno", precio=1000, stock=2,
+            oferta_modalidad=Producto.ModalidadOferta.PRECIO_FINAL,
+            oferta_valor=700, oferta_activa=False,
+        )
+        self.assertEqual(producto.precio_venta, 1000)
+        respuesta = self.client.post(
+            reverse("catalogo:editar_producto", args=[producto.pk]),
+            {"nombre": "Cuaderno", "precio": 1000,
+             "oferta_modalidad": Producto.ModalidadOferta.PRECIO_FINAL,
+             "oferta_valor": 700},
+        )
+        self.assertEqual(respuesta.status_code, 302)
+        producto.refresh_from_db()
+        self.assertFalse(producto.oferta_activa)
+        self.assertEqual(producto.oferta_valor, 700)
+        respuesta = self.client.get(reverse("catalogo:exportar_productos", args=["csv"]), {"q": "oferta"})
+        self.assertNotIn("Cuaderno", respuesta.content.decode())
+        producto.oferta_activa = True
+        producto.save(update_fields=["oferta_activa"])
+        respuesta = self.client.get(reverse("catalogo:exportar_productos", args=["csv"]), {"q": "OFERTA"})
+        self.assertIn("Cuaderno", respuesta.content.decode())
+        respuesta = self.client.post(
+            reverse("catalogo:editar_producto", args=[producto.pk]),
+            {"nombre": "Cuaderno", "precio": 0, "oferta_activa": "on",
+             "oferta_modalidad": Producto.ModalidadOferta.PRECIO_FINAL,
+             "oferta_valor": 700},
+        )
+        self.assertEqual(respuesta.status_code, 302)
+        producto.refresh_from_db()
+        self.assertFalse(producto.activo)
+        self.assertFalse(producto.oferta_activa)
+        self.assertEqual(producto.oferta_valor, 700)
 
 
 class RegistrarMovimientoStockTests(TestCase):

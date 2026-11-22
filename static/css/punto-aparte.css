@@ -172,3 +172,30 @@ body > .dropdown-menu { z-index: 1080; border-color: var(--pa-border); border-ra
 @media (max-width: 575.98px) {
     .pa-galeria-pantalla { grid-template-columns: minmax(0, 1fr); }
 }
+/* La cabecera pertenece al contenido; la navegación conserva el azul institucional. */
+@media (min-width: 992px) {
+    .pa-app:has(.pa-menu-lateral)::before { content: ''; position: fixed; inset: 0 auto 0 0; width: 16rem; background: var(--pa-navy); z-index: 0; transition: width .2s ease; }
+    .pa-app.pa-menu-contraido::before { width: 4.5rem; }
+    .pa-app .pa-estructura { position: relative; }
+    .pa-app .pa-barra-superior { margin-left: 16rem; transition: margin-left .2s ease; }
+    .pa-app.pa-menu-contraido .pa-barra-superior { margin-left: 4.5rem; }
+}
+.pa-app .pa-barra-superior { background: #fff; color: var(--pa-ink); }
+.pa-app .pa-barra-superior .btn-outline-light { color: var(--pa-navy); border-color: #9aabba; }
+.pa-app .pa-barra-superior .pa-menu-control { color: var(--pa-navy); border-color: #9aabba; }
+.pa-app .pa-menu-lateral { background: var(--pa-navy); color: #fff; }
+.pa-app .pa-sidebar-nombre, .pa-app .pa-menu-grupo, .pa-app .pa-menu-enlace { color: #fff; }
+.pa-app .pa-menu-enlace:hover, .pa-app .pa-menu-enlace:focus-visible { background: #304b68; color: #fff; }
+.pa-app .pa-menu-enlace.active { background: #304b68; color: #fff; }
+.pa-app .pa-sidebar-cabecera .pa-menu-control { color: #fff; }
+.pa-app .pa-sidebar-cabecera .pa-menu-control:hover { background: #304b68; }
+.pa-app .pa-venta-flotante, .pa-app.pa-contenido-pantalla .pa-venta-flotante { position: fixed; display: inline-flex; width: auto; margin: 0; right: max(1.25rem, env(safe-area-inset-right)); bottom: max(1.25rem, env(safe-area-inset-bottom)); }
+.pa-app .pa-contenido, .pa-caja .pa-caja-contenido { padding-bottom: 7rem; }
+.pa-app div.dt-container .dt-search { flex: 1 1 25rem; min-width: 0; }
+.pa-app div.dt-container .dt-search input { width: min(100%, 33rem); min-width: 0; flex: 1 1 24rem; }
+@media (max-width: 575.98px) {
+    .pa-app div.dt-container .dt-search { flex-wrap: wrap; width: 100%; }
+    .pa-app div.dt-container .dt-search input { flex-basis: 100%; width: 100%; }
+    .pa-app .pa-venta-flotante { max-width: calc(100vw - 2.5rem); }
+}
+.pa-oferta-recuadro { border: 1px solid var(--pa-border); border-radius: .8rem; padding: 1rem; }

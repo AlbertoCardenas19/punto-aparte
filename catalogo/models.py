@@ -113,19 +113,21 @@ class Producto(models.Model):
     def clean(self):
         super().clean()
         errores = {}
+        if self.precio == 0 and self.activo:
+            errores["activo"] = "Para activar el producto, ingresa un precio mayor que $0."
         modalidad = self.oferta_modalidad
         valor = self.oferta_valor
 
-        if modalidad and valor is None:
+        if self.oferta_activa and modalidad and valor is None:
             errores["oferta_valor"] = "Indica el valor de la oferta."
-        if not modalidad and valor is not None:
+        if self.oferta_activa and not modalidad and valor is not None:
             errores["oferta_modalidad"] = "Selecciona una modalidad de oferta."
         if self.oferta_activa and (not modalidad or valor is None):
             errores["oferta_activa"] = (
                 "Completa la modalidad y el valor antes de activar la oferta."
             )
 
-        if modalidad == self.ModalidadOferta.PORCENTAJE and valor is not None:
+        if self.oferta_activa and modalidad == self.ModalidadOferta.PORCENTAJE and valor is not None:
             if valor <= 0 or valor > 100:
                 errores["oferta_valor"] = (
                     "El porcentaje debe ser mayor que 0 y menor o igual que 100."
@@ -138,7 +140,7 @@ class Producto(models.Model):
                     "El porcentaje no reduce el precio al redondearlo a pesos."
                 )
 
-        if modalidad == self.ModalidadOferta.PRECIO_FINAL and valor is not None:
+        if self.oferta_activa and modalidad == self.ModalidadOferta.PRECIO_FINAL and valor is not None:
             if valor < 0 or valor != valor.to_integral_value():
                 errores["oferta_valor"] = (
                     "El precio promocional debe ser un monto entero en pesos."
@@ -191,6 +193,8 @@ class Producto(models.Model):
         return self.precio - self.precio_venta
 
     def save(self, *args, **kwargs):
+        if self.precio == 0 and self.activo:
+            raise ValidationError({"activo": "Para activar el producto, ingresa un precio mayor que $0."})
         self.nombre = normalizar_mayuscula_inicial(self.nombre)
         self.marca = normalizar_mayuscula_inicial(self.marca)
         self.codigo_barras = (self.codigo_barras or "").strip() or None

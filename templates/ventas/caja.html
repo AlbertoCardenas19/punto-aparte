@@ -3,7 +3,7 @@
 
 {% block title %}Caja | Punto Aparte{% endblock %}
 
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/caja.css' %}?v=interfaz-20261118-2">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/caja.css' %}?v=interfaz-20261122-1">{% endblock %}
 {% block body_class %}pa-caja{% endblock %}
 {% block main_class %}pa-caja-contenido{% endblock %}
 {% block content %}
@@ -266,7 +266,7 @@
                             </div>
                             <div class="pa-estado-breve mt-3" role="status" aria-live="polite">
                                 <div>Asignado: <strong data-pago-asignado>$0</strong></div>
-                                <div>Falta: <strong data-pago-falta>{{ total_carrito|clp }}</strong></div>
+                                <div data-pago-falta>Faltan {{ total_carrito|clp }} por asignar</div>
                                 <div>Vuelto: <strong data-pago-vuelto>$0</strong></div>
                                 <p class="pa-error-campo mb-0" data-pago-error hidden></p>
                             </div>

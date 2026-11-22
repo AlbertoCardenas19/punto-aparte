@@ -403,8 +403,20 @@ def caja(request):
             request.session.pop(CLAVE_PRECIOS_CARRITO, None)
             request.session.pop(CLAVE_PRECIOS_NORMALES_CARRITO, None)
             request.session[CLAVE_IDEMPOTENCIA_VENTA] = str(uuid4())
-            _rotar_version_carrito(request)
-            return responder(redirect(f"{request.path}?carrito=abierto"))
+            carrito = {}
+            precios_vistos = {}
+            precios_normales_vistos = {}
+            version_carrito = _rotar_version_carrito(request)
+            codigo_estado = "vaciado"
+            if solicitud_dinamica:
+                # El render final conserva los filtros y permite reconciliar tarjetas.
+                parametros = request.GET.copy()
+                parametros["carrito"] = "abierto"
+                request.GET = parametros
+            else:
+                parametros = request.GET.copy()
+                parametros["carrito"] = "abierto"
+                return responder(redirect(f"{request.path}?{parametros.urlencode()}"))
 
         if accion == "agregar":
             codigo_estado = "rechazado"
@@ -624,14 +636,20 @@ def caja(request):
     busqueda = request.GET.get("q", "").strip()
     productos = Producto.objects.filter(activo=True)
 
-    if busqueda:
+    buscar_oferta = "oferta" in (termino.casefold() for termino in busqueda.split())
+    texto_busqueda = " ".join(
+        termino for termino in busqueda.split() if termino.casefold() != "oferta"
+    ) if buscar_oferta else busqueda
+    if texto_busqueda:
         productos = productos.filter(
-            Q(nombre__icontains=busqueda)
-            | Q(descripcion__icontains=busqueda)
-            | Q(marca__icontains=busqueda)
-            | Q(codigo_barras__icontains=busqueda)
-            | Q(categorias__nombre__icontains=busqueda)
+            Q(nombre__icontains=texto_busqueda)
+            | Q(descripcion__icontains=texto_busqueda)
+            | Q(marca__icontains=texto_busqueda)
+            | Q(codigo_barras__icontains=texto_busqueda)
+            | Q(categorias__nombre__icontains=texto_busqueda)
         ).distinct()
+    if buscar_oferta:
+        productos = [producto for producto in productos if producto.tiene_oferta_activa]
 
     orden = request.GET.get("orden", "nombre_asc")
     claves = {
