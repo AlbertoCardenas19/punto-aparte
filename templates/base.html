@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Punto Aparte{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'vendor/bootstrap/css/bootstrap.min.css' %}">
-    <link rel="stylesheet" href="{% static 'css/punto-aparte.css' %}?v=interfaz-20261122-2">
+    <link rel="stylesheet" href="{% static 'css/punto-aparte.css' %}?v=interfaz-20261122-3">
     {% block extra_css %}{% endblock %}
 </head>
 
@@ -51,9 +51,9 @@
             <div class="pa-sidebar-cabecera">
                 <a class="pa-logo-enlace" href="{% url 'inicio' %}" aria-label="Ir a Inicio"><img class="pa-logo" src="{% static 'img/logo_punto_aparte.jpg' %}" alt=""></a>
                 <strong class="pa-sidebar-nombre">Punto Aparte</strong>
-                <button class="pa-menu-control pa-menu-control-interno" type="button" data-menu-principal
-                    aria-controls="menu-escritorio" aria-expanded="true" aria-label="Cerrar menú"><span class="pa-menu-icono" aria-hidden="true"></span></button>
             </div>
+            <button class="pa-menu-control pa-menu-control-borde" type="button" data-menu-principal
+                aria-controls="menu-escritorio" aria-expanded="true" aria-label="Cerrar menú"><span class="pa-menu-icono" aria-hidden="true"></span></button>
             {% include "includes/menu_principal.html" %}
         </aside>
         {% endif %}
@@ -103,12 +103,10 @@
     {% if request.user.is_authenticated and not request.user.debe_cambiar_password %}
     {% if request.user.rol == "JEFE" or request.user.rol == "CAJERO" %}
     {% if request.resolver_match.namespace != "ventas" or request.resolver_match.url_name != "caja" %}
-    <div class="pa-venta-barra">
-        <a class="pa-venta-flotante" href="{% url 'ventas:caja' %}" aria-label="Nueva venta">
-            <span class="pa-venta-etiqueta">+ Nueva venta</span>
-            <span class="pa-venta-signo" aria-hidden="true">+</span>
-        </a>
-    </div>
+    <a class="pa-venta-flotante" href="{% url 'ventas:caja' %}" aria-label="Nueva venta">
+        <span class="pa-venta-etiqueta">+ Nueva venta</span>
+        <span class="pa-venta-signo" aria-hidden="true">+</span>
+    </a>
     {% endif %}
     {% endif %}
     {% endif %}
